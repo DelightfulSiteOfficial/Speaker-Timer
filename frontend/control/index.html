@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Speaker Timer — Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --border: #222;
+    --text: #f0ede8;
+    --muted: #555;
+    --accent: #e8ff47;
+    --danger: #ff4444;
+    --warn: #ff9900;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    padding: env(safe-area-inset-top, 20px) 20px env(safe-area-inset-bottom, 20px);
+    gap: 16px;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    flex-shrink: 0;
+  }
+
+  .session-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .conn-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+  }
+
+  .conn-dot.live {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* ── Time preview ── */
+  .time-preview {
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .time-big {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(72px, 20vw, 120px);
+    line-height: 1;
+    letter-spacing: -0.01em;
+    transition: color 0.4s;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .time-big.warning { color: var(--warn); }
+  .time-big.danger  { color: var(--danger); }
+  .time-big.overtime { color: var(--danger); }
+
+  .time-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ── Speaker name input ── */
+  .speaker-row {
+    flex-shrink: 0;
+  }
+
+  .field-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .speaker-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .speaker-input::placeholder { color: var(--muted); }
+  .speaker-input:focus { border-color: var(--accent); }
+
+  /* ── Duration picker ── */
+  .duration-row {
+    flex-shrink: 0;
+  }
+
+  .duration-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .dur-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 6px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dur-btn:active { transform: scale(0.95); }
+
+  .dur-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 500;
+  }
+
+  /* Custom duration */
+  .custom-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .custom-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .custom-input::placeholder { color: var(--muted); font-size: 12px; }
+  .custom-input:focus { border-color: var(--accent); }
+
+  .custom-set {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .custom-set:active { transform: scale(0.95); background: var(--border); }
+
+  /* ── Time nudge ── */
+  .nudge-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .nudge-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .nudge-btn {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+
+  .nudge-btn:active { transform: scale(0.95); background: var(--border); }
+  .nudge-btn.add { color: var(--accent); }
+  .nudge-btn.sub { color: var(--warn); }
+
+  /* ── Main controls ── */
+  .controls {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .btn-main {
+    flex: 2;
+    padding: 20px;
+    border-radius: 14px;
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-main:active { transform: scale(0.97); }
+
+  .btn-start {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .btn-pause {
+    background: var(--warn);
+    color: #000;
+  }
+
+  .btn-reset {
+    flex: 1;
+    padding: 20px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-reset:active { transform: scale(0.97); background: var(--border); }
+
+  /* ── Overtime indicator ── */
+  .overtime-banner {
+    display: none;
+    background: var(--danger);
+    color: #fff;
+    text-align: center;
+    padding: 10px;
+    border-radius: 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    animation: flashBg 1s step-end infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes flashBg {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .overtime-banner.visible { display: block; }
+
+  /* ── Disconnected overlay ── */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,10,0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 100;
+    transition: opacity 0.3s;
+  }
+
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .overlay-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="session-tag" id="sessionTag">Session —</div>
+  <div class="conn-dot" id="connDot"></div>
+</div>
+
+<div class="time-preview">
+  <div class="time-big" id="timeBig">--:--</div>
+  <div class="time-status" id="timeStatus">Stopped</div>
+</div>
+
+<div class="speaker-row">
+  <div class="field-label">Speaker name</div>
+  <input class="speaker-input" id="speakerInput" type="text" placeholder="Enter speaker name…" maxlength="60">
+</div>
+
+<div class="duration-row">
+  <div class="field-label">Duration</div>
+  <div class="duration-grid">
+    <button class="dur-btn" data-mins="5">5 min</button>
+    <button class="dur-btn" data-mins="10">10 min</button>
+    <button class="dur-btn" data-mins="15">15 min</button>
+    <button class="dur-btn" data-mins="20">20 min</button>
+    <button class="dur-btn" data-mins="30">30 min</button>
+    <button class="dur-btn" data-mins="45">45 min</button>
+    <button class="dur-btn" data-mins="60">60 min</button>
+    <button class="dur-btn" data-mins="90">90 min</button>
+  </div>
+  <div class="custom-row">
+    <input class="custom-input" id="customMins" type="number" placeholder="Custom minutes…" min="1" max="300">
+    <button class="custom-set" id="customSetBtn">Set</button>
+  </div>
+</div>
+
+<div class="nudge-row">
+  <div class="nudge-label">Adjust</div>
+  <button class="nudge-btn sub" data-nudge="-300">−5m</button>
+  <button class="nudge-btn sub" data-nudge="-60">−1m</button>
+  <button class="nudge-btn sub" data-nudge="-30">−30s</button>
+  <button class="nudge-btn add" data-nudge="30">+30s</button>
+  <button class="nudge-btn add" data-nudge="60">+1m</button>
+  <button class="nudge-btn add" data-nudge="300">+5m</button>
+</div>
+
+<div class="overtime-banner" id="overtimeBanner">⚠ Speaker is over time</div>
+
+<div class="controls">
+  <button class="btn-main btn-start" id="mainBtn">Start</button>
+  <button class="btn-reset" id="resetBtn">Reset</button>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-text">Connecting…</div>
+</div>
+
+<script>
+  const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://your-app.railway.app';
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get('session') || 'NOSESSION';
+
+  let state = { running: false, timeRemaining: 0, totalTime: 0, speakerName: '', overtime: false };
+  let selectedMins = null;
+
+  // DOM
+  const timeBig        = document.getElementById('timeBig');
+  const timeStatus     = document.getElementById('timeStatus');
+  const mainBtn        = document.getElementById('mainBtn');
+  const resetBtn       = document.getElementById('resetBtn');
+  const speakerInput   = document.getElementById('speakerInput');
+  const connDot        = document.getElementById('connDot');
+  const overlay        = document.getElementById('overlay');
+  const overtimeBanner = document.getElementById('overtimeBanner');
+  const sessionTag     = document.getElementById('sessionTag');
+
+  sessionTag.textContent = `Session ${sessionId}`;
+
+  function formatTime(s) {
+    const abs = Math.abs(s);
+    const m = Math.floor(abs / 60);
+    const sec = abs % 60;
+    return `${s < 0 ? '-' : ''}${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  }
+
+  function render() {
+    const { running, timeRemaining, overtime } = state;
+    const isWarning = timeRemaining <= 60 && timeRemaining > 0 && !overtime;
+    const isDanger  = timeRemaining <= 30 && timeRemaining > 0 && !overtime;
+
+    timeBig.textContent = formatTime(timeRemaining);
+    timeBig.className = 'time-big' +
+      (overtime ? ' overtime' : isDanger ? ' danger' : isWarning ? ' warning' : '');
+
+    timeStatus.textContent = running ? 'Running' : (overtime ? 'Overtime' : 'Paused');
+
+    mainBtn.textContent = running ? 'Pause' : 'Start';
+    mainBtn.className = 'btn-main ' + (running ? 'btn-pause' : 'btn-start');
+
+    overtimeBanner.className = 'overtime-banner' + (overtime ? ' visible' : '');
+  }
+
+  // Duration buttons
+  document.querySelectorAll('.dur-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mins = parseInt(btn.dataset.mins);
+      selectedMins = mins;
+      document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      send({ type: 'set_duration', sessionId, seconds: mins * 60 });
+    });
+  });
+
+  // Custom duration
+  document.getElementById('customSetBtn').addEventListener('click', () => {
+    const val = parseInt(document.getElementById('customMins').value);
+    if (val > 0 && val <= 300) {
+      document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
+      send({ type: 'set_duration', sessionId, seconds: val * 60 });
+    }
+  });
+
+  // Speaker name (debounced)
+  let nameTimer;
+  speakerInput.addEventListener('input', () => {
+    clearTimeout(nameTimer);
+    nameTimer = setTimeout(() => {
+      send({ type: 'set_speaker', sessionId, name: speakerInput.value.trim() });
+    }, 500);
+  });
+
+  // Main control button
+  mainBtn.addEventListener('click', () => {
+    if (state.running) {
+      send({ type: 'pause', sessionId });
+    } else {
+      send({ type: 'start', sessionId });
+    }
+  });
+
+  // Reset
+  resetBtn.addEventListener('click', () => {
+    send({ type: 'reset', sessionId });
+  });
+
+  // Nudge buttons
+  document.querySelectorAll('[data-nudge]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      send({ type: 'nudge', sessionId, delta: parseInt(btn.dataset.nudge) });
+    });
+  });
+
+  // ── WebSocket ──
+  let ws, reconnectTimer;
+
+  function send(msg) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(msg));
+    }
+  }
+
+  function connect() {
+    try {
+      ws = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control`);
+    } catch(e) { scheduleReconnect(); return; }
+
+    ws.onopen = () => {
+      overlay.classList.add('hidden');
+      connDot.classList.add('live');
+      ws.send(JSON.stringify({ type: 'join', role: 'control', sessionId }));
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'state') {
+          state = { ...state, ...msg.payload };
+          if (msg.payload.speakerName !== undefined && document.activeElement !== speakerInput) {
+            speakerInput.value = msg.payload.speakerName || '';
+          }
+          render();
+        }
+      } catch {}
+    };
+
+    ws.onclose = () => {
+      overlay.classList.remove('hidden');
+      connDot.classList.remove('live');
+      scheduleReconnect();
+    };
+
+    ws.onerror = () => ws.close();
+  }
+
+  function scheduleReconnect() {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connect, 3000);
+  }
+
+  connect();
+  render();
+</script>
+</body>
+</html>

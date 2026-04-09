@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Speaker Timer — View</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --text: #f0ede8;
+    --muted: #555;
+    --accent: #e8ff47;
+    --danger: #ff4444;
+    --warn: #ff9900;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100dvh;
+    gap: 12px;
+    padding: 24px;
+  }
+
+  .speaker-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+    min-height: 1.4em;
+  }
+
+  .time-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(80px, 25vw, 160px);
+    line-height: 1;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    transition: color 0.4s;
+    text-align: center;
+  }
+
+  .time-display.warning { color: var(--warn); }
+  .time-display.danger  { color: var(--danger); animation: flash 1s step-end infinite; }
+  .time-display.overtime { color: var(--danger); }
+
+  @keyframes flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+
+  .status {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .status.running { color: var(--accent); }
+
+  .progress-bar {
+    width: 100%;
+    max-width: 320px;
+    height: 2px;
+    background: #1e1e1e;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.9s linear, background 0.5s;
+  }
+
+  .progress-fill.warning { background: var(--warn); }
+  .progress-fill.danger  { background: var(--danger); }
+
+  .overtime-text {
+    display: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--danger);
+    animation: flash 1s step-end infinite;
+  }
+
+  .overtime-text.visible { display: block; }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,10,0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: opacity 0.3s;
+  }
+
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .overlay-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<div class="speaker-label" id="speakerLabel">—</div>
+<div class="time-display" id="timeDisplay">--:--</div>
+<div class="progress-bar">
+  <div class="progress-fill" id="progressFill" style="width:100%"></div>
+</div>
+<div class="status" id="status">Waiting</div>
+<div class="overtime-text" id="overtimeText">Over time</div>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-text">Connecting…</div>
+</div>
+
+<script>
+  const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://your-app.railway.app';
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get('session') || 'NOSESSION';
+
+  let state = { running: false, timeRemaining: 0, totalTime: 0, speakerName: '', overtime: false };
+
+  const timeDisplay  = document.getElementById('timeDisplay');
+  const progressFill = document.getElementById('progressFill');
+  const speakerLabel = document.getElementById('speakerLabel');
+  const statusEl     = document.getElementById('status');
+  const overtimeText = document.getElementById('overtimeText');
+  const overlay      = document.getElementById('overlay');
+
+  function formatTime(s) {
+    const abs = Math.abs(s);
+    const m = Math.floor(abs / 60);
+    const sec = abs % 60;
+    return `${s < 0 ? '-' : ''}${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  }
+
+  function render() {
+    const { running, timeRemaining, totalTime, speakerName, overtime } = state;
+    const pct = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) : 1;
+    const isWarning = timeRemaining <= 60 && timeRemaining > 0 && !overtime;
+    const isDanger  = timeRemaining <= 30 && timeRemaining > 0 && !overtime;
+
+    timeDisplay.textContent = formatTime(timeRemaining);
+    timeDisplay.className = 'time-display' +
+      (overtime ? ' overtime' : isDanger ? ' danger' : isWarning ? ' warning' : '');
+
+    progressFill.style.width = (pct * 100) + '%';
+    progressFill.className = 'progress-fill' +
+      (overtime ? ' danger' : isDanger ? ' danger' : isWarning ? ' warning' : '');
+
+    speakerLabel.textContent = speakerName || '—';
+    statusEl.textContent = running ? 'Live' : 'Paused';
+    statusEl.className = 'status' + (running ? ' running' : '');
+    overtimeText.className = 'overtime-text' + (overtime ? ' visible' : '');
+  }
+
+  let ws, reconnectTimer;
+
+  function connect() {
+    try { ws = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=view`); }
+    catch(e) { scheduleReconnect(); return; }
+
+    ws.onopen = () => {
+      overlay.classList.add('hidden');
+      ws.send(JSON.stringify({ type: 'join', role: 'view', sessionId }));
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'state') { state = { ...state, ...msg.payload }; render(); }
+      } catch {}
+    };
+
+    ws.onclose = () => { overlay.classList.remove('hidden'); scheduleReconnect(); };
+    ws.onerror = () => ws.close();
+  }
+
+  function scheduleReconnect() {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connect, 3000);
+  }
+
+  connect();
+  render();
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "speaker-timer-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "WebSocket backend for Speaker Timer",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
