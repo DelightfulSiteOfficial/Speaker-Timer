@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speaker Timer — Display</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #1e1e1e;
+    --text: #f0ede8;
+    --muted: #555;
+    --accent: #e8ff47;
+    --danger: #ff4444;
+    --warn: #ff9900;
+    --safe: #e8ff47;
+    --dim: rgba(255,255,255,0.04);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  body {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    grid-template-columns: 1fr auto;
+    gap: 0;
+    height: 100vh;
+    padding: 40px;
+  }
+
+  /* ── Timer core ── */
+  .timer-block {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .label {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .label .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.4s;
+  }
+
+  .label .dot.live {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .time-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(120px, 22vw, 280px);
+    line-height: 0.88;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    transition: color 0.5s ease;
+    tabular-nums: numeric;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .time-display.warning { color: var(--warn); }
+  .time-display.danger  { color: var(--danger); animation: flash 1s step-end infinite; }
+  .time-display.overtime { color: var(--danger); }
+
+  @keyframes flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .progress-bar {
+    width: 100%;
+    max-width: 700px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.9s linear, background 0.5s ease;
+    transform-origin: left;
+  }
+
+  .progress-fill.warning { background: var(--warn); }
+  .progress-fill.danger  { background: var(--danger); }
+
+  .speaker-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: clamp(18px, 2.5vw, 32px);
+    font-weight: 300;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+    min-height: 1.4em;
+    transition: color 0.3s;
+  }
+
+  .speaker-name.has-name { color: rgba(240, 237, 232, 0.6); }
+
+  /* ── Status bar ── */
+  .status-bar {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding-top: 24px;
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    transition: all 0.3s;
+  }
+
+  .status-pill.running {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .status-pill.paused {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+
+  .overtime-badge {
+    display: none;
+    padding: 6px 14px;
+    background: var(--danger);
+    color: #000;
+    border-radius: 100px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    animation: flash 1s step-end infinite;
+  }
+
+  .overtime-badge.visible { display: block; }
+
+  /* ── QR panel ── */
+  .qr-panel {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding-left: 48px;
+  }
+
+  .qr-frame {
+    width: 160px;
+    height: 160px;
+    background: #fff;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    flex-shrink: 0;
+  }
+
+  .qr-frame canvas,
+  .qr-frame img { border-radius: 4px; }
+
+  .qr-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .session-id {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  /* ── Overlay for disconnected state ── */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,10,0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 100;
+    transition: opacity 0.4s;
+  }
+
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .overlay-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .overlay-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  /* scan hint shown at bottom during presentation */
+  .scan-hint {
+    position: fixed;
+    bottom: 28px;
+    right: 40px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="timer-block">
+  <div class="label">
+    <span class="dot" id="liveDot"></span>
+    <span id="labelText">Waiting for session</span>
+  </div>
+
+  <div class="time-display" id="timeDisplay">--:--</div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width:100%"></div>
+  </div>
+
+  <div class="speaker-name" id="speakerName">No speaker set</div>
+</div>
+
+<div class="status-bar">
+  <div class="status-pill" id="statusPill">Stopped</div>
+  <div class="overtime-badge" id="overtimeBadge">Overtime</div>
+</div>
+
+<div class="qr-panel">
+  <div class="qr-frame" id="qrFrame">
+    <div style="width:140px;height:140px;background:#eee;border-radius:4px;"></div>
+  </div>
+  <div class="qr-label">Scan to control<br>or view timer</div>
+  <div class="session-id" id="sessionIdDisplay">—</div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-title">Connecting…</div>
+  <div class="overlay-sub">Reaching server</div>
+</div>
+
+<div class="scan-hint">Scan QR to control</div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────────────────────
+  // In production this will be your Railway URL
+  // For local dev, use ws://localhost:3000
+  const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://your-app.railway.app';
+
+  // Session ID from URL param, or generate one for this display
+  const params = new URLSearchParams(window.location.search);
+  let sessionId = params.get('session');
+  if (!sessionId) {
+    sessionId = Math.random().toString(36).slice(2, 8).toUpperCase();
+    window.history.replaceState({}, '', `?session=${sessionId}`);
+  }
+
+  // ── State ───────────────────────────────────────────────────────────────
+  let state = {
+    running: false,
+    timeRemaining: 0,
+    totalTime: 0,
+    speakerName: '',
+    overtime: false
+  };
+
+  // ── DOM refs ─────────────────────────────────────────────────────────────
+  const timeDisplay   = document.getElementById('timeDisplay');
+  const progressFill  = document.getElementById('progressFill');
+  const speakerName   = document.getElementById('speakerName');
+  const statusPill    = document.getElementById('statusPill');
+  const overtimeBadge = document.getElementById('overtimeBadge');
+  const liveDot       = document.getElementById('liveDot');
+  const labelText     = document.getElementById('labelText');
+  const overlay       = document.getElementById('overlay');
+  const sessionIdDisplay = document.getElementById('sessionIdDisplay');
+
+  // ── QR Code ──────────────────────────────────────────────────────────────
+  function buildQR() {
+    const controlUrl = `${window.location.origin}/control/?session=${sessionId}`;
+    document.getElementById('qrFrame').innerHTML = '';
+    new QRCode(document.getElementById('qrFrame'), {
+      text: controlUrl,
+      width: 140,
+      height: 140,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+    sessionIdDisplay.textContent = sessionId;
+  }
+  buildQR();
+
+  // ── Format time ───────────────────────────────────────────────────────────
+  function formatTime(seconds) {
+    const abs = Math.abs(seconds);
+    const m = Math.floor(abs / 60);
+    const s = abs % 60;
+    const sign = seconds < 0 ? '-' : '';
+    return `${sign}${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  // ── Render state ──────────────────────────────────────────────────────────
+  function render() {
+    const { running, timeRemaining, totalTime, speakerName: name, overtime } = state;
+    const pct = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) : 1;
+    const isWarning = timeRemaining <= 60 && timeRemaining > 0 && !overtime;
+    const isDanger  = timeRemaining <= 30 && timeRemaining > 0 && !overtime;
+
+    timeDisplay.textContent = formatTime(timeRemaining);
+    timeDisplay.className = 'time-display' +
+      (overtime ? ' overtime' : isDanger ? ' danger' : isWarning ? ' warning' : '');
+
+    progressFill.style.width = (pct * 100) + '%';
+    progressFill.className = 'progress-fill' +
+      (overtime ? ' danger' : isDanger ? ' danger' : isWarning ? ' warning' : '');
+
+    speakerName.textContent = name || 'No speaker set';
+    speakerName.className = 'speaker-name' + (name ? ' has-name' : '');
+
+    statusPill.textContent = running ? 'Running' : 'Paused';
+    statusPill.className = 'status-pill' + (running ? ' running' : ' paused');
+
+    overtimeBadge.className = 'overtime-badge' + (overtime ? ' visible' : '');
+    liveDot.className = 'dot' + (running ? ' live' : '');
+    labelText.textContent = running ? 'Live' : 'Standby';
+  }
+
+  // ── WebSocket ──────────────────────────────────────────────────────────────
+  let ws, reconnectTimer;
+
+  function connect() {
+    try {
+      ws = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=display`);
+    } catch(e) {
+      scheduleReconnect();
+      return;
+    }
+
+    ws.onopen = () => {
+      overlay.classList.add('hidden');
+      ws.send(JSON.stringify({ type: 'join', role: 'display', sessionId }));
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'state') {
+          state = { ...state, ...msg.payload };
+          render();
+        }
+      } catch {}
+    };
+
+    ws.onclose = () => {
+      overlay.classList.remove('hidden');
+      scheduleReconnect();
+    };
+
+    ws.onerror = () => ws.close();
+  }
+
+  function scheduleReconnect() {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connect, 3000);
+  }
+
+  connect();
+
+  // ── Local tick (keeps display smooth even if server tick is slow) ─────────
+  setInterval(() => {
+    if (state.running && state.timeRemaining !== undefined) {
+      // Server is source of truth, this just smooths the display
+      // Real time comes from server state pushes
+    }
+    render();
+  }, 500);
+</script>
+</body>
+</html>

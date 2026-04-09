@@ -1,0 +1,15 @@
+{
+  "name": "speaker-timer",
+  "version": "1.0.0",
+  "description": "Real-time speaker timer — WebSocket backend + static frontend",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && npm install && npm run dev",
+    "dev:frontend": "npx serve frontend --listen 8080",
+    "dev": "npm run dev:backend & npm run dev:frontend",
+    "install:backend": "cd backend && npm install"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
