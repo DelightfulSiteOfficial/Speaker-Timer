@@ -1307,6 +1307,7 @@
     const text = messageInput.value.trim();
     if (!text) return;
     send({ type: 'set_message', sessionId, text });
+    messageInput.value = '';
     messageInput.blur();
     sendMsgBtn.textContent = '✓ Sent';
     setTimeout(() => { sendMsgBtn.textContent = 'Send'; }, 1500);
