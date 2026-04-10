@@ -22,21 +22,21 @@
     --warn: #ff9900;
   }
 
-  html, body {
-    height: 100%;
+  html {
     background: var(--bg);
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
-    overflow: hidden;
     -webkit-tap-highlight-color: transparent;
   }
 
   body {
+    min-height: 100dvh;
+    padding: env(safe-area-inset-top, 16px) 16px 0;
+    /* bottom padding added dynamically once sticky height is known */
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
     display: flex;
     flex-direction: column;
-    height: 100dvh;
-    padding: env(safe-area-inset-top, 20px) 20px env(safe-area-inset-bottom, 20px);
-    gap: 16px;
+    gap: 14px;
   }
 
   /* ── Header ── */
@@ -44,7 +44,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 0;
+    padding: 6px 0 2px;
     flex-shrink: 0;
   }
 
@@ -56,24 +56,17 @@
     text-transform: uppercase;
   }
 
-  .conn-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--muted);
-    transition: background 0.3s;
-  }
-
-  .conn-dot.live {
-    background: var(--accent);
-    box-shadow: 0 0 8px var(--accent);
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
   .btn-rooms {
     background: none;
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 5px 10px;
+    padding: 6px 12px;
     color: var(--muted);
     font-family: 'DM Mono', monospace;
     font-size: 10px;
@@ -81,29 +74,49 @@
     text-transform: uppercase;
     cursor: pointer;
     transition: all 0.15s;
-    -webkit-tap-highlight-color: transparent;
+    min-height: 32px;
   }
 
   .btn-rooms:active { background: var(--border); color: var(--text); }
 
-  /* ── Time preview ── */
+  .conn-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+    flex-shrink: 0;
+  }
+
+  .conn-dot.live {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* ── Time display ── */
   .time-preview {
     text-align: center;
+    padding: 4px 0;
     flex-shrink: 0;
   }
 
   .time-big {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(72px, 20vw, 120px);
-    line-height: 1;
+    font-size: clamp(80px, 22vw, 130px);
+    line-height: 0.95;
     letter-spacing: -0.01em;
     transition: color 0.4s;
     font-variant-numeric: tabular-nums;
   }
 
   .time-big.warning { color: var(--warn); }
-  .time-big.danger  { color: var(--danger); }
+  .time-big.danger  { color: var(--danger); animation: flash 1s step-end infinite; }
   .time-big.overtime { color: var(--danger); }
+
+  @keyframes flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
 
   .time-status {
     font-family: 'DM Mono', monospace;
@@ -111,44 +124,42 @@
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
-    margin-top: 4px;
+    margin-top: 6px;
   }
 
-  /* ── Speaker name input ── */
-  .speaker-row {
-    flex-shrink: 0;
-  }
-
+  /* ── Section label ── */
   .field-label {
     font-family: 'DM Mono', monospace;
     font-size: 10px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
+
+  /* ── Speaker name ── */
+  .speaker-row { flex-shrink: 0; }
 
   .speaker-input {
     width: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 16px;
+    border-radius: 12px;
+    padding: 14px 16px;
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
     font-size: 16px;
     font-weight: 300;
     outline: none;
     transition: border-color 0.2s;
+    min-height: 52px;
   }
 
   .speaker-input::placeholder { color: var(--muted); }
   .speaker-input:focus { border-color: var(--accent); }
 
   /* ── Duration picker ── */
-  .duration-row {
-    flex-shrink: 0;
-  }
+  .duration-row { flex-shrink: 0; }
 
   .duration-grid {
     display: grid;
@@ -160,19 +171,21 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 10px 6px;
+    padding: 0;
+    height: 48px;
     color: var(--muted);
     font-family: 'DM Mono', monospace;
     font-size: 13px;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     cursor: pointer;
     transition: all 0.15s;
     text-align: center;
-    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .dur-btn:active { transform: scale(0.95); }
-
   .dur-btn.active {
     background: var(--accent);
     border-color: var(--accent);
@@ -180,7 +193,6 @@
     font-weight: 500;
   }
 
-  /* Custom duration */
   .custom-row {
     display: flex;
     gap: 8px;
@@ -192,10 +204,11 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 10px 14px;
+    padding: 0 14px;
+    height: 48px;
     color: var(--text);
     font-family: 'DM Mono', monospace;
-    font-size: 14px;
+    font-size: 15px;
     outline: none;
     transition: border-color 0.2s;
   }
@@ -207,7 +220,8 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 10px 16px;
+    padding: 0 18px;
+    height: 48px;
     color: var(--text);
     font-family: 'DM Mono', monospace;
     font-size: 12px;
@@ -219,98 +233,43 @@
 
   .custom-set:active { transform: scale(0.95); background: var(--border); }
 
-  /* ── Time nudge ── */
+  /* ── Nudge ── */
   .nudge-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-
-  .nudge-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--muted);
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
     flex-shrink: 0;
   }
 
   .nudge-btn {
-    flex: 1;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 10px;
+    height: 48px;
     color: var(--text);
     font-family: 'DM Mono', monospace;
-    font-size: 12px;
+    font-size: 11px;
     cursor: pointer;
     text-align: center;
     transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 2px;
   }
 
   .nudge-btn:active { transform: scale(0.95); background: var(--border); }
-  .nudge-btn.add { color: var(--accent); }
-  .nudge-btn.sub { color: var(--warn); }
+  .nudge-btn.add { color: var(--accent); border-color: rgba(232,255,71,0.15); }
+  .nudge-btn.sub { color: var(--warn);   border-color: rgba(255,153,0,0.15); }
 
-  /* ── Main controls ── */
-  .controls {
-    display: flex;
-    gap: 12px;
-    flex-shrink: 0;
-  }
-
-  .btn-main {
-    flex: 2;
-    padding: 20px;
-    border-radius: 14px;
-    border: none;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 28px;
-    letter-spacing: 0.06em;
-    cursor: pointer;
-    transition: all 0.15s;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .btn-main:active { transform: scale(0.97); }
-
-  .btn-start {
-    background: var(--accent);
-    color: #000;
-  }
-
-  .btn-pause {
-    background: var(--warn);
-    color: #000;
-  }
-
-  .btn-reset {
-    flex: 1;
-    padding: 20px;
-    border-radius: 14px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .btn-reset:active { transform: scale(0.97); background: var(--border); }
-
-  /* ── Overtime indicator ── */
+  /* ── Overtime banner ── */
   .overtime-banner {
     display: none;
     background: var(--danger);
     color: #fff;
     text-align: center;
-    padding: 10px;
-    border-radius: 10px;
+    padding: 12px;
+    border-radius: 12px;
     font-family: 'DM Mono', monospace;
     font-size: 12px;
     letter-spacing: 0.15em;
@@ -332,19 +291,20 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 32px 24px;
+    gap: 12px;
+    padding: 36px 24px;
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 16px;
     text-align: center;
     flex: 1;
+    min-height: 200px;
   }
 
   .lock-banner.visible { display: flex; }
 
   .lock-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 36px;
+    font-size: 40px;
     color: var(--muted);
     letter-spacing: 0.05em;
   }
@@ -353,35 +313,34 @@
     font-family: 'DM Mono', monospace;
     font-size: 11px;
     color: var(--muted);
-    letter-spacing: 0.15em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    line-height: 1.6;
+    line-height: 1.7;
   }
 
   .waiting-name-input {
     width: 100%;
-    background: var(--surface);
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 10px 14px;
+    padding: 12px 14px;
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 300;
     outline: none;
     transition: border-color 0.2s;
     text-align: center;
-    margin-top: 4px;
   }
 
   .waiting-name-input::placeholder { color: var(--muted); font-size: 13px; }
   .waiting-name-input:focus { border-color: var(--accent); }
 
-  /* ── Waiting list (shown to controller) ── */
+  /* ── Waiting list ── */
   .waiting-section {
     display: none;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     flex-shrink: 0;
   }
 
@@ -401,14 +360,15 @@
     justify-content: space-between;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 14px;
+    border-radius: 12px;
+    padding: 12px 16px;
     gap: 12px;
+    min-height: 52px;
   }
 
   .waiting-item-name {
     font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
+    font-size: 15px;
     color: var(--text);
     flex: 1;
     overflow: hidden;
@@ -422,7 +382,7 @@
     background: transparent;
     border: 1px solid var(--accent);
     border-radius: 8px;
-    padding: 5px 12px;
+    padding: 7px 16px;
     color: var(--accent);
     font-family: 'DM Mono', monospace;
     font-size: 11px;
@@ -431,34 +391,89 @@
     cursor: pointer;
     flex-shrink: 0;
     transition: all 0.15s;
+    min-height: 36px;
   }
 
   .btn-pass:active { background: rgba(232,255,71,0.1); transform: scale(0.95); }
 
+  /* ── Take control button ── */
   .btn-take-control {
     display: none;
     width: 100%;
-    padding: 20px;
-    border-radius: 14px;
+    padding: 22px;
+    border-radius: 16px;
     border: 2px solid var(--accent);
     background: transparent;
     color: var(--accent);
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 28px;
+    font-size: 30px;
     letter-spacing: 0.06em;
     cursor: pointer;
     transition: all 0.15s;
     flex-shrink: 0;
-    -webkit-tap-highlight-color: transparent;
   }
 
   .btn-take-control.visible { display: block; }
   .btn-take-control:active { background: rgba(232,255,71,0.08); transform: scale(0.97); }
 
+  /* ── Sticky controls ── */
+  .controls-sticky {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px);
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 20;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-main {
+    flex: 2;
+    padding: 0;
+    height: 60px;
+    border-radius: 14px;
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 30px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-main:active { transform: scale(0.97); }
+  .btn-start { background: var(--accent); color: #000; }
+  .btn-pause { background: var(--warn);   color: #000; }
+
+  .btn-reset {
+    flex: 1;
+    height: 60px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-reset:active { transform: scale(0.97); background: var(--border); }
+
   .btn-release {
     display: none;
     width: 100%;
-    padding: 8px;
+    padding: 6px;
     background: none;
     border: none;
     color: var(--muted);
@@ -468,7 +483,6 @@
     text-transform: uppercase;
     cursor: pointer;
     text-align: center;
-    flex-shrink: 0;
   }
 
   .btn-release.visible { display: block; }
@@ -503,7 +517,7 @@
 
 <div class="header">
   <div class="session-tag" id="sessionTag">Session —</div>
-  <div style="display:flex;align-items:center;gap:10px;">
+  <div class="header-right">
     <button class="btn-rooms" id="roomsBtn">All Rooms</button>
     <div class="conn-dot" id="connDot"></div>
   </div>
@@ -538,7 +552,6 @@
 </div>
 
 <div class="nudge-row">
-  <div class="nudge-label">Adjust</div>
   <button class="nudge-btn sub" data-nudge="-300">−5m</button>
   <button class="nudge-btn sub" data-nudge="-60">−1m</button>
   <button class="nudge-btn sub" data-nudge="-30">−30s</button>
@@ -562,12 +575,13 @@
 
 <button class="btn-take-control" id="takeControlBtn">Take Control</button>
 
-<div class="controls">
-  <button class="btn-main btn-start" id="mainBtn">Start</button>
-  <button class="btn-reset" id="resetBtn">Reset</button>
+<div class="controls-sticky">
+  <div class="controls">
+    <button class="btn-main btn-start" id="mainBtn">Start</button>
+    <button class="btn-reset" id="resetBtn">Reset</button>
+  </div>
+  <button class="btn-release" id="releaseBtn">Release Control</button>
 </div>
-
-<button class="btn-release" id="releaseBtn">Release Control</button>
 
 <div class="overlay" id="overlay">
   <div class="overlay-text">Connecting…</div>
@@ -639,7 +653,7 @@
 
     overtimeBanner.className = 'overtime-banner' + (overtime && hasControl ? ' visible' : '');
 
-    // Lock state UI
+    // Lock state
     document.querySelector('.speaker-row').style.display  = hasControl ? '' : 'none';
     document.querySelector('.duration-row').style.display = hasControl ? '' : 'none';
     document.querySelector('.nudge-row').style.display    = hasControl ? '' : 'none';
@@ -695,11 +709,7 @@
 
   // Main control button
   mainBtn.addEventListener('click', () => {
-    if (state.running) {
-      send({ type: 'pause', sessionId });
-    } else {
-      send({ type: 'start', sessionId });
-    }
+    send({ type: state.running ? 'pause' : 'start', sessionId });
   });
 
   // Reset
@@ -714,14 +724,12 @@
     });
   });
 
-  // Waiting name input (debounced)
+  // Waiting name (debounced)
   let waitingNameTimer;
   waitingNameInput.addEventListener('input', () => {
     clearTimeout(waitingNameTimer);
     waitingNameTimer = setTimeout(() => {
-      if (waitingId) {
-        send({ type: 'set_waiting_name', waitingId, name: waitingNameInput.value.trim() });
-      }
+      if (waitingId) send({ type: 'set_waiting_name', waitingId, name: waitingNameInput.value.trim() });
     }, 500);
   });
 
@@ -737,13 +745,11 @@
     send({ type: 'release_control', sessionId });
   });
 
-  // ── WebSocket ──
+  // ── WebSocket ──────────────────────────────────────────────────────────────
   let ws, reconnectTimer;
 
   function send(msg) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(msg));
-    }
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
   }
 
   function connect() {
@@ -754,7 +760,6 @@
     ws.onopen = () => {
       overlay.classList.add('hidden');
       connDot.classList.add('live');
-      ws.send(JSON.stringify({ type: 'join', role: 'control', sessionId }));
     };
 
     ws.onmessage = (e) => {
