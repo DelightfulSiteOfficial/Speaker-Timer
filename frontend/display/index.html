@@ -137,6 +137,19 @@
 
   .speaker-name.has-name { color: rgba(240, 237, 232, 0.6); }
 
+  .run-counter {
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(11px, 1.2vw, 15px);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 2px;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .run-counter.visible { opacity: 1; }
+
   /* ── Status bar ── */
   .status-bar {
     grid-column: 1;
@@ -480,7 +493,8 @@
     <div class="progress-fill" id="progressFill" style="width:100%"></div>
   </div>
 
-  <div class="speaker-name" id="speakerName">No speaker set</div>
+  <div class="speaker-name" id="speakerName"></div>
+  <div class="run-counter" id="runCounter"></div>
 </div>
 
 <div class="status-bar">
@@ -537,14 +551,16 @@
     running: false,
     timeRemaining: 0,
     totalTime: 0,
-    speakerName: '',
-    overtime: false
+    roomName: '',
+    overtime: false,
+    runCount: 0,
   };
 
   // ── DOM refs ─────────────────────────────────────────────────────────────
   const timeDisplay   = document.getElementById('timeDisplay');
   const progressFill  = document.getElementById('progressFill');
   const speakerName   = document.getElementById('speakerName');
+  const runCounter    = document.getElementById('runCounter');
   const statusPill    = document.getElementById('statusPill');
   const overtimeBadge = document.getElementById('overtimeBadge');
   const liveDot       = document.getElementById('liveDot');
@@ -580,7 +596,7 @@
 
   // ── Render state ──────────────────────────────────────────────────────────
   function render() {
-    const { running, timeRemaining, totalTime, speakerName: name, overtime } = state;
+    const { running, timeRemaining, totalTime, roomName, overtime, runCount } = state;
     const pct = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) : 1;
     const isWarning = timeRemaining <= 60 && timeRemaining > 0 && !overtime;
     const isDanger  = timeRemaining <= 30 && timeRemaining > 0 && !overtime;
@@ -593,8 +609,13 @@
     progressFill.className = 'progress-fill' +
       (overtime ? ' danger' : isDanger ? ' danger' : isWarning ? ' warning' : '');
 
-    speakerName.textContent = name || 'No speaker set';
-    speakerName.className = 'speaker-name' + (name ? ' has-name' : '');
+    speakerName.textContent = roomName || '';
+    speakerName.className = 'speaker-name' + (roomName ? ' has-name' : '');
+
+    // Run counter — show "Timer 1", "Timer 2" etc once at least one has run
+    const currentTimer = runCount + 1;
+    runCounter.textContent = `Timer ${currentTimer}`;
+    runCounter.className = 'run-counter' + (runCount > 0 || running ? ' visible' : '');
 
     statusPill.textContent = running ? 'Running' : 'Paused';
     statusPill.className = 'status-pill' + (running ? ' running' : ' paused');

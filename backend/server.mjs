@@ -17,16 +17,18 @@ function createSession(id) {
       running: false,
       timeRemaining: 600, // default 10 min
       totalTime: 600,
-      speakerName: '',
+      roomName: '',
       overtime: false,
       controllerConnected: false,
       waitingList: [], // [{ id, name }] — visible to all clients
       message: '',     // operator message shown on display when QR is hidden
+      runCount: 0,     // increments each time reset is called after a timer was started
     },
     clients: new Set(),
     tickInterval: null,
     controller: null,             // WebSocket of the current controller
     waitingControllers: new Map(), // waitingId → { ws, name }
+    everStarted: false,           // internal flag — tracks if current timer was ever started
   };
 }
 
@@ -195,6 +197,7 @@ wss.on('connection', (ws, req) => {
       case 'start':
         if (!s.running) {
           s.running = true;
+          session.everStarted = true;
           startTick(session, sessionId);
           broadcast(session);
         }
@@ -208,6 +211,8 @@ wss.on('connection', (ws, req) => {
         break;
 
       case 'reset':
+        if (session.everStarted) s.runCount++;
+        session.everStarted = false;
         s.running = false;
         s.timeRemaining = s.totalTime;
         s.overtime = false;
@@ -227,8 +232,8 @@ wss.on('connection', (ws, req) => {
         break;
       }
 
-      case 'set_speaker':
-        s.speakerName = (msg.name || '').slice(0, 60);
+      case 'set_room':
+        s.roomName = (msg.name || '').slice(0, 60);
         broadcast(session);
         break;
 
