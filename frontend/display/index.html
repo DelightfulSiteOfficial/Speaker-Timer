@@ -250,19 +250,59 @@
     text-align: center;
   }
 
-  /* ── Toolbar — top-right ── */
-  .toolbar {
+  /* ── Top bar — holds mode tabs (left) and utility buttons (right) ── */
+  .top-bar {
     position: fixed;
-    top: 24px;
-    right: 24px;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    z-index: 50;
+    pointer-events: none;
+  }
+
+  /* ── Mode tabs ── */
+  .mode-tabs {
+    display: flex;
+    background: rgba(14,14,14,0.9);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    gap: 2px;
+    pointer-events: auto;
+    backdrop-filter: blur(12px);
+  }
+
+  .mode-tab {
+    background: none;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 22px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .mode-tab:hover { color: var(--text); }
+  .mode-tab.tab-active-presenter { background: #22c55e; color: #000; font-weight: 500; }
+  .mode-tab.tab-active-admin     { background: var(--surface); color: var(--text); border: 1px solid #333; }
+
+  /* ── Utility buttons (top-right) ── */
+  .toolbar {
     display: flex;
     align-items: center;
     gap: 8px;
-    z-index: 50;
+    pointer-events: auto;
   }
 
   .toolbar-btn {
-    background: none;
+    background: rgba(14,14,14,0.9);
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 6px 12px;
@@ -274,6 +314,7 @@
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
+    backdrop-filter: blur(12px);
   }
 
   .toolbar-btn:hover { border-color: var(--muted); color: var(--text); }
@@ -472,17 +513,11 @@
   .presenter-btn:hover  { opacity: 0.85; }
   .presenter-btn:active { transform: scale(0.96); }
 
-  /* presenter mode indicator in toolbar */
-  .toolbar-btn.presenter-active {
-    border-color: #22c55e;
-    color: #22c55e;
-  }
-
   /* ── Compact / small window ── */
   @media (max-width: 520px), (max-height: 400px) {
     body { padding: 20px; }
     .time-display { font-size: clamp(72px, 30vw, 160px); }
-    .qr-panel, .toolbar { display: none !important; }
+    .qr-panel, .top-bar { display: none !important; }
     .label { font-size: 11px; }
   }
 </style>
@@ -520,12 +555,17 @@
   <div class="session-id" id="sessionIdDisplay">—</div>
 </div>
 
-<!-- Toolbar -->
-<div class="toolbar">
-  <button class="toolbar-btn" id="pipBtn">Pop Out</button>
-  <button class="toolbar-btn" id="presenterToggle">Presenter Mode</button>
-  <button class="toolbar-btn" id="infoToggle">Hide Info</button>
-  <button class="toolbar-btn" id="qrToggle">Hide QR</button>
+<!-- Top bar: mode tabs + utility buttons -->
+<div class="top-bar">
+  <div class="mode-tabs">
+    <button class="mode-tab" id="tabPresenter">Presenter Mode</button>
+    <button class="mode-tab tab-active-admin" id="tabAdmin">Admin Mode</button>
+  </div>
+  <div class="toolbar">
+    <button class="toolbar-btn" id="pipBtn">Pop Out</button>
+    <button class="toolbar-btn" id="infoToggle">Hide Info</button>
+    <button class="toolbar-btn" id="qrToggle">Hide QR</button>
+  </div>
 </div>
 
 <!-- Presenter controls panel -->
@@ -751,12 +791,12 @@
     infoToggle.classList.toggle('active', !infoVisible);
   });
 
-  // ── Presenter mode ────────────────────────────────────────────────────────
-  // Opens a second WS as role=control so the display page can drive the timer.
-  const presenterToggle = document.getElementById('presenterToggle');
-  const presenterPanel  = document.getElementById('presenterPanel');
-  const presenterStart  = document.getElementById('presenterStart');
-  const presenterReset  = document.getElementById('presenterReset');
+  // ── Mode switching (Presenter / Admin) ───────────────────────────────────
+  const tabPresenter  = document.getElementById('tabPresenter');
+  const tabAdmin      = document.getElementById('tabAdmin');
+  const presenterPanel = document.getElementById('presenterPanel');
+  const presenterStart = document.getElementById('presenterStart');
+  const presenterReset = document.getElementById('presenterReset');
 
   let presenterMode = false;
   let ctrlWs        = null;
@@ -779,15 +819,28 @@
     if (ctrlWs) { ctrlWs.onclose = null; ctrlWs.close(); ctrlWs = null; }
   }
 
-  function togglePresenterMode() {
-    presenterMode = !presenterMode;
+  function setMode(mode) {
+    presenterMode = (mode === 'presenter');
+
+    // Tab styles
+    tabPresenter.className = 'mode-tab' + (presenterMode ? ' tab-active-presenter' : '');
+    tabAdmin.className     = 'mode-tab' + (!presenterMode ? ' tab-active-admin' : '');
+
+    // Show/hide presenter panel
     presenterPanel.classList.toggle('visible', presenterMode);
-    presenterToggle.classList.toggle('presenter-active', presenterMode);
-    presenterToggle.textContent = presenterMode ? 'Exit Presenter' : 'Presenter Mode';
+
+    // Show/hide QR (admin shows it, presenter hides it)
+    qrVisible = !presenterMode;
+    qrPanel.classList.toggle('hidden', !qrVisible);
+    qrToggle.textContent = qrVisible ? 'Hide QR' : 'Show QR';
+    qrToggle.classList.toggle('active', !qrVisible);
+
+    // Control WS
     if (presenterMode) openCtrlWs(); else closeCtrlWs();
   }
 
-  presenterToggle.addEventListener('click', togglePresenterMode);
+  tabPresenter.addEventListener('click', () => setMode('presenter'));
+  tabAdmin.addEventListener('click',     () => setMode('admin'));
 
   // Duration presets
   document.querySelectorAll('.presenter-preset').forEach(btn => {
@@ -981,7 +1034,7 @@
       pipWindow.document.getElementById('pip-timer').addEventListener('click', () => {
         if (!presenterMode) {
           // Auto-activate presenter mode on first tap
-          togglePresenterMode();
+          setMode('presenter');
         }
         if (state.running) {
           sendCtrl({ type: 'pause' });
