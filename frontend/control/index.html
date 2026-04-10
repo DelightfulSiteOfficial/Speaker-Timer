@@ -716,6 +716,15 @@
   .lock-screen.cohost-mode .btn-request-control,
   .lock-screen.cohost-mode .request-feedback,
   .lock-screen.cohost-mode .btn-cancel-request { display: none !important; }
+
+  /* ── Background warning pulses ── */
+  @keyframes bgPulseWarn        { 0%,100%{background-color:#0a0a0a} 50%{background-color:#221d08} }
+  @keyframes bgPulseDangerSlow  { 0%,100%{background-color:#0a0a0a} 50%{background-color:#280606} }
+  @keyframes bgPulseDangerFast  { 0%,100%{background-color:#0a0a0a} 50%{background-color:#360808} }
+  body.pulse-warn        { animation: bgPulseWarn       5.5s ease-in-out infinite; }
+  body.pulse-danger-slow { animation: bgPulseDangerSlow 2.8s ease-in-out infinite; }
+  body.pulse-danger-fast { animation: bgPulseDangerFast 1.6s ease-in-out infinite; }
+  body.bg-overtime       { background-color: #200404 !important; animation: none; }
 </style>
 </head>
 <body>
@@ -1036,6 +1045,15 @@
         send({ type: 'pass_control_to', sessionId, targetId: btn.dataset.id })
       );
     });
+
+    // Background pulse states
+    const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
+    const isWarn1  = timeRemaining <= 60  && timeRemaining > 30 && !overtime;
+    const isWarn30 = timeRemaining <= 30  && timeRemaining > 0  && !overtime;
+    document.body.classList.toggle('pulse-warn',        isWarn5);
+    document.body.classList.toggle('pulse-danger-slow', isWarn1);
+    document.body.classList.toggle('pulse-danger-fast', isWarn30);
+    document.body.classList.toggle('bg-overtime',       !!overtime);
   }
 
   // ── Request permission flow ───────────────────────────────────────────────
