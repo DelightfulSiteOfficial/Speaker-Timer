@@ -951,6 +951,8 @@
     const nextIdx = agenda.findIndex(i => i.status === 'pending');
     if (nextIdx === -1) return;
     loadItem(nextIdx);
+    // Small delay so reset + set_duration are processed before start
+    setTimeout(() => send({ type: 'start', sessionId }), 100);
   }
 
   // ── Add form ──────────────────────────────────────────────────────────────
