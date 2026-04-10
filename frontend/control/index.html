@@ -324,6 +324,12 @@
     overflow: visible;
   }
 
+  .dial-area.locked .dial-wrapper,
+  .dial-area.locked .dial-presets {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
   .dial-center-overlay {
     position: absolute;
     top: 50%; left: 50%;
@@ -970,6 +976,7 @@
     overtimeBanner.className = 'overtime-banner' + (overtime && hasControl ? ' visible' : '');
 
     controlPanel.classList.toggle('visible', hasControl);
+    dialArea.classList.toggle('locked', running);
     lockScreen.classList.toggle('visible', !hasControl);
     takeControlBtn.classList.toggle('visible', !hasControl && controlAvailable);
 
@@ -1049,6 +1056,7 @@
   const DIAL_SWEEP = 300;
   const DIAL_R     = 96;
 
+  const dialArea          = document.querySelector('.dial-area');
   const durationDial      = document.getElementById('durationDial');
   const dialArcEl         = document.getElementById('dialArc');
   const dialThumb         = document.getElementById('dialThumb');
@@ -1108,7 +1116,7 @@
   }
 
   durationDial.addEventListener('pointerdown', e => {
-    if (!hasControl) return;
+    if (!hasControl || state.running) return;
     dialDragging = true;
     durationDial.setPointerCapture(e.pointerId);
     const [cx, cy] = clientToDialCoords(e);
@@ -1135,7 +1143,7 @@
   });
 
   dialCenterOverlay.addEventListener('click', () => {
-    if (!hasControl) return;
+    if (!hasControl || state.running) return;
     dialDirectInput.value = dialMins;
     dialDirectInput.style.display = 'block';
     dialDirectInput.focus();
@@ -1145,7 +1153,7 @@
   dialDirectInput.addEventListener('blur', () => {
     const val = parseInt(dialDirectInput.value);
     dialDirectInput.style.display = 'none';
-    if (val >= 1 && val <= 300) updateDial(val, true);
+    if (!state.running && val >= 1 && val <= 300) updateDial(val, true);
   });
 
   dialDirectInput.addEventListener('keydown', e => {
@@ -1155,7 +1163,7 @@
 
   document.querySelectorAll('.dial-preset').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (!hasControl) return;
+      if (!hasControl || state.running) return;
       updateDial(parseInt(btn.dataset.mins), true);
     });
   });
