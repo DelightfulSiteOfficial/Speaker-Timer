@@ -253,27 +253,22 @@
   .card-progress-fill.danger  { background: var(--danger); }
 
   .card-remove {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: none;
-    border: none;
+    background: var(--bg);
+    border: 1px solid var(--border);
     color: var(--muted);
-    font-size: 18px;
+    font-size: 16px;
     cursor: pointer;
     border-radius: 50%;
-    opacity: 0;
-    transition: opacity 0.2s;
-    z-index: 2;
+    flex-shrink: 0;
+    transition: all 0.15s;
   }
 
-  .room-card:hover .card-remove,
-  .room-card.show-remove .card-remove { opacity: 1; }
+  .card-remove:active { background: var(--border); color: var(--danger); }
 
   /* ── Add room FAB ── */
   .fab {
@@ -609,6 +604,7 @@
             <span class="pill-dot ${running && !offline ? 'live' : ''}"></span>
             ${pillLabel}
           </div>
+          <button class="card-remove" data-id="${sessionId}" title="Remove room">×</button>
         </div>
       </div>
       <div class="card-body">
