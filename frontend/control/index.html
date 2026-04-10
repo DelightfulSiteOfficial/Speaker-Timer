@@ -69,6 +69,23 @@
     box-shadow: 0 0 8px var(--accent);
   }
 
+  .btn-rooms {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 10px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-rooms:active { background: var(--border); color: var(--text); }
+
   /* ── Time preview ── */
   .time-preview {
     text-align: center;
@@ -486,7 +503,10 @@
 
 <div class="header">
   <div class="session-tag" id="sessionTag">Session —</div>
-  <div class="conn-dot" id="connDot"></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button class="btn-rooms" id="roomsBtn">All Rooms</button>
+    <div class="conn-dot" id="connDot"></div>
+  </div>
 </div>
 
 <div class="time-preview">
@@ -582,6 +602,18 @@
   const waitingNameInput  = document.getElementById('waitingNameInput');
 
   sessionTag.textContent = `Session ${sessionId}`;
+
+  // All Rooms button — save this room and go to hub
+  document.getElementById('roomsBtn').addEventListener('click', () => {
+    try {
+      const rooms = JSON.parse(localStorage.getItem('speakerTimerRooms')) || [];
+      if (!rooms.includes(sessionId)) {
+        rooms.push(sessionId);
+        localStorage.setItem('speakerTimerRooms', JSON.stringify(rooms));
+      }
+    } catch {}
+    window.location.href = '/';
+  });
 
   function formatTime(s) {
     const abs = Math.abs(s);
