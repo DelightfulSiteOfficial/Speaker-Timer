@@ -216,6 +216,140 @@
 
   .card-open-btn:hover { border-color: var(--muted); color: var(--text); }
 
+  /* ── Release control button ── */
+  .card-release-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--warn);
+    background: none;
+    border: 1px solid rgba(255,153,0,0.3);
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .card-release-btn:hover { background: rgba(255,153,0,0.08); border-color: var(--warn); }
+
+  /* ── Release modal ── */
+  .release-modal {
+    position: fixed; inset: 0;
+    background: rgba(10,10,10,0.88);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .release-modal.visible { opacity: 1; pointer-events: auto; }
+
+  .release-modal-box {
+    background: #141414;
+    border: 1px solid #222;
+    border-radius: 20px;
+    padding: 24px 20px 20px;
+    width: calc(100% - 40px);
+    max-width: 400px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+
+  .release-modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+
+  .release-modal-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: -8px;
+  }
+
+  .release-waiting-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .release-waiting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid #222;
+    border-radius: 12px;
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .release-waiting-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .release-waiting-name.unnamed { color: var(--muted); font-style: italic; }
+
+  .btn-pass-to {
+    background: transparent;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-pass-to:hover { background: rgba(232,255,71,0.08); }
+
+  .release-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid #1e1e1e;
+  }
+
+  .btn-just-release {
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,153,0,0.4);
+    background: transparent;
+    color: var(--warn);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-just-release:hover { background: rgba(255,153,0,0.08); border-color: var(--warn); }
+
+  .btn-release-cancel {
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid #222;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-release-cancel:hover { background: #1e1e1e; color: var(--text); }
+
   /* ── Controller info ── */
   .controller-row {
     display: flex;
@@ -267,6 +401,19 @@
   <div class="empty-state">No active sessions</div>
 </div>
 
+<!-- ── Release control modal ── -->
+<div class="release-modal" id="releaseModal">
+  <div class="release-modal-box">
+    <div class="release-modal-title" id="releaseModalTitle">Release Control</div>
+    <div class="release-modal-sub" id="releaseModalSub">No one waiting</div>
+    <div class="release-waiting-list" id="releaseWaitingList"></div>
+    <div class="release-modal-actions">
+      <button class="btn-just-release" id="btnJustRelease">Release</button>
+      <button class="btn-release-cancel" id="btnReleaseCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
   const HTTP_URL = SERVER_URL.replace(/^wss?:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
@@ -301,7 +448,6 @@
       const pct = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) * 100 : 100;
       const tc = timeClass(timeRemaining, overtime);
       const displayUrl = `${window.location.origin}/display/?session=${id}`;
-      const waitingNames = waitingList.filter(w => w.name);
 
       return `
         <div class="session-card ${running ? 'running' : ''}">
@@ -324,6 +470,7 @@
           <div class="controller-row">
             <span class="controller-dot ${controllerConnected ? 'connected' : ''}"></span>
             ${controllerConnected ? 'Controller connected' : 'No controller'}
+            ${controllerConnected ? `<button class="card-release-btn" data-session="${id}" data-waiting='${JSON.stringify(waitingList)}'>Release Control</button>` : ''}
           </div>
 
           ${waitingList.length > 0 ? `
@@ -352,6 +499,87 @@
       pollStatus.textContent = 'Error reaching server';
     }
   }
+
+  // ── Release modal ─────────────────────────────────────────────────────────
+  const releaseModal      = document.getElementById('releaseModal');
+  const releaseModalTitle = document.getElementById('releaseModalTitle');
+  const releaseModalSub   = document.getElementById('releaseModalSub');
+  const releaseWaitingList = document.getElementById('releaseWaitingList');
+  const btnJustRelease    = document.getElementById('btnJustRelease');
+  const btnReleaseCancel  = document.getElementById('btnReleaseCancel');
+
+  let modalSessionId = null;
+
+  function openReleaseModal(sessionId, waitingList) {
+    modalSessionId = sessionId;
+    releaseModalTitle.textContent = `Release Control — ${sessionId}`;
+
+    if (waitingList.length > 0) {
+      releaseModalSub.textContent = `${waitingList.length} device${waitingList.length !== 1 ? 's' : ''} waiting — pass to one or just release`;
+      releaseWaitingList.innerHTML = waitingList.map(w => `
+        <div class="release-waiting-item">
+          <span class="release-waiting-name ${w.name ? '' : 'unnamed'}">${w.name || 'Unknown device'}</span>
+          <button class="btn-pass-to" data-target="${w.id}">Pass control →</button>
+        </div>
+      `).join('');
+      releaseWaitingList.style.display = '';
+    } else {
+      releaseModalSub.textContent = 'No one waiting — control will be freed.';
+      releaseWaitingList.innerHTML = '';
+      releaseWaitingList.style.display = 'none';
+    }
+
+    releaseModal.classList.add('visible');
+  }
+
+  function closeReleaseModal() {
+    releaseModal.classList.remove('visible');
+    modalSessionId = null;
+  }
+
+  // Pass to a waiting person
+  releaseWaitingList.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn-pass-to');
+    if (!btn || !modalSessionId) return;
+    const targetId = btn.dataset.target;
+    btn.textContent = '…';
+    btn.disabled = true;
+    try {
+      await fetch(`${HTTP_URL}/sessions/${modalSessionId}/pass`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetId }),
+      });
+    } catch {}
+    closeReleaseModal();
+    poll();
+  });
+
+  // Just release with no handoff
+  btnJustRelease.addEventListener('click', async () => {
+    if (!modalSessionId) return;
+    btnJustRelease.textContent = '…';
+    btnJustRelease.disabled = true;
+    try {
+      await fetch(`${HTTP_URL}/sessions/${modalSessionId}/release`, { method: 'POST' });
+    } catch {}
+    closeReleaseModal();
+    btnJustRelease.textContent = 'Release';
+    btnJustRelease.disabled = false;
+    poll();
+  });
+
+  btnReleaseCancel.addEventListener('click', closeReleaseModal);
+  releaseModal.addEventListener('click', (e) => { if (e.target === releaseModal) closeReleaseModal(); });
+
+  // Open modal via event delegation on the grid
+  grid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.card-release-btn');
+    if (!btn) return;
+    const sessionId = btn.dataset.session;
+    const waitingList = JSON.parse(btn.dataset.waiting || '[]');
+    openReleaseModal(sessionId, waitingList);
+  });
 
   poll();
   setInterval(poll, 2000);

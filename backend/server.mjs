@@ -94,9 +94,22 @@ function stopTick(session) {
   }
 }
 
+// ── HTTP helpers ─────────────────────────────────────────────────────────────
+function readBody(req) {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => resolve(body));
+  });
+}
+
 // ── HTTP server ───────────────────────────────────────────────────────────────
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -115,6 +128,74 @@ const server = createServer((req, res) => {
       });
     }
     res.end(JSON.stringify({ sessions: list }));
+    return;
+  }
+
+  // POST /sessions/:id/release  — admin force-releases the current controller
+  const releaseMatch = req.url.match(/^\/sessions\/([^/]+)\/release$/);
+  if (req.method === 'POST' && releaseMatch) {
+    const sessionId = releaseMatch[1].toUpperCase().trim();
+    const session = sessions.get(sessionId);
+    if (!session) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Session not found' }));
+      return;
+    }
+    if (session.controller) {
+      const ws = session.controller;
+      const newWaitingId = generateId();
+      session.waitingControllers.set(newWaitingId, { ws, name: '' });
+      session.controller = null;
+      session.state.controllerConnected = false;
+      syncWaitingList(session);
+      sendMsg(ws, { type: 'control_denied', waitingId: newWaitingId });
+      broadcast(session);
+      broadcastMsg(session, { type: 'control_available' });
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+
+  // POST /sessions/:id/pass  — admin passes control to a waiting person
+  const passMatch = req.url.match(/^\/sessions\/([^/]+)\/pass$/);
+  if (req.method === 'POST' && passMatch) {
+    const sessionId = passMatch[1].toUpperCase().trim();
+    const body = await readBody(req);
+    let targetId;
+    try { ({ targetId } = JSON.parse(body)); } catch {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Invalid JSON' }));
+      return;
+    }
+    const session = sessions.get(sessionId);
+    if (!session) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Session not found' }));
+      return;
+    }
+    const target = session.waitingControllers.get(targetId);
+    if (!target) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Target not found' }));
+      return;
+    }
+    // Demote current controller to waiting (if any)
+    if (session.controller) {
+      const prevWs = session.controller;
+      const newWaitingId = generateId();
+      session.waitingControllers.set(newWaitingId, { ws: prevWs, name: '' });
+      sendMsg(prevWs, { type: 'control_denied', waitingId: newWaitingId });
+    }
+    // Promote target
+    session.waitingControllers.delete(targetId);
+    session.controller = target.ws;
+    session.state.controllerConnected = true;
+    syncWaitingList(session);
+    sendMsg(target.ws, { type: 'control_granted' });
+    broadcast(session);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
     return;
   }
 
