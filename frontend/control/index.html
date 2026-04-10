@@ -566,9 +566,6 @@
   }
   .btn-reset-side:active { background: var(--border); color: var(--text); transform: scale(0.96); }
 
-  .btn-release { display: none; width: 100%; padding: 6px; background: none; border: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; text-align: center; }
-  .btn-release.visible { display: block; }
-  .btn-release:active { color: var(--text); }
 
   /* ── Control panel (hidden until hasControl) ── */
   .control-panel { display: none; flex-direction: column; gap: 10px; }
@@ -685,7 +682,6 @@
     <div id="waitingList"></div>
   </div>
 
-  <button class="btn-release" id="releaseBtn">Release Control</button>
 
 </div>
 
@@ -730,7 +726,6 @@
   const controlPanel     = document.getElementById('controlPanel');
   const lockScreen       = document.getElementById('lockScreen');
   const takeControlBtn   = document.getElementById('takeControlBtn');
-  const releaseBtn       = document.getElementById('releaseBtn');
   const waitingSection   = document.getElementById('waitingSection');
   const waitingListEl    = document.getElementById('waitingList');
   const waitingNameInput = document.getElementById('waitingNameInput');
@@ -839,7 +834,6 @@
     controlPanel.classList.toggle('visible', hasControl);
     lockScreen.classList.toggle('visible', !hasControl);
     takeControlBtn.classList.toggle('visible', !hasControl && controlAvailable);
-    releaseBtn.classList.toggle('visible', hasControl);
 
     // Waiting list
     const wl = state.waitingList || [];
@@ -1072,7 +1066,6 @@
     render();
   });
 
-  releaseBtn.addEventListener('click', () => send({ type: 'release_control', sessionId }));
 
   // ── WebSocket ──────────────────────────────────────────────────────────────
   let ws, reconnectTimer;
