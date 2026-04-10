@@ -1,6 +1,6 @@
 [[redirects]]
-  from = "/admin/*"
-  to = "/admin/index.html"
+  from = "/hub/*"
+  to = "/hub/index.html"
   status = 200
 
 [[redirects]]
@@ -16,4 +16,9 @@
 [[redirects]]
   from = "/view/*"
   to = "/view/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/*"
+  to = "/admin/index.html"
   status = 200
