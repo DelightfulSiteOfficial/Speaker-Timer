@@ -911,7 +911,7 @@
     const h = pipWindow.document.getElementById('pip-hint');
     if (t) { t.textContent = formatTime(timeRemaining); t.className = 'time ' + tc; }
     if (s) { s.textContent = name || ''; }
-    if (h) { h.textContent = running ? 'tap to pause' : 'tap to start'; }
+    if (h) { h.textContent = running ? 'tap · pause   dbl · reset' : 'tap · start   dbl · reset'; }
 
     const pb = pipWindow.document.body;
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
@@ -1030,17 +1030,25 @@
         </div>
       `;
 
-      // Tap anywhere on the timer to toggle start/pause
-      pipWindow.document.getElementById('pip-timer').addEventListener('click', () => {
-        if (!presenterMode) {
-          // Auto-activate presenter mode on first tap
-          setMode('presenter');
-        }
-        if (state.running) {
-          sendCtrl({ type: 'pause' });
-        } else {
-          sendCtrl({ type: 'start' });
-        }
+      // Single tap = start / pause (with short delay so double-tap can cancel it)
+      // Double tap = reset to beginning without starting
+      const pipTimerEl = pipWindow.document.getElementById('pip-timer');
+      let pipClickTimer = null;
+
+      pipTimerEl.addEventListener('click', () => {
+        if (pipClickTimer) return; // double-click in progress, ignore
+        pipClickTimer = setTimeout(() => {
+          pipClickTimer = null;
+          if (!presenterMode) setMode('presenter');
+          sendCtrl({ type: state.running ? 'pause' : 'start' });
+        }, 220);
+      });
+
+      pipTimerEl.addEventListener('dblclick', () => {
+        clearTimeout(pipClickTimer);
+        pipClickTimer = null;
+        if (!presenterMode) setMode('presenter');
+        sendCtrl({ type: 'reset' });
       });
 
       pipBtn.textContent = 'Close Pop Out';
