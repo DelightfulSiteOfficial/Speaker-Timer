@@ -1359,6 +1359,7 @@
         const msg = JSON.parse(e.data);
         if (msg.type === 'state') {
           const prevMessage = state.message;
+          const prevMessageSeq = state.messageSeq;
           state = { ...state, ...msg.payload };
 
           if (msg.payload.totalTime !== undefined && !dialDragging)
@@ -1375,7 +1376,7 @@
             }
           }
 
-          if (state.message && state.message !== prevMessage) startMsgCountdown();
+          if (state.message && state.messageSeq !== prevMessageSeq) startMsgCountdown();
           else if (!state.message && prevMessage) { clearInterval(msgCountInterval); setMsgStatus('cleared'); }
 
           render();

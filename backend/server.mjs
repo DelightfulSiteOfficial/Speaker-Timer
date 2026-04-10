@@ -22,6 +22,7 @@ function createSession(id) {
       controllerConnected: false,
       waitingList: [], // [{ id, name }] — visible to all clients
       message: '',     // operator message shown on display when QR is hidden
+      messageSeq: 0,   // increments on every set_message so same-text resends are detectable
       runCount: 0,     // increments each time reset is called after a timer was started
       coHost: false,
       coHostName: '',
@@ -418,6 +419,7 @@ wss.on('connection', (ws, req) => {
 
       case 'set_message':
         s.message = (msg.text || '').slice(0, 200);
+        if (s.message) s.messageSeq++;
         broadcast(session);
         break;
 
