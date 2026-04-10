@@ -2,9 +2,236 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="0;url=/display/">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Speaker Timer</title>
-<script>window.location.replace('/display/');</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:      #0a0a0a;
+    --surface: #111111;
+    --border:  #1e1e1e;
+    --text:    #f0ede8;
+    --muted:   #555;
+    --accent:  #e8ff47;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: 40px 24px;
+    gap: 48px;
+  }
+
+  /* ── Wordmark ── */
+  .wordmark {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    user-select: none;
+  }
+
+  .wordmark-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .wordmark-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(52px, 8vw, 88px);
+    letter-spacing: 0.04em;
+    color: var(--text);
+    line-height: 0.9;
+  }
+
+  .wordmark-title span { color: var(--accent); }
+
+  /* ── Choice prompt ── */
+  .prompt {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── Cards ── */
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+    max-width: 680px;
+  }
+
+  @media (max-width: 520px) {
+    .cards { grid-template-columns: 1fr; max-width: 360px; }
+  }
+
+  .card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+    text-decoration: none;
+    color: inherit;
+    user-select: none;
+  }
+
+  .card:hover {
+    border-color: #333;
+    transform: translateY(-2px);
+  }
+
+  .card:active { transform: scale(0.98); }
+
+  .card.disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .card-icon {
+    font-size: 28px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(32px, 5vw, 44px);
+    letter-spacing: 0.04em;
+    line-height: 0.95;
+    color: var(--text);
+  }
+
+  .card-desc {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    color: var(--muted);
+    line-height: 1.5;
+    flex: 1;
+  }
+
+  .card-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 8px;
+    transition: color 0.2s;
+  }
+
+  .card:hover .card-action { color: var(--text); }
+
+  .card-active-border {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    border: 1px solid var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+  .card:hover .card-active-border { opacity: 1; }
+
+  /* Quick Meeting card accent on hover */
+  .card.quick:hover .card-title { color: var(--accent); }
+
+  .card-badge {
+    position: absolute;
+    top: 16px; right: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 3px 10px;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #2a2a2a;
+  }
+</style>
 </head>
-<body></body>
+<body>
+
+<div class="wordmark">
+  <div class="wordmark-eyebrow">Welcome to</div>
+  <div class="wordmark-title">Speaker<span>Timer</span></div>
+</div>
+
+<div class="prompt">How are you using it today?</div>
+
+<div class="cards">
+
+  <!-- Quick Meeting -->
+  <div class="card quick" id="quickMeetingCard">
+    <div class="card-active-border"></div>
+    <div class="card-icon">⚡</div>
+    <div class="card-title">Quick Meeting</div>
+    <div class="card-desc">Jump right in. Set a time, start the timer, and go.</div>
+    <div class="card-action">Get started →</div>
+  </div>
+
+  <!-- Event (placeholder) -->
+  <div class="card disabled">
+    <div class="card-badge">Coming Soon</div>
+    <div class="card-icon">📋</div>
+    <div class="card-title">Event</div>
+    <div class="card-desc">Manage a full day of speakers across multiple rooms with an agenda.</div>
+    <div class="card-action">Not available yet</div>
+  </div>
+
+</div>
+
+<div class="footer">Speaker Timer &nbsp;·&nbsp; Built for AV &amp; event production</div>
+
+<script>
+  function generateId() {
+    return Math.random().toString(36).slice(2, 8).toUpperCase();
+  }
+
+  document.getElementById('quickMeetingCard').addEventListener('click', () => {
+    const sessionId = generateId();
+    window.location.href = `/display/?session=${sessionId}`;
+  });
+</script>
+</body>
 </html>
