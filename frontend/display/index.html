@@ -586,7 +586,7 @@
 
   // ── Format time ───────────────────────────────────────────────────────────
   function formatTime(seconds) {
-    if (seconds == null || isNaN(seconds)) return '--:--';
+    if (!Number.isFinite(seconds)) return '--:--';
     const abs = Math.abs(seconds);
     const m = Math.floor(abs / 60);
     const s = abs % 60;

@@ -767,7 +767,7 @@
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   function formatTime(s) {
-    if (s == null || isNaN(s)) return '--:--';
+    if (!Number.isFinite(s)) return '--:--';
     const abs = Math.abs(s);
     const m = Math.floor(abs / 60);
     const sec = abs % 60;
