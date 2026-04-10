@@ -775,70 +775,76 @@
   body.pulse-danger-fast { animation: bgPulseDangerFast 1.6s ease-in-out infinite; }
   body.bg-overtime       { background-color: #200404 !important; animation: none; }
 
-  /* ── Presenter access toggle ── */
-  .access-row {
+  /* ── Timer row (timer centered, presenter pill right) ── */
+  .timer-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
     flex-shrink: 0;
   }
+  .timer-row-spacer,
+  .timer-row-side {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
 
-  .access-label-text {
+  /* ── Presenter pill toggle ── */
+  .presenter-pill {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+  .presenter-pill.visible { display: flex; }
+
+  .presenter-pill-word {
     font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.18em;
+    font-size: 8px;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
   }
 
-  .access-status {
-    display: block;
-    font-size: 9px;
-    margin-top: 3px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+  .presenter-pill-status {
     font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
   }
-  .access-status.allowed { color: var(--accent); }
-  .access-status.locked  { color: var(--danger); }
+  .presenter-pill-status.allowed { color: var(--accent); }
+  .presenter-pill-status.locked  { color: var(--danger); }
 
-  .toggle-switch {
+  .pill-toggle {
     position: relative;
-    width: 44px;
-    height: 26px;
+    width: 34px;
+    height: 20px;
     flex-shrink: 0;
     cursor: pointer;
   }
-  .toggle-switch input {
-    opacity: 0; width: 0; height: 0;
-    position: absolute;
-  }
-  .toggle-track {
+  .pill-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .pill-track {
     position: absolute;
     inset: 0;
-    border-radius: 13px;
+    border-radius: 10px;
     background: #2a2a2a;
     transition: background 0.2s;
   }
-  .toggle-track::after {
+  .pill-track::after {
     content: '';
     position: absolute;
-    width: 20px; height: 20px;
+    width: 14px; height: 14px;
     border-radius: 50%;
     background: #444;
     top: 3px; left: 3px;
     transition: transform 0.2s, background 0.2s;
   }
-  .toggle-switch input:checked + .toggle-track {
+  .pill-toggle input:checked + .pill-track {
     background: rgba(232,255,71,0.15);
     border: 1px solid rgba(232,255,71,0.3);
   }
-  .toggle-switch input:checked + .toggle-track::after {
-    transform: translateX(18px);
+  .pill-toggle input:checked + .pill-track::after {
+    transform: translateX(14px);
     background: var(--accent);
   }
 </style>
@@ -870,10 +876,23 @@
 <!-- ── Co-host banner ── -->
 <div class="cohost-banner" id="cohostBanner">⬡ Co-hosting — Timer controls assigned by event organizer</div>
 
-<!-- ── Timer ── -->
-<div class="time-preview">
-  <div class="time-big" id="timeBig">--:--</div>
-  <span class="time-status" id="timeStatus">Stopped</span>
+<!-- ── Timer + presenter pill ── -->
+<div class="timer-row">
+  <div class="timer-row-spacer"></div>
+  <div class="time-preview">
+    <div class="time-big" id="timeBig">--:--</div>
+    <span class="time-status" id="timeStatus">Stopped</span>
+  </div>
+  <div class="timer-row-side">
+    <div class="presenter-pill" id="presenterPill">
+      <span class="presenter-pill-word">Presenter</span>
+      <label class="pill-toggle">
+        <input type="checkbox" id="presenterToggle" checked>
+        <span class="pill-track"></span>
+      </label>
+      <span class="presenter-pill-status allowed" id="accessStatus">On</span>
+    </div>
+  </div>
 </div>
 
 <!-- ── Room name modal ── -->
@@ -919,18 +938,6 @@
   <div class="action-row">
     <button class="btn-main btn-start" id="mainBtn">Start</button>
     <button class="btn-main btn-reset-side" id="resetBtn">Reset</button>
-  </div>
-
-  <!-- Presenter access toggle -->
-  <div class="access-row">
-    <div>
-      <div class="access-label-text">Presenter Control</div>
-      <span class="access-status allowed" id="accessStatus">Presenter can control timer</span>
-    </div>
-    <label class="toggle-switch">
-      <input type="checkbox" id="presenterToggle" checked>
-      <span class="toggle-track"></span>
-    </label>
   </div>
 
   <!-- Nudge -->
@@ -1182,13 +1189,12 @@
       );
     });
 
-    // Presenter access toggle
+    // Presenter pill toggle
     const locked = !!state.presenterLocked;
+    presenterPill.classList.toggle('visible', hasControl);
     presenterToggle.checked = !locked;
-    accessStatus.textContent = locked
-      ? 'Desktop controls locked — admin only'
-      : 'Presenter can control timer';
-    accessStatus.className = 'access-status ' + (locked ? 'locked' : 'allowed');
+    accessStatus.textContent = locked ? 'Locked' : 'On';
+    accessStatus.className = 'presenter-pill-status ' + (locked ? 'locked' : 'allowed');
 
     // Background pulse states
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
@@ -1496,7 +1502,8 @@
     render();
   });
 
-  // ── Presenter access toggle ────────────────────────────────────────────────
+  // ── Presenter pill toggle ─────────────────────────────────────────────────
+  const presenterPill   = document.getElementById('presenterPill');
   const presenterToggle = document.getElementById('presenterToggle');
   const accessStatus    = document.getElementById('accessStatus');
 
