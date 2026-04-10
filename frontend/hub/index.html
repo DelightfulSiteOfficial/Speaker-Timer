@@ -135,6 +135,23 @@
   .room-card.running { border-color: #2a2e14; }
   .room-card.offline { opacity: 0.5; }
 
+  @keyframes cardPulseWarn {
+    0%, 100% { background-color: var(--surface); border-color: var(--border); }
+    50%       { background-color: #1e1c08;        border-color: #2e2a12; }
+  }
+  @keyframes cardPulseDangerSlow {
+    0%, 100% { background-color: var(--surface); border-color: var(--border); }
+    50%       { background-color: #200707;        border-color: #321010; }
+  }
+  @keyframes cardPulseDangerFast {
+    0%, 100% { background-color: var(--surface); border-color: var(--border); }
+    50%       { background-color: #280808;        border-color: #401414; }
+  }
+  .room-card.pulse-warn        { animation: cardPulseWarn        5.5s ease-in-out infinite; }
+  .room-card.pulse-danger-slow { animation: cardPulseDangerSlow  2.8s ease-in-out infinite; }
+  .room-card.pulse-danger-fast { animation: cardPulseDangerFast  1.6s ease-in-out infinite; }
+  .room-card.card-overtime     { background-color: #1e0404; border-color: #350a0a; }
+
   .card-top {
     display: flex;
     align-items: center;
@@ -984,7 +1001,14 @@
     if (!offline && runCount > 0) metaParts.push(`Timer ${runCount + 1}`);
     if (!offline && waitingCount > 0) metaParts.push(`<span class="waiting waiting-tap">${waitingCount} waiting →</span>`);
 
-    el.className = `room-card ${running && !offline ? 'running' : ''} ${offline ? 'offline' : ''}`;
+    let pulseClass = '';
+    if (!offline) {
+      if (overtime)                                    pulseClass = 'card-overtime';
+      else if (timeRemaining <= 30 && timeRemaining > 0) pulseClass = 'pulse-danger-fast';
+      else if (timeRemaining <= 60 && timeRemaining > 0) pulseClass = 'pulse-danger-slow';
+      else if (timeRemaining <= 300)                   pulseClass = 'pulse-warn';
+    }
+    el.className = `room-card ${running && !offline ? 'running' : ''} ${offline ? 'offline' : ''} ${pulseClass}`.trim();
 
     el.innerHTML = `
       <div class="card-top">
