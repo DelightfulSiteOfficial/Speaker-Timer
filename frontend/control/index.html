@@ -528,6 +528,117 @@
   .btn-take-control.visible { display: block; }
   .btn-take-control:active { background: rgba(232,255,71,0.08); transform: scale(0.97); }
 
+  /* ── Request permission button ── */
+  .btn-request-control {
+    width: 100%;
+    padding: 18px;
+    border-radius: 14px;
+    border: 1px solid rgba(232,255,71,0.3);
+    background: transparent;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-request-control:active { background: rgba(232,255,71,0.06); transform: scale(0.97); }
+  .btn-request-control:disabled { opacity: 0.35; cursor: default; transform: none; }
+
+  .request-feedback {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-align: center;
+    color: var(--muted);
+    min-height: 1.4em;
+  }
+  .request-feedback.pending { color: var(--warn); }
+  .request-feedback.denied  { color: var(--danger); }
+
+  .btn-cancel-request {
+    display: none;
+    background: none; border: none;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+    cursor: pointer; padding: 4px; margin: 0 auto;
+    transition: color 0.15s;
+  }
+  .btn-cancel-request.visible { display: block; }
+  .btn-cancel-request:active { color: var(--text); }
+
+  /* ── Incoming control request modal (shown to controller) ── */
+  .ctrl-request-modal {
+    position: fixed; inset: 0;
+    background: rgba(10,10,10,0.88);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 180;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .ctrl-request-modal.visible { opacity: 1; pointer-events: auto; }
+
+  .ctrl-request-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 20px 20px;
+    width: calc(100% - 40px);
+    max-width: 360px;
+    display: flex; flex-direction: column; gap: 6px;
+    align-items: center; text-align: center;
+  }
+
+  .ctrl-request-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .ctrl-request-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 40px;
+    color: var(--text);
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+
+  .ctrl-request-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 300;
+    margin-bottom: 10px;
+  }
+
+  .ctrl-request-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .btn-approve-req {
+    height: 56px; border-radius: 12px; border: none;
+    background: var(--accent); color: #000;
+    font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 0.06em;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .btn-approve-req:active { transform: scale(0.96); opacity: 0.85; }
+
+  .btn-deny-req {
+    height: 56px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+    font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 0.06em;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .btn-deny-req:active { background: var(--border); color: var(--text); transform: scale(0.96); }
+
   /* ── Dial section ── */
   .dial-area {
     display: flex;
@@ -690,10 +801,26 @@
 <div class="lock-screen" id="lockScreen">
   <div class="lock-title">Control Active</div>
   <div class="lock-sub">Another device is controlling<br>this session</div>
-  <input class="waiting-name-input" id="waitingNameInput" type="text" placeholder="Enter your name so they can pass to you…" maxlength="40">
+  <input class="waiting-name-input" id="waitingNameInput" type="text" placeholder="Your name…" maxlength="40">
+  <button class="btn-request-control" id="requestControlBtn">Request Permission to Control</button>
+  <div class="request-feedback" id="requestFeedback"></div>
+  <button class="btn-cancel-request" id="cancelRequestBtn">Cancel request</button>
 </div>
 
 <button class="btn-take-control" id="takeControlBtn">Take Control</button>
+
+<!-- ── Incoming control request modal (shown to the current controller) ── -->
+<div class="ctrl-request-modal" id="ctrlRequestModal">
+  <div class="ctrl-request-box">
+    <div class="ctrl-request-eyebrow">Control Request</div>
+    <div class="ctrl-request-name" id="ctrlRequestName">Someone</div>
+    <div class="ctrl-request-sub">is requesting permission to control this session</div>
+    <div class="ctrl-request-actions">
+      <button class="btn-deny-req" id="denyRequestBtn">Deny</button>
+      <button class="btn-approve-req" id="approveRequestBtn">Approve</button>
+    </div>
+  </div>
+</div>
 
 <div class="overlay" id="overlay">
   <div class="overlay-text">Connecting…</div>
@@ -725,11 +852,21 @@
   const overtimeBanner   = document.getElementById('overtimeBanner');
   const sessionTag       = document.getElementById('sessionTag');
   const controlPanel     = document.getElementById('controlPanel');
-  const lockScreen       = document.getElementById('lockScreen');
-  const takeControlBtn   = document.getElementById('takeControlBtn');
-  const waitingSection   = document.getElementById('waitingSection');
-  const waitingListEl    = document.getElementById('waitingList');
-  const waitingNameInput = document.getElementById('waitingNameInput');
+  const lockScreen          = document.getElementById('lockScreen');
+  const takeControlBtn      = document.getElementById('takeControlBtn');
+  const waitingSection      = document.getElementById('waitingSection');
+  const waitingListEl       = document.getElementById('waitingList');
+  const waitingNameInput    = document.getElementById('waitingNameInput');
+  const requestControlBtn   = document.getElementById('requestControlBtn');
+  const requestFeedback     = document.getElementById('requestFeedback');
+  const cancelRequestBtn    = document.getElementById('cancelRequestBtn');
+  const ctrlRequestModal    = document.getElementById('ctrlRequestModal');
+  const ctrlRequestName     = document.getElementById('ctrlRequestName');
+  const approveRequestBtn   = document.getElementById('approveRequestBtn');
+  const denyRequestBtn      = document.getElementById('denyRequestBtn');
+
+  let requestState     = 'idle'; // 'idle' | 'pending' | 'denied'
+  let pendingRequestId = null;   // requestId shown to controller
 
   sessionTag.textContent = `Session ${sessionId}`;
 
@@ -851,6 +988,60 @@
       );
     });
   }
+
+  // ── Request permission flow ───────────────────────────────────────────────
+  function setRequestState(s) {
+    requestState = s;
+    requestControlBtn.disabled = (s === 'pending');
+    cancelRequestBtn.classList.toggle('visible', s === 'pending');
+    if (s === 'idle') {
+      requestFeedback.textContent = '';
+      requestFeedback.className = 'request-feedback';
+    } else if (s === 'pending') {
+      requestFeedback.textContent = 'Waiting for approval…';
+      requestFeedback.className = 'request-feedback pending';
+    } else if (s === 'denied') {
+      requestFeedback.textContent = 'Request was denied — try again';
+      requestFeedback.className = 'request-feedback denied';
+    }
+  }
+
+  requestControlBtn.addEventListener('click', () => {
+    if (!waitingId) return;
+    const name = waitingNameInput.value.trim();
+    if (name) {
+      localStorage.setItem(MY_NAME_KEY, name);
+      send({ type: 'set_waiting_name', waitingId, name });
+    }
+    send({ type: 'request_control', waitingId, sessionId });
+    setRequestState('pending');
+  });
+
+  cancelRequestBtn.addEventListener('click', () => {
+    if (!waitingId) return;
+    send({ type: 'cancel_request', waitingId, sessionId });
+    setRequestState('idle');
+  });
+
+  // Sync name to server as user types
+  waitingNameInput.addEventListener('input', () => {
+    if (waitingId) send({ type: 'set_waiting_name', waitingId, name: waitingNameInput.value.trim() });
+  });
+
+  // ── Incoming request handlers (controller side) ───────────────────────────
+  approveRequestBtn.addEventListener('click', () => {
+    if (!pendingRequestId) return;
+    send({ type: 'approve_request', sessionId, targetId: pendingRequestId });
+    ctrlRequestModal.classList.remove('visible');
+    pendingRequestId = null;
+  });
+
+  denyRequestBtn.addEventListener('click', () => {
+    if (!pendingRequestId) return;
+    send({ type: 'deny_request', sessionId, targetId: pendingRequestId });
+    ctrlRequestModal.classList.remove('visible');
+    pendingRequestId = null;
+  });
 
   // ── Duration dial ──────────────────────────────────────────────────────────
   const DIAL_MAX   = 90;
@@ -1063,6 +1254,7 @@
   // ── Control lock ───────────────────────────────────────────────────────────
   takeControlBtn.addEventListener('click', () => {
     controlAvailable = false;
+    setRequestState('idle');
     send({ type: 'claim_control', sessionId });
     render();
   });
@@ -1116,22 +1308,48 @@
           hasControl = true;
           waitingId = null;
           controlAvailable = false;
+          setRequestState('idle');
+          ctrlRequestModal.classList.remove('visible');
           render();
 
         } else if (msg.type === 'control_denied') {
           hasControl = false;
           waitingId = msg.waitingId;
+          setRequestState('idle');
           const myName = localStorage.getItem(MY_NAME_KEY) || '';
+          waitingNameInput.value = myName;
           if (myName) send({ type: 'set_waiting_name', waitingId, name: myName });
           render();
 
         } else if (msg.type === 'control_available') {
           controlAvailable = true;
+          setRequestState('idle');
           render();
 
         } else if (msg.type === 'waiting_list') {
           state.waitingList = msg.list || [];
           render();
+
+        } else if (msg.type === 'request_pending') {
+          setRequestState('pending');
+
+        } else if (msg.type === 'request_denied') {
+          setRequestState('denied');
+
+        } else if (msg.type === 'request_cancelled') {
+          setRequestState('idle');
+
+        } else if (msg.type === 'control_request') {
+          // Someone is requesting control — show approval modal to the current controller
+          pendingRequestId = msg.requestId;
+          ctrlRequestName.textContent = msg.fromName || 'Someone';
+          ctrlRequestModal.classList.add('visible');
+
+        } else if (msg.type === 'control_request_cancelled') {
+          if (pendingRequestId === msg.requestId) {
+            ctrlRequestModal.classList.remove('visible');
+            pendingRequestId = null;
+          }
         }
       } catch {}
     };

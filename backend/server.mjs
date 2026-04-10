@@ -243,6 +243,33 @@ wss.on('connection', (ws, req) => {
 
     // ── Messages any control-role client can send ─────────────────────────────
 
+    if (msg.type === 'request_control') {
+      const entry = session.waitingControllers.get(msg.waitingId);
+      if (!entry || entry.ws !== ws) return;
+      if (!session.controller) {
+        // No active controller — grant directly
+        session.waitingControllers.delete(msg.waitingId);
+        session.controller = ws;
+        session.state.controllerConnected = true;
+        syncWaitingList(session);
+        sendMsg(ws, { type: 'control_granted' });
+        broadcast(session);
+        return;
+      }
+      const fromName = entry.name || 'Someone';
+      sendMsg(session.controller, { type: 'control_request', requestId: msg.waitingId, fromName });
+      sendMsg(ws, { type: 'request_pending' });
+      return;
+    }
+
+    if (msg.type === 'cancel_request') {
+      if (session.controller) {
+        sendMsg(session.controller, { type: 'control_request_cancelled', requestId: msg.waitingId });
+      }
+      sendMsg(ws, { type: 'request_cancelled' });
+      return;
+    }
+
     if (msg.type === 'claim_control') {
       if (!session.controller) {
         // Remove from waiting list if present
@@ -329,6 +356,29 @@ wss.on('connection', (ws, req) => {
         s.timeRemaining = Math.max(-1800, s.timeRemaining + delta);
         s.overtime = s.timeRemaining < 0;
         broadcast(session);
+        break;
+      }
+
+      case 'approve_request': {
+        const target = session.waitingControllers.get(msg.targetId);
+        if (!target) break;
+        const prevWs = ws;
+        const newWaitingId = generateId();
+        session.waitingControllers.set(newWaitingId, { ws: prevWs, name: '' });
+        sendMsg(prevWs, { type: 'control_denied', waitingId: newWaitingId });
+        session.waitingControllers.delete(msg.targetId);
+        session.controller = target.ws;
+        session.state.controllerConnected = true;
+        syncWaitingList(session);
+        sendMsg(target.ws, { type: 'control_granted' });
+        broadcast(session);
+        break;
+      }
+
+      case 'deny_request': {
+        const target = session.waitingControllers.get(msg.targetId);
+        if (!target) break;
+        sendMsg(target.ws, { type: 'request_denied' });
         break;
       }
 
