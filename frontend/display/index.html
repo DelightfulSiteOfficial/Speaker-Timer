@@ -150,6 +150,34 @@
 
   .run-counter.visible { opacity: 1; }
 
+  /* ── Agenda slot info ── */
+  .slot-info {
+    font-family: 'DM Sans', sans-serif;
+    font-size: clamp(14px, 1.8vw, 26px);
+    font-weight: 300;
+    color: rgba(240,237,232,0.45);
+    margin-top: 4px;
+    letter-spacing: 0.01em;
+    min-height: 1.4em;
+    transition: color 0.3s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .slot-info.is-break { color: rgba(107,181,255,0.65); }
+
+  .slot-counter {
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(10px, 1vw, 13px);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 2px;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .slot-counter.visible { opacity: 1; }
+
   /* ── Status bar ── */
   .status-bar {
     grid-column: 1;
@@ -494,6 +522,8 @@
   </div>
 
   <div class="speaker-name" id="speakerName"></div>
+  <div class="slot-info" id="slotInfo"></div>
+  <div class="slot-counter" id="slotCounter"></div>
   <div class="run-counter" id="runCounter"></div>
 </div>
 
@@ -554,12 +584,16 @@
     roomName: '',
     overtime: false,
     runCount: 0,
+    agenda: [],
+    currentSlotId: null,
   };
 
   // ── DOM refs ─────────────────────────────────────────────────────────────
   const timeDisplay   = document.getElementById('timeDisplay');
   const progressFill  = document.getElementById('progressFill');
   const speakerName   = document.getElementById('speakerName');
+  const slotInfo      = document.getElementById('slotInfo');
+  const slotCounter   = document.getElementById('slotCounter');
   const runCounter    = document.getElementById('runCounter');
   const statusPill    = document.getElementById('statusPill');
   const overtimeBadge = document.getElementById('overtimeBadge');
@@ -612,10 +646,32 @@
     speakerName.textContent = roomName || '';
     speakerName.className = 'speaker-name' + (roomName ? ' has-name' : '');
 
-    // Run counter — show "Timer 1", "Timer 2" etc once at least one has run
+    // Agenda slot info
+    const agenda = state.agenda || [];
+    const currentSlotId = state.currentSlotId;
+    const currentSlot = agenda.find(sl => sl.id === currentSlotId) || null;
+    const talks = agenda.filter(sl => sl.type === 'talk');
+
+    if (currentSlot) {
+      slotInfo.textContent = currentSlot.label || '';
+      slotInfo.className = 'slot-info' + (currentSlot.type === 'break' ? ' is-break' : '');
+      if (currentSlot.type === 'talk' && talks.length > 0) {
+        const talkIdx = talks.findIndex(t => t.id === currentSlotId);
+        slotCounter.textContent = talkIdx >= 0 ? `Talk ${talkIdx + 1} of ${talks.length}` : '';
+        slotCounter.className = 'slot-counter' + (talkIdx >= 0 ? ' visible' : '');
+      } else {
+        slotCounter.className = 'slot-counter';
+      }
+    } else {
+      slotInfo.textContent = '';
+      slotInfo.className = 'slot-info';
+      slotCounter.className = 'slot-counter';
+    }
+
+    // Run counter — hide when agenda slot is active (agenda counter is clearer)
     const currentTimer = runCount + 1;
     runCounter.textContent = `Timer ${currentTimer}`;
-    runCounter.className = 'run-counter' + (runCount > 0 || running ? ' visible' : '');
+    runCounter.className = 'run-counter' + ((runCount > 0 || running) && !currentSlot ? ' visible' : '');
 
     statusPill.textContent = running ? 'Running' : 'Paused';
     statusPill.className = 'status-pill' + (running ? ' running' : ' paused');
