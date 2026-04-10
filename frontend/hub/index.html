@@ -40,11 +40,16 @@
 
   /* ── Header ── */
   .header {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
     padding: 16px 4px 20px;
     flex-shrink: 0;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
   }
 
   .header-title {
@@ -52,12 +57,13 @@
     font-size: 28px;
     letter-spacing: 0.06em;
     color: var(--text);
+    text-align: center;
   }
 
   .header-right {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: flex-end;
   }
 
   .room-count {
@@ -532,10 +538,12 @@
 <body>
 
 <div class="header">
+  <div class="header-left">
+    <button class="btn-fresh" id="freshBtn">Start Fresh</button>
+  </div>
   <div class="header-title">Speaker Timer</div>
   <div class="header-right">
     <div class="room-count" id="roomCount"></div>
-    <button class="btn-fresh" id="freshBtn">Start Fresh</button>
   </div>
 </div>
 
