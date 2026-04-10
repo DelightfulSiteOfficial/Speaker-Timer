@@ -275,6 +275,7 @@
   const pollStatus = document.getElementById('pollStatus');
 
   function formatTime(seconds) {
+    if (!Number.isFinite(seconds)) return '--:--';
     const abs = Math.abs(seconds);
     const m = Math.floor(abs / 60);
     const s = abs % 60;
