@@ -95,13 +95,8 @@
   }
 
   .time-display.warning { color: var(--warn); }
-  .time-display.danger  { color: var(--danger); animation: flash 1s step-end infinite; }
+  .time-display.danger  { color: var(--danger); }
   .time-display.overtime { color: var(--danger); }
-
-  @keyframes flash {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
 
   .progress-bar {
     width: 100%;
@@ -441,6 +436,25 @@
     to   { transform: scaleX(0); }
   }
 
+  /* ── Background warning pulses ── */
+  @keyframes bgPulseWarn {
+    0%, 100% { background-color: #0a0a0a; }
+    50%       { background-color: #221d08; }
+  }
+  @keyframes bgPulseDangerSlow {
+    0%, 100% { background-color: #0a0a0a; }
+    50%       { background-color: #280606; }
+  }
+  @keyframes bgPulseDangerFast {
+    0%, 100% { background-color: #0a0a0a; }
+    50%       { background-color: #360808; }
+  }
+
+  body.pulse-warn         { animation: bgPulseWarn        5.5s ease-in-out infinite; }
+  body.pulse-danger-slow  { animation: bgPulseDangerSlow  2.8s ease-in-out infinite; }
+  body.pulse-danger-fast  { animation: bgPulseDangerFast  1.6s ease-in-out infinite; }
+  body.bg-overtime        { background-color: #200404 !important; animation: none; }
+
   /* ── Auto-compact mode (small window) ── */
   @media (max-width: 520px), (max-height: 400px) {
     body {
@@ -622,6 +636,15 @@
     overtimeBadge.className = 'overtime-badge' + (overtime ? ' visible' : '');
     liveDot.className = 'dot' + (running ? ' live' : '');
     labelText.textContent = running ? 'Live' : 'Standby';
+
+    // Background pulse states
+    const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
+    const isWarn1  = timeRemaining <= 60  && timeRemaining > 30 && !overtime;
+    const isWarn30 = timeRemaining <= 30  && timeRemaining > 0  && !overtime;
+    document.body.classList.toggle('pulse-warn',        isWarn5);
+    document.body.classList.toggle('pulse-danger-slow', isWarn1);
+    document.body.classList.toggle('pulse-danger-fast', isWarn30);
+    document.body.classList.toggle('bg-overtime',       !!overtime);
   }
 
   // ── WebSocket ──────────────────────────────────────────────────────────────
