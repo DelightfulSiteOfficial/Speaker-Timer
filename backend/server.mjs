@@ -23,12 +23,15 @@ function createSession(id) {
       waitingList: [], // [{ id, name }] — visible to all clients
       message: '',     // operator message shown on display when QR is hidden
       runCount: 0,     // increments each time reset is called after a timer was started
+      coHost: false,
+      coHostName: '',
     },
     clients: new Set(),
     tickInterval: null,
     controller: null,             // WebSocket of the current controller
     waitingControllers: new Map(), // waitingId → { ws, name }
     everStarted: false,           // internal flag — tracks if current timer was ever started
+    coHostWs: null,
   };
 }
 
@@ -147,6 +150,9 @@ const server = createServer(async (req, res) => {
       session.waitingControllers.set(newWaitingId, { ws, name: '' });
       session.controller = null;
       session.state.controllerConnected = false;
+      session.coHostWs = null;
+      session.state.coHost = false;
+      session.state.coHostName = '';
       syncWaitingList(session);
       sendMsg(ws, { type: 'control_denied', waitingId: newWaitingId });
       broadcast(session);
@@ -194,6 +200,61 @@ const server = createServer(async (req, res) => {
     syncWaitingList(session);
     sendMsg(target.ws, { type: 'control_granted' });
     broadcast(session);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+
+  // POST /sessions/:id/assign-cohost  — admin assigns a co-host
+  const assignCohostMatch = req.url.match(/^\/sessions\/([^/]+)\/assign-cohost$/);
+  if (req.method === 'POST' && assignCohostMatch) {
+    const sessionId = assignCohostMatch[1].toUpperCase().trim();
+    const body = await readBody(req);
+    let targetId;
+    try { ({ targetId } = JSON.parse(body)); } catch { targetId = undefined; }
+    const session = sessions.get(sessionId);
+    if (!session) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Session not found' }));
+      return;
+    }
+    if (targetId) {
+      // Promote a waiting person as co-host
+      const target = session.waitingControllers.get(targetId);
+      if (!target) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Target not found' }));
+        return;
+      }
+      // Demote current controller (if any) to waiting
+      if (session.controller) {
+        const prevWs = session.controller;
+        const newWaitingId = generateId();
+        session.waitingControllers.set(newWaitingId, { ws: prevWs, name: '' });
+        sendMsg(prevWs, { type: 'control_denied', waitingId: newWaitingId });
+      }
+      // Promote target as co-host
+      session.waitingControllers.delete(targetId);
+      session.controller = target.ws;
+      session.coHostWs = target.ws;
+      session.state.controllerConnected = true;
+      session.state.coHost = true;
+      session.state.coHostName = target.name || '';
+      syncWaitingList(session);
+      sendMsg(target.ws, { type: 'control_granted' });
+      broadcast(session);
+    } else {
+      // Mark current controller as co-host
+      if (!session.controller) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'No active controller' }));
+        return;
+      }
+      session.coHostWs = session.controller;
+      session.state.coHost = true;
+      session.state.coHostName = '';
+      broadcast(session);
+    }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true }));
     return;
@@ -256,6 +317,11 @@ wss.on('connection', (ws, req) => {
         broadcast(session);
         return;
       }
+      // If a co-host has control, don't forward requests to them — they can't approve
+      if (session.coHostWs === session.controller) {
+        sendMsg(ws, { type: 'request_pending' });
+        return;
+      }
       const fromName = entry.name || 'Someone';
       sendMsg(session.controller, { type: 'control_request', requestId: msg.waitingId, fromName });
       sendMsg(ws, { type: 'request_pending' });
@@ -297,6 +363,11 @@ wss.on('connection', (ws, req) => {
 
     // ── Controller-only messages ──────────────────────────────────────────────
     if (ws !== session.controller) return;
+
+    // Co-host restrictions — cannot transfer or delegate control
+    if (session.coHostWs === ws) {
+      if (['pass_control_to', 'approve_request', 'deny_request', 'release_control'].includes(msg.type)) return;
+    }
 
     const s = session.state;
 
@@ -423,6 +494,11 @@ wss.on('connection', (ws, req) => {
     if (session.controller === ws) {
       session.controller = null;
       session.state.controllerConnected = false;
+      if (session.coHostWs === ws) {
+        session.coHostWs = null;
+        session.state.coHost = false;
+        session.state.coHostName = '';
+      }
       syncWaitingList(session);
       broadcast(session);
       broadcastMsg(session, { type: 'control_available' });

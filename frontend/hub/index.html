@@ -471,6 +471,63 @@
   }
   .btn-fresh:active { background: var(--border); color: var(--text); }
 
+  /* ── Co-host card actions ── */
+  .card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    gap: 10px;
+  }
+
+  .cohost-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .btn-revoke-cohost {
+    background: none;
+    border: 1px solid var(--warn);
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: var(--warn);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .btn-revoke-cohost:active { background: rgba(255,153,0,0.1); transform: scale(0.95); }
+
+  .btn-make-cohost {
+    width: 100%;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .btn-make-cohost:active { background: var(--border); color: var(--text); }
+
   /* ── Confirm modal ── */
   .confirm-modal {
     position: fixed; inset: 0;
@@ -713,8 +770,8 @@
 <!-- ── Pass control modal ── -->
 <div class="pass-modal" id="passModal">
   <div class="pass-modal-box">
-    <div class="pass-modal-eyebrow">Pass Control</div>
-    <div class="pass-modal-title" id="passModalTitle">Who should take over?</div>
+    <div class="pass-modal-eyebrow">Assign Co-host</div>
+    <div class="pass-modal-title" id="passModalTitle">Who should be co-host?</div>
     <div class="pass-waiting-list" id="passWaitingList"></div>
     <button class="pass-modal-cancel" id="passModalCancel">Cancel</button>
   </div>
@@ -737,11 +794,15 @@
   const HTTP_URL   = SERVER_URL.replace(/^wss?:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
   const STORAGE_KEY = 'speakerTimerRooms';
 
+  function escHtml(s) {
+    return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   // ── Pass control modal ───────────────────────────────────────────────────────
   const passModal = document.getElementById('passModal');
   let passSessionId = null;
 
-  function openPassModal(sessionId) {
+  function openAssignCohostModal(sessionId) {
     passSessionId = sessionId;
     const waitingList = roomData[sessionId]?.state?.waitingList || [];
     const listEl = document.getElementById('passWaitingList');
@@ -751,8 +812,8 @@
     } else {
       listEl.innerHTML = waitingList.map(w => `
         <div class="pass-waiting-item">
-          <span class="pass-waiting-name ${w.name ? '' : 'unnamed'}">${w.name || 'Unknown device'}</span>
-          <button class="btn-pass-to" data-target="${w.id}">Pass →</button>
+          <span class="pass-waiting-name ${w.name ? '' : 'unnamed'}">${escHtml(w.name) || 'Unknown device'}</span>
+          <button class="btn-pass-to" data-target="${w.id}">Assign as Co-host →</button>
         </div>
       `).join('');
 
@@ -761,7 +822,7 @@
           btn.textContent = '…';
           btn.disabled = true;
           try {
-            await fetch(`${HTTP_URL}/sessions/${passSessionId}/pass`, {
+            await fetch(`${HTTP_URL}/sessions/${passSessionId}/assign-cohost`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ targetId: btn.dataset.target }),
@@ -910,7 +971,7 @@
     if (!el) return;
 
     const { state, status } = roomData[sessionId] || {};
-    const { running, timeRemaining, totalTime, roomName, overtime, waitingList = [], runCount = 0 } = state || {};
+    const { running, timeRemaining, totalTime, roomName, overtime, waitingList = [], runCount = 0, controllerConnected = false, coHost = false, coHostName = '' } = state || {};
     const offline = status === 'offline' || status === 'connecting';
     const tc = offline ? '' : timeClass(timeRemaining, overtime);
     const pct = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) * 100 : 100;
@@ -946,6 +1007,15 @@
       <div class="card-progress">
         <div class="card-progress-fill ${tc}" style="width:${offline ? '100' : pct}%"></div>
       </div>
+      ${!offline && controllerConnected ? `
+      <div class="card-actions">
+        ${coHost ? `
+          <span class="cohost-label">⬡ Co-host${coHostName ? ': ' + escHtml(coHostName) : ''}</span>
+          <button class="btn-revoke-cohost" data-id="${sessionId}">Revoke</button>
+        ` : `
+          <button class="btn-make-cohost" data-id="${sessionId}">Make Co-host</button>
+        `}
+      </div>` : ''}
     `;
 
     // Remove button
@@ -968,7 +1038,35 @@
       waitingTap.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        openPassModal(sessionId);
+        openAssignCohostModal(sessionId);
+      });
+    }
+
+    // Make co-host
+    const makeCoHostBtn = el.querySelector('.btn-make-cohost');
+    if (makeCoHostBtn) {
+      makeCoHostBtn.addEventListener('click', async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        try {
+          await fetch(`${HTTP_URL}/sessions/${sessionId}/assign-cohost`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+          });
+        } catch {}
+      });
+    }
+
+    // Revoke co-host
+    const revokeCoHostBtn = el.querySelector('.btn-revoke-cohost');
+    if (revokeCoHostBtn) {
+      revokeCoHostBtn.addEventListener('click', async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        try {
+          await fetch(`${HTTP_URL}/sessions/${sessionId}/release`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: '{}',
+          });
+        } catch {}
       });
     }
   }
