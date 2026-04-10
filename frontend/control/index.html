@@ -137,8 +137,27 @@
     margin-bottom: 8px;
   }
 
-  /* ── Speaker name ── */
+  /* ── Speaker name + operator name ── */
   .speaker-row { flex-shrink: 0; }
+  .operator-row { flex-shrink: 0; }
+
+  .operator-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+    min-height: 52px;
+  }
+
+  .operator-input:focus { border-color: var(--accent); }
+  .operator-input::placeholder { color: var(--muted); }
 
   .speaker-input {
     width: 100%;
@@ -645,6 +664,11 @@
   <input class="speaker-input" id="speakerInput" type="text" placeholder="Enter speaker name…" maxlength="60">
 </div>
 
+<div class="operator-row">
+  <div class="field-label">Your name <span style="color:var(--muted);font-weight:300;text-transform:none;letter-spacing:0">(for passing control)</span></div>
+  <input class="operator-input" id="operatorInput" type="text" placeholder="Enter your name…" maxlength="40">
+</div>
+
 <div class="duration-row">
   <div class="field-label">Duration</div>
   <div class="duration-grid">
@@ -741,13 +765,17 @@
   const waitingSection    = document.getElementById('waitingSection');
   const waitingListEl     = document.getElementById('waitingList');
   const waitingNameInput  = document.getElementById('waitingNameInput');
+  const operatorInput     = document.getElementById('operatorInput');
 
   sessionTag.textContent = `Session ${sessionId}`;
 
   // Restore saved name for this device
   const MY_NAME_KEY = 'speakerTimerMyName';
   const savedMyName = localStorage.getItem(MY_NAME_KEY) || '';
-  if (savedMyName) waitingNameInput.value = savedMyName;
+  if (savedMyName) {
+    waitingNameInput.value = savedMyName;
+    operatorInput.value    = savedMyName;
+  }
 
   // All Rooms button — save this room and go to hub
   document.getElementById('roomsBtn').addEventListener('click', () => {
@@ -830,14 +858,25 @@
     }
   });
 
-  // Speaker name (debounced) — also persists to localStorage
+  // Speaker name (debounced)
   let nameTimer;
   speakerInput.addEventListener('input', () => {
-    const name = speakerInput.value.trim();
-    if (name) localStorage.setItem(MY_NAME_KEY, name);
     clearTimeout(nameTimer);
     nameTimer = setTimeout(() => {
-      send({ type: 'set_speaker', sessionId, name });
+      send({ type: 'set_speaker', sessionId, name: speakerInput.value.trim() });
+    }, 500);
+  });
+
+  // Operator (your) name — persists to localStorage, keeps waiting name in sync
+  operatorInput.addEventListener('input', () => {
+    const name = operatorInput.value.trim();
+    if (name) {
+      localStorage.setItem(MY_NAME_KEY, name);
+      waitingNameInput.value = name;
+    }
+    clearTimeout(waitingNameTimer);
+    waitingNameTimer = setTimeout(() => {
+      if (waitingId) send({ type: 'set_waiting_name', waitingId, name });
     }, 500);
   });
 
@@ -858,11 +897,14 @@
     });
   });
 
-  // Waiting name (debounced) — also persists to localStorage
+  // Waiting name (debounced) — persists to localStorage and keeps operatorInput in sync
   let waitingNameTimer;
   waitingNameInput.addEventListener('input', () => {
     const name = waitingNameInput.value.trim();
-    if (name) localStorage.setItem(MY_NAME_KEY, name);
+    if (name) {
+      localStorage.setItem(MY_NAME_KEY, name);
+      operatorInput.value = name;
+    }
     clearTimeout(waitingNameTimer);
     waitingNameTimer = setTimeout(() => {
       if (waitingId) send({ type: 'set_waiting_name', waitingId, name });
@@ -994,9 +1036,9 @@
           hasControl = true;
           waitingId = null;
           controlAvailable = false;
-          // Auto-fill speaker name from saved device name if field is blank
+          // Auto-fill speaker name from operator name if session speaker is blank
           if (!state.speakerName) {
-            const myName = localStorage.getItem(MY_NAME_KEY) || '';
+            const myName = operatorInput.value.trim() || localStorage.getItem(MY_NAME_KEY) || '';
             if (myName) {
               speakerInput.value = myName;
               send({ type: 'set_speaker', sessionId, name: myName });
