@@ -341,6 +341,83 @@
     line-height: 1.6;
   }
 
+  .waiting-name-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  .waiting-name-input::placeholder { color: var(--muted); font-size: 13px; }
+  .waiting-name-input:focus { border-color: var(--accent); }
+
+  /* ── Waiting list (shown to controller) ── */
+  .waiting-section {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .waiting-section.visible { display: flex; }
+
+  .waiting-section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .waiting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    gap: 12px;
+  }
+
+  .waiting-item-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .waiting-item-name.unnamed { color: var(--muted); font-style: italic; }
+
+  .btn-pass {
+    background: transparent;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 5px 12px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+
+  .btn-pass:active { background: rgba(232,255,71,0.1); transform: scale(0.95); }
+
   .btn-take-control {
     display: none;
     width: 100%;
@@ -455,6 +532,12 @@
 <div class="lock-banner" id="lockBanner">
   <div class="lock-title">Control Active</div>
   <div class="lock-sub">Another device is controlling<br>this session</div>
+  <input class="waiting-name-input" id="waitingNameInput" type="text" placeholder="Enter your name so they can pass to you…" maxlength="40">
+</div>
+
+<div class="waiting-section" id="waitingSection">
+  <div class="waiting-section-label">Waiting to control</div>
+  <div id="waitingList"></div>
 </div>
 
 <button class="btn-take-control" id="takeControlBtn">Take Control</button>
@@ -475,24 +558,28 @@
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get('session') || 'NOSESSION';
 
-  let state = { running: false, timeRemaining: 0, totalTime: 0, speakerName: '', overtime: false };
+  let state = { running: false, timeRemaining: 0, totalTime: 0, speakerName: '', overtime: false, waitingList: [] };
   let selectedMins = null;
   let hasControl = false;
   let controlAvailable = false;
+  let waitingId = null;
 
   // DOM
-  const timeBig         = document.getElementById('timeBig');
-  const timeStatus      = document.getElementById('timeStatus');
-  const mainBtn         = document.getElementById('mainBtn');
-  const resetBtn        = document.getElementById('resetBtn');
-  const speakerInput    = document.getElementById('speakerInput');
-  const connDot         = document.getElementById('connDot');
-  const overlay         = document.getElementById('overlay');
-  const overtimeBanner  = document.getElementById('overtimeBanner');
-  const sessionTag      = document.getElementById('sessionTag');
-  const lockBanner      = document.getElementById('lockBanner');
-  const takeControlBtn  = document.getElementById('takeControlBtn');
-  const releaseBtn      = document.getElementById('releaseBtn');
+  const timeBig           = document.getElementById('timeBig');
+  const timeStatus        = document.getElementById('timeStatus');
+  const mainBtn           = document.getElementById('mainBtn');
+  const resetBtn          = document.getElementById('resetBtn');
+  const speakerInput      = document.getElementById('speakerInput');
+  const connDot           = document.getElementById('connDot');
+  const overlay           = document.getElementById('overlay');
+  const overtimeBanner    = document.getElementById('overtimeBanner');
+  const sessionTag        = document.getElementById('sessionTag');
+  const lockBanner        = document.getElementById('lockBanner');
+  const takeControlBtn    = document.getElementById('takeControlBtn');
+  const releaseBtn        = document.getElementById('releaseBtn');
+  const waitingSection    = document.getElementById('waitingSection');
+  const waitingListEl     = document.getElementById('waitingList');
+  const waitingNameInput  = document.getElementById('waitingNameInput');
 
   sessionTag.textContent = `Session ${sessionId}`;
 
@@ -520,14 +607,28 @@
     overtimeBanner.className = 'overtime-banner' + (overtime && hasControl ? ' visible' : '');
 
     // Lock state UI
-    const showControls = hasControl;
-    document.querySelector('.speaker-row').style.display  = showControls ? '' : 'none';
-    document.querySelector('.duration-row').style.display = showControls ? '' : 'none';
-    document.querySelector('.nudge-row').style.display    = showControls ? '' : 'none';
-    document.querySelector('.controls').style.display     = showControls ? '' : 'none';
-    releaseBtn.className   = 'btn-release'      + (hasControl ? ' visible' : '');
-    lockBanner.className   = 'lock-banner'      + (!hasControl ? ' visible' : '');
+    document.querySelector('.speaker-row').style.display  = hasControl ? '' : 'none';
+    document.querySelector('.duration-row').style.display = hasControl ? '' : 'none';
+    document.querySelector('.nudge-row').style.display    = hasControl ? '' : 'none';
+    document.querySelector('.controls').style.display     = hasControl ? '' : 'none';
+    releaseBtn.className     = 'btn-release'      + (hasControl ? ' visible' : '');
+    lockBanner.className     = 'lock-banner'      + (!hasControl ? ' visible' : '');
     takeControlBtn.className = 'btn-take-control' + (!hasControl && controlAvailable ? ' visible' : '');
+
+    // Waiting list (shown to controller)
+    const wl = state.waitingList || [];
+    waitingSection.className = 'waiting-section' + (hasControl && wl.length > 0 ? ' visible' : '');
+    waitingListEl.innerHTML = wl.map(p => `
+      <div class="waiting-item">
+        <span class="waiting-item-name ${p.name ? '' : 'unnamed'}">${p.name || 'Unknown device'}</span>
+        <button class="btn-pass" data-id="${p.id}">Pass</button>
+      </div>
+    `).join('');
+    waitingListEl.querySelectorAll('.btn-pass').forEach(btn => {
+      btn.addEventListener('click', () => {
+        send({ type: 'pass_control_to', sessionId, targetId: btn.dataset.id });
+      });
+    });
   }
 
   // Duration buttons
@@ -580,6 +681,17 @@
     });
   });
 
+  // Waiting name input (debounced)
+  let waitingNameTimer;
+  waitingNameInput.addEventListener('input', () => {
+    clearTimeout(waitingNameTimer);
+    waitingNameTimer = setTimeout(() => {
+      if (waitingId) {
+        send({ type: 'set_waiting_name', waitingId, name: waitingNameInput.value.trim() });
+      }
+    }, 500);
+  });
+
   // Take control
   takeControlBtn.addEventListener('click', () => {
     controlAvailable = false;
@@ -623,10 +735,12 @@
           render();
         } else if (msg.type === 'control_granted') {
           hasControl = true;
+          waitingId = null;
           controlAvailable = false;
           render();
         } else if (msg.type === 'control_denied') {
           hasControl = false;
+          waitingId = msg.waitingId;
           render();
         } else if (msg.type === 'control_available') {
           controlAvailable = true;

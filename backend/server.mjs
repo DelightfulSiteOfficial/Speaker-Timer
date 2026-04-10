@@ -5,8 +5,11 @@ import { parse } from 'url';
 const PORT = process.env.PORT || 3000;
 
 // ── Session store ────────────────────────────────────────────────────────────
-// Each session: { state, clients: Set<WebSocket>, tickInterval }
 const sessions = new Map();
+
+function generateId() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
 
 function createSession(id) {
   return {
@@ -17,10 +20,12 @@ function createSession(id) {
       speakerName: '',
       overtime: false,
       controllerConnected: false,
+      waitingList: [], // [{ id, name }] — visible to all clients
     },
     clients: new Set(),
     tickInterval: null,
-    controller: null, // WebSocket of the current controller
+    controller: null,             // WebSocket of the current controller
+    waitingControllers: new Map(), // waitingId → { ws, name }
   };
 }
 
@@ -29,12 +34,22 @@ function getSession(id) {
   return sessions.get(id);
 }
 
+function syncWaitingList(session) {
+  session.state.waitingList = Array.from(session.waitingControllers.entries())
+    .map(([id, { name }]) => ({ id, name }));
+}
+
 // ── Broadcast state to all clients in a session ───────────────────────────────
 function broadcast(session) {
   const msg = JSON.stringify({ type: 'state', payload: session.state });
   for (const client of session.clients) {
     if (client.readyState === WebSocket.OPEN) client.send(msg);
   }
+}
+
+// ── Send a message to one client ──────────────────────────────────────────────
+function sendMsg(ws, msg) {
+  if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
 }
 
 // ── Broadcast a non-state message to all clients ──────────────────────────────
@@ -76,13 +91,30 @@ function stopTick(session) {
   }
 }
 
-// ── HTTP server (health check + static file hint) ─────────────────────────────
+// ── HTTP server ───────────────────────────────────────────────────────────────
 const server = createServer((req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true, sessions: sessions.size }));
     return;
   }
+
+  if (req.url === '/sessions') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    const list = [];
+    for (const [id, session] of sessions.entries()) {
+      list.push({
+        id,
+        state: session.state,
+        clientCount: session.clients.size,
+      });
+    }
+    res.end(JSON.stringify({ sessions: list }));
+    return;
+  }
+
   res.writeHead(200, { 'Content-Type': 'text/plain' });
   res.end('Speaker Timer WebSocket server running.');
 });
@@ -101,28 +133,59 @@ wss.on('connection', (ws, req) => {
   session.clients.add(ws);
 
   // Send current state immediately on join
-  ws.send(JSON.stringify({ type: 'state', payload: session.state }));
+  sendMsg(ws, { type: 'state', payload: session.state });
 
   // Grant or deny control
   if (role === 'control') {
     if (!session.controller) {
       session.controller = ws;
       session.state.controllerConnected = true;
-      ws.send(JSON.stringify({ type: 'control_granted' }));
+      sendMsg(ws, { type: 'control_granted' });
       broadcast(session);
     } else {
-      ws.send(JSON.stringify({ type: 'control_denied' }));
+      const waitingId = generateId();
+      session.waitingControllers.set(waitingId, { ws, name: '' });
+      syncWaitingList(session);
+      sendMsg(ws, { type: 'control_denied', waitingId });
+      broadcast(session);
     }
   }
 
   console.log(`[${sessionId}] ${role} connected. Clients: ${session.clients.size}`);
 
   ws.on('message', (raw) => {
-    // Only the active controller can send commands
-    if (ws !== session.controller) return;
-
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
+
+    // ── Messages any control-role client can send ─────────────────────────────
+
+    if (msg.type === 'claim_control') {
+      if (!session.controller) {
+        // Remove from waiting list if present
+        for (const [wid, entry] of session.waitingControllers.entries()) {
+          if (entry.ws === ws) { session.waitingControllers.delete(wid); break; }
+        }
+        session.controller = ws;
+        session.state.controllerConnected = true;
+        syncWaitingList(session);
+        sendMsg(ws, { type: 'control_granted' });
+        broadcast(session);
+      }
+      return;
+    }
+
+    if (msg.type === 'set_waiting_name') {
+      const entry = session.waitingControllers.get(msg.waitingId);
+      if (entry && entry.ws === ws) {
+        entry.name = (msg.name || '').slice(0, 40);
+        syncWaitingList(session);
+        broadcast(session);
+      }
+      return;
+    }
+
+    // ── Controller-only messages ──────────────────────────────────────────────
+    if (ws !== session.controller) return;
 
     const s = session.state;
 
@@ -177,21 +240,36 @@ wss.on('connection', (ws, req) => {
         break;
       }
 
-      case 'claim_control':
-        if (!session.controller) {
-          session.controller = ws;
-          session.state.controllerConnected = true;
-          ws.send(JSON.stringify({ type: 'control_granted' }));
-          broadcast(session);
-        }
-        break;
+      case 'pass_control_to': {
+        const target = session.waitingControllers.get(msg.targetId);
+        if (!target) break;
 
-      case 'release_control':
+        // Put current controller into the waiting list
+        const newWaitingId = generateId();
+        session.waitingControllers.set(newWaitingId, { ws, name: '' });
+        sendMsg(ws, { type: 'control_denied', waitingId: newWaitingId });
+
+        // Promote the target
+        session.waitingControllers.delete(msg.targetId);
+        session.controller = target.ws;
+        syncWaitingList(session);
+        sendMsg(target.ws, { type: 'control_granted' });
+        broadcast(session);
+        break;
+      }
+
+      case 'release_control': {
+        // Put current controller into the waiting list
+        const newWaitingId = generateId();
+        session.waitingControllers.set(newWaitingId, { ws, name: '' });
         session.controller = null;
         session.state.controllerConnected = false;
+        syncWaitingList(session);
+        sendMsg(ws, { type: 'control_denied', waitingId: newWaitingId });
         broadcast(session);
         broadcastMsg(session, { type: 'control_available' });
         break;
+      }
     }
   });
 
@@ -203,8 +281,19 @@ wss.on('connection', (ws, req) => {
     if (session.controller === ws) {
       session.controller = null;
       session.state.controllerConnected = false;
+      syncWaitingList(session);
       broadcast(session);
       broadcastMsg(session, { type: 'control_available' });
+    }
+
+    // Remove from waiting list if present
+    for (const [wid, entry] of session.waitingControllers.entries()) {
+      if (entry.ws === ws) {
+        session.waitingControllers.delete(wid);
+        syncWaitingList(session);
+        broadcast(session);
+        break;
+      }
     }
 
     // Clean up idle sessions (no clients for 10 minutes)
