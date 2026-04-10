@@ -30,11 +30,12 @@
   }
 
   body {
-    min-height: 100dvh;
-    padding: env(safe-area-inset-top, 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 20px);
+    height: 100dvh;
+    overflow: hidden;
+    padding: env(safe-area-inset-top, 12px) 16px calc(env(safe-area-inset-bottom, 0px) + 12px);
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 8px;
   }
 
   /* ── Name prompt overlay ── */
@@ -258,7 +259,7 @@
 
   .time-big {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(60px, 17vw, 96px);
+    font-size: clamp(48px, 13vw, 72px);
     line-height: 0.9;
     letter-spacing: -0.01em;
     transition: color 0.4s;
@@ -302,15 +303,15 @@
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 8px;
+    margin-bottom: 5px;
   }
 
   /* ── Duration dial ── */
   .dial-wrapper {
     position: relative;
-    width: min(75%, 280px);
+    width: min(55%, 190px);
     aspect-ratio: 1;
-    margin: 0 0 12px;
+    margin: 0 0 6px;
   }
 
   .dial-svg {
@@ -334,7 +335,7 @@
 
   .dial-value {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 62px;
+    font-size: 48px;
     line-height: 1;
     color: var(--text);
     letter-spacing: 0.02em;
@@ -388,7 +389,7 @@
   }
 
   .dial-preset {
-    height: 40px;
+    height: 34px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -415,7 +416,7 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
-    height: 52px;
+    height: 44px;
     color: var(--text);
     font-family: 'DM Mono', monospace;
     font-size: 13px;
@@ -436,7 +437,7 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 0 16px;
-    height: 52px;
+    height: 44px;
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
     font-size: 15px;
@@ -452,7 +453,7 @@
     border: 1px solid var(--accent);
     border-radius: 12px;
     padding: 0 18px;
-    height: 52px;
+    height: 44px;
     color: var(--accent);
     font-family: 'DM Mono', monospace;
     font-size: 11px;
@@ -537,7 +538,7 @@
   }
 
   .btn-main {
-    height: 68px;
+    height: 58px;
     border-radius: 16px;
     border: none;
     display: flex;
@@ -565,7 +566,7 @@
   .btn-release:active { color: var(--text); }
 
   /* ── Control panel (hidden until hasControl) ── */
-  .control-panel { display: none; flex-direction: column; gap: 14px; }
+  .control-panel { display: none; flex-direction: column; gap: 10px; }
   .control-panel.visible { display: flex; }
 
   /* ── Overlay ── */
