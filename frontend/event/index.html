@@ -135,7 +135,7 @@
   ══════════════════════════════════════════ */
   .main {
     display: grid;
-    grid-template-columns: 420px 1fr;
+    grid-template-columns: 1fr 260px;
     flex: 1;
     overflow: hidden;
   }
@@ -419,7 +419,7 @@
     align-items: center;
     justify-content: center;
     gap: 0;
-    padding: 32px 48px 28px;
+    padding: 20px 16px 16px;
     overflow: hidden;
     position: relative;
   }
@@ -427,22 +427,22 @@
   /* Now presenting label */
   .now-label {
     font-family: 'DM Mono', monospace;
-    font-size: 10px;
+    font-size: 9px;
     letter-spacing: 0.28em;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   .now-speaker {
     font-family: 'DM Sans', sans-serif;
-    font-size: clamp(16px, 2vw, 24px);
+    font-size: clamp(11px, 1.5vw, 14px);
     font-weight: 300;
     color: rgba(240,237,232,0.55);
     letter-spacing: 0.02em;
-    min-height: 1.5em;
+    min-height: 1.4em;
     text-align: center;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -453,7 +453,7 @@
   /* Big timer */
   .time-display {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(100px, 18vw, 220px);
+    font-size: clamp(52px, 12vw, 88px);
     line-height: 0.88;
     letter-spacing: -0.02em;
     color: var(--text);
@@ -469,12 +469,12 @@
 
   /* Progress bar */
   .progress-bar {
-    width: min(100%, 560px);
+    width: 100%;
     height: 3px;
     background: var(--border);
     border-radius: 2px;
     overflow: hidden;
-    margin: 14px 0 20px;
+    margin: 10px 0 14px;
   }
   .progress-fill {
     height: 100%;
@@ -490,19 +490,19 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    width: min(100%, 480px);
+    gap: 8px;
+    width: 100%;
   }
 
   .btn-start {
     width: 100%;
-    height: 66px;
-    border-radius: 16px;
+    height: 44px;
+    border-radius: 12px;
     border: none;
     background: var(--green);
     color: #000;
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 36px;
+    font-size: 24px;
     letter-spacing: 0.06em;
     cursor: pointer;
     transition: all 0.15s;
@@ -514,18 +514,18 @@
   .btn-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
   }
 
   .btn-secondary {
-    height: 48px;
-    border-radius: 12px;
+    height: 36px;
+    border-radius: 10px;
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--muted);
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 22px;
+    font-size: 16px;
     letter-spacing: 0.05em;
     cursor: pointer;
     transition: all 0.15s;
@@ -544,14 +544,14 @@
   /* Overtime */
   .overtime-badge {
     font-family: 'DM Mono', monospace;
-    font-size: 10px;
+    font-size: 9px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--danger);
     background: rgba(255,68,68,0.08);
     border: 1px solid rgba(255,68,68,0.3);
     border-radius: 100px;
-    padding: 4px 14px;
+    padding: 3px 10px;
     display: none;
     animation: flash 1s step-end infinite;
   }
@@ -560,12 +560,12 @@
   /* QR corner */
   .qr-corner {
     position: absolute;
-    bottom: 20px;
-    right: 24px;
+    bottom: 14px;
+    right: 16px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
   }
   .qr-corner canvas, .qr-corner img { border-radius: 4px; }
   .qr-corner-label {
