@@ -1320,7 +1320,6 @@
   function addAgenda(sessionId, title) {
     sessionId = sessionId.toUpperCase().trim();
     if (!sessionId || !title.trim()) return 'Session ID and title are required';
-    if (rooms.includes(sessionId) && !agendas[sessionId]) return 'Session already added as a plain room';
     if (agendas[sessionId]) return 'Agenda for this session already exists';
     agendas[sessionId] = { title: title.trim(), items: [] };
     saveAgendas(agendas);
