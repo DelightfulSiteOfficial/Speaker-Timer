@@ -563,8 +563,8 @@
 <!-- Top bar: mode tabs + utility buttons -->
 <div class="top-bar">
   <div class="mode-tabs">
-    <button class="mode-tab" id="tabPresenter">Presenter Mode</button>
-    <button class="mode-tab tab-active-admin" id="tabAdmin">Admin Mode</button>
+    <button class="mode-tab tab-active-presenter" id="tabPresenter">Presenter Mode</button>
+    <button class="mode-tab" id="tabAdmin">Admin Mode</button>
   </div>
   <div class="toolbar">
     <button class="toolbar-btn" id="pipBtn">Pop Out</button>
@@ -820,7 +820,7 @@
   const presenterStart = document.getElementById('presenterStart');
   const presenterReset = document.getElementById('presenterReset');
 
-  let presenterMode = false;
+  let presenterMode = true;
   let ctrlWs        = null;
 
   function sendCtrl(msg) {
@@ -1175,6 +1175,7 @@
   });
 
 
+  setMode('presenter');
   connect();
 
   setInterval(() => { render(); updatePiP(); }, 500);
