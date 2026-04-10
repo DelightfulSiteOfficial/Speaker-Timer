@@ -1013,16 +1013,39 @@
         .msg-bar { width:100%; height:3px; background:#e8ff47; transform-origin:left; border-radius:2px; }
         .msg-bar.drain { animation: drain var(--d,5s) linear forwards; }
         @keyframes drain { from{transform:scaleX(1)} to{transform:scaleX(0)} }
+        #pip-input {
+          display:none; flex-direction:column; align-items:center;
+          justify-content:center; gap:8px; width:100%; padding:12px;
+        }
+        #pip-input.visible { display:flex; }
+        .pip-min-input {
+          background:#1a1a1a; border:2px solid #e8ff47; border-radius:10px;
+          color:#f0ede8; font-family:'Bebas Neue',sans-serif;
+          font-size:clamp(40px,14vw,72px); text-align:center;
+          width:100%; outline:none; padding:4px 0; line-height:1;
+          -moz-appearance:textfield;
+        }
+        .pip-min-input::-webkit-inner-spin-button,
+        .pip-min-input::-webkit-outer-spin-button { -webkit-appearance:none; }
+        .pip-min-label {
+          font-family:'DM Mono',monospace; font-size:10px;
+          letter-spacing:.2em; text-transform:uppercase; color:#555;
+        }
       `;
       pipWindow.document.head.appendChild(style);
 
       pipWindow.document.body.innerHTML = `
-        <div id="pip-timer" style="cursor:pointer" title="Click to start / pause">
+        <div id="pip-timer" style="cursor:pointer">
           <div class="time" id="pt">--:--</div>
           <div class="speaker" id="ps"></div>
           <div id="pip-hint" style="font-family:'DM Mono',monospace;font-size:9px;
-            letter-spacing:.15em;text-transform:uppercase;color:#333;margin-top:4px;
-            transition:color .2s">tap to start / pause</div>
+            letter-spacing:.15em;text-transform:uppercase;color:#333;margin-top:4px;">
+            tap · start &nbsp; dbl · reset &nbsp; hold · set time
+          </div>
+        </div>
+        <div id="pip-input">
+          <input class="pip-min-input" id="pipMinInput" type="number" min="1" max="300" placeholder="10">
+          <div class="pip-min-label">minutes — press enter</div>
         </div>
         <div id="pip-msg" style="display:none">
           <div class="msg-text" id="pm"></div>
@@ -1030,13 +1053,57 @@
         </div>
       `;
 
-      // Single tap = start / pause (with short delay so double-tap can cancel it)
-      // Double tap = reset to beginning without starting
-      const pipTimerEl = pipWindow.document.getElementById('pip-timer');
+      const pipTimerEl  = pipWindow.document.getElementById('pip-timer');
+      const pipInputEl  = pipWindow.document.getElementById('pip-input');
+      const pipMinInput = pipWindow.document.getElementById('pipMinInput');
       let pipClickTimer = null;
+      let pipHoldTimer  = null;
 
+      function showPipInput() {
+        pipTimerEl.style.display = 'none';
+        pipInputEl.classList.add('visible');
+        pipMinInput.value = '';
+        pipMinInput.focus();
+      }
+
+      function hidePipInput() {
+        pipInputEl.classList.remove('visible');
+        pipTimerEl.style.display = 'flex';
+      }
+
+      // Confirm duration on Enter
+      pipMinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const mins = parseInt(pipMinInput.value);
+          if (mins >= 1 && mins <= 300) {
+            if (!presenterMode) setMode('presenter');
+            sendCtrl({ type: 'set_duration', seconds: mins * 60 });
+          }
+          hidePipInput();
+        }
+        if (e.key === 'Escape') hidePipInput();
+      });
+
+      // Dismiss on click outside input
+      pipMinInput.addEventListener('blur', () => setTimeout(hidePipInput, 150));
+
+      // Long press → show duration input
+      pipTimerEl.addEventListener('mousedown', () => {
+        pipHoldTimer = setTimeout(() => {
+          pipHoldTimer = null;
+          clearTimeout(pipClickTimer);
+          pipClickTimer = null;
+          showPipInput();
+        }, 500);
+      });
+
+      pipTimerEl.addEventListener('mouseup',    () => clearTimeout(pipHoldTimer));
+      pipTimerEl.addEventListener('mouseleave', () => clearTimeout(pipHoldTimer));
+
+      // Single click = start / pause
       pipTimerEl.addEventListener('click', () => {
-        if (pipClickTimer) return; // double-click in progress, ignore
+        if (pipHoldTimer === null && pipClickTimer === null) return; // hold fired
+        if (pipClickTimer) return;
         pipClickTimer = setTimeout(() => {
           pipClickTimer = null;
           if (!presenterMode) setMode('presenter');
@@ -1044,6 +1111,7 @@
         }, 220);
       });
 
+      // Double click = reset
       pipTimerEl.addEventListener('dblclick', () => {
         clearTimeout(pipClickTimer);
         pipClickTimer = null;
