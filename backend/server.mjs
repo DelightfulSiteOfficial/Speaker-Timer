@@ -250,6 +250,36 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  // POST /sessions/:id/load  — admin loads an agenda item (sets name + duration, resets timer)
+  const loadMatch = req.url.match(/^\/sessions\/([^/]+)\/load$/);
+  if (req.method === 'POST' && loadMatch) {
+    const sessionId = loadMatch[1].toUpperCase().trim();
+    const body = await readBody(req);
+    let name, seconds;
+    try { ({ name, seconds } = JSON.parse(body)); } catch {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Invalid JSON' }));
+      return;
+    }
+    const secs = parseInt(seconds);
+    if (!secs || secs < 1 || secs > 18000) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'seconds must be 1–18000' }));
+      return;
+    }
+    const session = getSession(sessionId);
+    session.state.roomName      = (name || '').slice(0, 60);
+    session.state.totalTime     = secs;
+    session.state.timeRemaining = secs;
+    session.state.running       = false;
+    session.state.overtime      = false;
+    stopTick(session);
+    broadcast(session);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+
   // POST /sessions/:id/release  — admin force-releases the current controller
   const releaseMatch = req.url.match(/^\/sessions\/([^/]+)\/release$/);
   if (req.method === 'POST' && releaseMatch) {
