@@ -386,6 +386,98 @@
   body.pulse-danger-fast  { animation: bgPulseDangerFast  1.6s ease-in-out infinite; }
   body.bg-overtime        { background-color: #200404 !important; animation: none; }
 
+  /* ── Presenter controls panel ── */
+  .presenter-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(10,10,10,0.95);
+    border-top: 1px solid #1e1e1e;
+    padding: 20px 40px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    z-index: 60;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(12px);
+    transition: opacity 0.3s, transform 0.3s;
+  }
+
+  .presenter-panel.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .presenter-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .presenter-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    flex-shrink: 0;
+    width: 60px;
+  }
+
+  .presenter-presets {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .presenter-preset {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .presenter-preset:hover { border-color: var(--muted); color: var(--text); }
+  .presenter-preset.selected { border-color: var(--accent); color: var(--accent); }
+
+  .presenter-actions {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+  }
+
+  .presenter-btn {
+    height: 42px;
+    padding: 0 28px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .presenter-btn.start  { background: #22c55e; color: #000; }
+  .presenter-btn.pause  { background: var(--danger); color: #fff; }
+  .presenter-btn.reset  { background: none; border: 1px solid var(--border); color: var(--muted); font-size: 14px; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; }
+  .presenter-btn:hover  { opacity: 0.85; }
+  .presenter-btn:active { transform: scale(0.96); }
+
+  /* presenter mode indicator in toolbar */
+  .toolbar-btn.presenter-active {
+    border-color: #22c55e;
+    color: #22c55e;
+  }
+
   /* ── Compact / small window ── */
   @media (max-width: 520px), (max-height: 400px) {
     body { padding: 20px; }
@@ -431,8 +523,31 @@
 <!-- Toolbar -->
 <div class="toolbar">
   <button class="toolbar-btn" id="pipBtn">Pop Out</button>
+  <button class="toolbar-btn" id="presenterToggle">Presenter Mode</button>
   <button class="toolbar-btn" id="infoToggle">Hide Info</button>
   <button class="toolbar-btn" id="qrToggle">Hide QR</button>
+</div>
+
+<!-- Presenter controls panel -->
+<div class="presenter-panel" id="presenterPanel">
+  <div class="presenter-row">
+    <span class="presenter-label">Duration</span>
+    <div class="presenter-presets">
+      <button class="presenter-preset" data-mins="5">5 min</button>
+      <button class="presenter-preset" data-mins="10">10 min</button>
+      <button class="presenter-preset" data-mins="15">15 min</button>
+      <button class="presenter-preset" data-mins="20">20 min</button>
+      <button class="presenter-preset" data-mins="30">30 min</button>
+      <button class="presenter-preset" data-mins="45">45 min</button>
+      <button class="presenter-preset" data-mins="60">60 min</button>
+    </div>
+  </div>
+  <div class="presenter-row">
+    <div class="presenter-actions">
+      <button class="presenter-btn reset" id="presenterReset">Reset</button>
+      <button class="presenter-btn start" id="presenterStart">Start</button>
+    </div>
+  </div>
 </div>
 
 <!-- Message flash -->
@@ -544,6 +659,12 @@
     liveDot.className = 'dot' + (running ? ' live' : '');
     labelText.textContent = running ? 'Live' : 'Standby';
 
+    // Keep presenter panel start button in sync
+    if (presenterStart) {
+      presenterStart.textContent = running ? 'Pause' : 'Start';
+      presenterStart.className = 'presenter-btn ' + (running ? 'pause' : 'start');
+    }
+
     // Background pulse states
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
     const isWarn1  = timeRemaining <= 60  && timeRemaining > 30 && !overtime;
@@ -630,6 +751,69 @@
     infoToggle.classList.toggle('active', !infoVisible);
   });
 
+  // ── Presenter mode ────────────────────────────────────────────────────────
+  // Opens a second WS as role=control so the display page can drive the timer.
+  const presenterToggle = document.getElementById('presenterToggle');
+  const presenterPanel  = document.getElementById('presenterPanel');
+  const presenterStart  = document.getElementById('presenterStart');
+  const presenterReset  = document.getElementById('presenterReset');
+
+  let presenterMode = false;
+  let ctrlWs        = null;
+
+  function sendCtrl(msg) {
+    if (ctrlWs?.readyState === WebSocket.OPEN) {
+      ctrlWs.send(JSON.stringify({ ...msg, sessionId }));
+    }
+  }
+
+  function openCtrlWs() {
+    if (ctrlWs?.readyState === WebSocket.OPEN) return;
+    ctrlWs = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control`);
+    ctrlWs.onopen  = () => ctrlWs.send(JSON.stringify({ type: 'join', role: 'control', sessionId }));
+    ctrlWs.onclose = () => { ctrlWs = null; };
+    ctrlWs.onerror = () => ctrlWs?.close();
+  }
+
+  function closeCtrlWs() {
+    if (ctrlWs) { ctrlWs.onclose = null; ctrlWs.close(); ctrlWs = null; }
+  }
+
+  function togglePresenterMode() {
+    presenterMode = !presenterMode;
+    presenterPanel.classList.toggle('visible', presenterMode);
+    presenterToggle.classList.toggle('presenter-active', presenterMode);
+    presenterToggle.textContent = presenterMode ? 'Exit Presenter' : 'Presenter Mode';
+    if (presenterMode) openCtrlWs(); else closeCtrlWs();
+  }
+
+  presenterToggle.addEventListener('click', togglePresenterMode);
+
+  // Duration presets
+  document.querySelectorAll('.presenter-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.presenter-preset').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      sendCtrl({ type: 'set_duration', seconds: parseInt(btn.dataset.mins) * 60 });
+    });
+  });
+
+  // Start / Pause toggle
+  presenterStart.addEventListener('click', () => {
+    if (state.running) {
+      sendCtrl({ type: 'pause' });
+    } else {
+      sendCtrl({ type: 'start' });
+    }
+  });
+
+  // Reset
+  presenterReset.addEventListener('click', () => sendCtrl({ type: 'reset' }));
+
+  // Keep Start button label in sync with running state
+  const _origRender = render;
+  // (patched below after render is defined — see bottom of script)
+
   // ── Message flash ──────────────────────────────────────────────────────────
   const messageFlash   = document.getElementById('messageFlash');
   const flashText      = document.getElementById('flashText');
@@ -671,8 +855,10 @@
 
     const t = pipWindow.document.getElementById('pt');
     const s = pipWindow.document.getElementById('ps');
+    const h = pipWindow.document.getElementById('pip-hint');
     if (t) { t.textContent = formatTime(timeRemaining); t.className = 'time ' + tc; }
     if (s) { s.textContent = name || ''; }
+    if (h) { h.textContent = overtime ? 'tap to pause' : running ? 'tap to pause' : 'tap to start'; }
 
     const pb = pipWindow.document.body;
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
@@ -778,15 +964,31 @@
       pipWindow.document.head.appendChild(style);
 
       pipWindow.document.body.innerHTML = `
-        <div id="pip-timer">
+        <div id="pip-timer" style="cursor:pointer" title="Click to start / pause">
           <div class="time" id="pt">--:--</div>
           <div class="speaker" id="ps"></div>
+          <div id="pip-hint" style="font-family:'DM Mono',monospace;font-size:9px;
+            letter-spacing:.15em;text-transform:uppercase;color:#333;margin-top:4px;
+            transition:color .2s">tap to start / pause</div>
         </div>
         <div id="pip-msg" style="display:none">
           <div class="msg-text" id="pm"></div>
           <div class="msg-bar" id="pb"></div>
         </div>
       `;
+
+      // Tap anywhere on the timer to toggle start/pause
+      pipWindow.document.getElementById('pip-timer').addEventListener('click', () => {
+        if (!presenterMode) {
+          // Auto-activate presenter mode on first tap
+          togglePresenterMode();
+        }
+        if (state.running) {
+          sendCtrl({ type: 'pause' });
+        } else {
+          sendCtrl({ type: 'start' });
+        }
+      });
 
       pipBtn.textContent = 'Close Pop Out';
       pipBtn.classList.add('active');
