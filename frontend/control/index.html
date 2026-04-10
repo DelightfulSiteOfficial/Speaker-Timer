@@ -169,56 +169,6 @@
     margin-bottom: 8px;
   }
 
-  /* ── Current slot bar (Control tab) ── */
-  .current-slot-bar {
-    background: rgba(232,255,71,0.05);
-    border: 1px solid rgba(232,255,71,0.18);
-    border-radius: 12px;
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-shrink: 0;
-  }
-  .current-slot-bar.hidden { display: none; }
-
-  .current-slot-info { flex: 1; min-width: 0; }
-
-  .current-slot-name {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .current-slot-meta {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: var(--accent);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    margin-top: 3px;
-  }
-
-  .btn-next-slot {
-    background: var(--accent);
-    border: none;
-    border-radius: 10px;
-    padding: 0 18px;
-    height: 44px;
-    color: #000;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 22px;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: all 0.15s;
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-  .btn-next-slot:active { transform: scale(0.95); opacity: 0.85; }
-
   /* ── Nudge ── */
   .nudge-row {
     display: grid;
@@ -438,191 +388,6 @@
   .dial-preset:active { transform: scale(0.95); }
   .dial-preset.active { background: rgba(232,255,71,0.1); border-color: rgba(232,255,71,0.35); color: var(--accent); }
 
-  /* agenda tab still needs these */
-  .custom-row { display: flex; gap: 8px; }
-  .custom-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0 14px; height: 48px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 15px; outline: none; transition: border-color 0.2s; }
-  .custom-input::placeholder { color: var(--muted); font-size: 12px; }
-  .custom-input:focus { border-color: var(--accent); }
-  .custom-set { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0 18px; height: 48px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-  .custom-set:active { transform: scale(0.95); background: var(--border); }
-
-  /* ── Agenda tab ── */
-  .agenda-add-section { flex-shrink: 0; }
-
-  .agenda-type-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
-
-  .agenda-type-btn {
-    height: 44px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .agenda-type-btn:active { transform: scale(0.95); }
-  .agenda-type-btn.active[data-type="talk"]  { background: rgba(232,255,71,0.12); border-color: rgba(232,255,71,0.35); color: var(--accent); }
-  .agenda-type-btn.active[data-type="break"] { background: rgba(107,181,255,0.1); border-color: rgba(107,181,255,0.3); color: var(--blue); }
-  .agenda-type-btn.active[data-type="other"] { background: rgba(255,153,0,0.1); border-color: rgba(255,153,0,0.3); color: var(--warn); }
-
-  .agenda-dur-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
-
-  .agenda-dur-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    height: 44px;
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .agenda-dur-btn:active { transform: scale(0.95); }
-  .agenda-dur-btn.active { background: var(--surface); border-color: var(--accent); color: var(--accent); }
-
-  .btn-agenda-add {
-    width: 100%;
-    height: 48px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.15s;
-    margin-top: 8px;
-  }
-  .btn-agenda-add:active { background: var(--border); transform: scale(0.98); }
-
-  /* ── Slot list ── */
-  .agenda-slot-list { display: flex; flex-direction: column; gap: 8px; }
-
-  .agenda-empty {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.12em;
-    text-align: center;
-    padding: 24px 0;
-  }
-
-  .agenda-slot {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--border);
-    border-radius: 12px;
-    padding: 10px 12px 10px 10px;
-    transition: border-color 0.2s, opacity 0.2s;
-  }
-  .agenda-slot.current { border-left-color: var(--accent); background: rgba(232,255,71,0.03); }
-  .agenda-slot.done { opacity: 0.38; }
-
-  .slot-move-col { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
-
-  .slot-move-btn {
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-size: 12px;
-    cursor: pointer;
-    padding: 2px 4px;
-    border-radius: 4px;
-    line-height: 1;
-    transition: color 0.1s;
-  }
-  .slot-move-btn:active { color: var(--text); }
-  .slot-move-btn:disabled { opacity: 0.2; cursor: default; }
-
-  .slot-body { flex: 1; min-width: 0; cursor: pointer; padding: 2px 0; }
-
-  .slot-badge {
-    display: inline-block;
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    padding: 2px 7px;
-    border-radius: 4px;
-    margin-bottom: 5px;
-  }
-  .slot-badge.talk  { background: rgba(232,255,71,0.1); color: var(--accent); }
-  .slot-badge.break { background: rgba(107,181,255,0.1); color: var(--blue); }
-  .slot-badge.other { background: rgba(255,153,0,0.1); color: var(--warn); }
-
-  .slot-label-text {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .slot-label-text .unnamed { color: var(--muted); font-style: italic; }
-
-  .slot-duration-text {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    margin-top: 3px;
-  }
-
-  .slot-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
-
-  .slot-done-btn, .slot-remove-btn {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    width: 28px; height: 28px;
-    color: var(--muted);
-    font-size: 13px;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s;
-  }
-  .slot-done-btn:active { background: rgba(232,255,71,0.1); color: var(--accent); }
-  .slot-done-btn.is-done { color: var(--accent); border-color: rgba(232,255,71,0.3); }
-  .slot-remove-btn:active { background: rgba(255,68,68,0.1); color: var(--danger); border-color: var(--danger); }
-
-  .agenda-divider {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    margin-top: 4px;
-  }
-
-  .btn-agenda-next {
-    width: 100%;
-    padding: 18px;
-    border-radius: 14px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--muted);
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 26px;
-    letter-spacing: 0.06em;
-    cursor: pointer;
-    transition: all 0.15s;
-    flex-shrink: 0;
-    margin-top: 4px;
-  }
-  .btn-agenda-next.has-next { border-color: var(--accent); color: var(--accent); background: rgba(232,255,71,0.04); }
-  .btn-agenda-next:active { transform: scale(0.98); }
-
   /* ── Lock screen ── */
   .lock-screen {
     display: none;
@@ -700,20 +465,10 @@
 <div class="tab-bar hidden" id="tabBar">
   <button class="tab-btn active" data-tab="control">Control</button>
   <button class="tab-btn" data-tab="setup">Setup</button>
-  <button class="tab-btn" data-tab="agenda">Agenda</button>
 </div>
 
 <!-- ── CONTROL tab ── -->
 <div class="tab-panel" id="tabControl">
-
-  <!-- Current slot (visible when agenda has a current slot) -->
-  <div class="current-slot-bar hidden" id="currentSlotBar">
-    <div class="current-slot-info">
-      <div class="current-slot-name" id="currentSlotName">—</div>
-      <div class="current-slot-meta" id="currentSlotMeta"></div>
-    </div>
-    <button class="btn-next-slot" id="controlNextBtn">Next →</button>
-  </div>
 
   <div class="nudge-row">
     <button class="nudge-btn sub" data-nudge="-60">−1m</button>
@@ -785,45 +540,6 @@
 
 </div>
 
-<!-- ── AGENDA tab ── -->
-<div class="tab-panel hidden" id="tabAgenda">
-
-  <!-- Add slot form -->
-  <div class="agenda-add-section">
-    <div class="field-label">Add to agenda</div>
-
-    <div class="agenda-type-row">
-      <button class="agenda-type-btn active" data-type="talk">Talk</button>
-      <button class="agenda-type-btn" data-type="break">Break</button>
-      <button class="agenda-type-btn" data-type="other">Other</button>
-    </div>
-
-    <input class="text-input" id="agendaLabel" type="text" placeholder="Label (optional)…" maxlength="80" style="margin-bottom:10px">
-
-    <div class="agenda-dur-row">
-      <button class="agenda-dur-btn" data-secs="300">5m</button>
-      <button class="agenda-dur-btn" data-secs="600">10m</button>
-      <button class="agenda-dur-btn" data-secs="900">15m</button>
-      <button class="agenda-dur-btn" data-secs="1200">20m</button>
-      <button class="agenda-dur-btn" data-secs="1800">30m</button>
-      <button class="agenda-dur-btn" data-secs="2700">45m</button>
-      <button class="agenda-dur-btn" data-secs="3600">60m</button>
-      <button class="agenda-dur-btn" data-secs="5400">90m</button>
-    </div>
-    <div class="custom-row">
-      <input class="custom-input" id="agendaCustomMins" type="number" placeholder="Custom mins…" min="1" max="300">
-      <button class="custom-set" id="agendaAddBtn">Add</button>
-    </div>
-  </div>
-
-  <!-- Slot list -->
-  <div class="agenda-divider" id="agendaDivider" style="display:none">Agenda</div>
-  <div class="agenda-slot-list" id="agendaList"></div>
-
-  <!-- Next button -->
-  <button class="btn-agenda-next" id="agendaNextBtn">Next Item →</button>
-
-</div>
 
 <!-- ── Lock screen ── -->
 <div class="lock-screen" id="lockScreen">
@@ -855,17 +571,11 @@
   let state = {
     running: false, timeRemaining: 0, totalTime: 0, roomName: '',
     overtime: false, waitingList: [], message: '', runCount: 0,
-    agenda: [], currentSlotId: null,
   };
   let hasControl     = false;
   let controlAvailable = false;
   let waitingId      = null;
   let currentTab     = 'control';
-
-  // Agenda form state
-  let agendaSelectedType = 'talk';
-  let agendaSelectedSecs = null;
-  let lastAgendaJson     = '';
 
   // ── DOM ────────────────────────────────────────────────────────────────────
   const timeBig          = document.getElementById('timeBig');
@@ -880,7 +590,6 @@
   const tabBar           = document.getElementById('tabBar');
   const tabControl       = document.getElementById('tabControl');
   const tabSetup         = document.getElementById('tabSetup');
-  const tabAgenda        = document.getElementById('tabAgenda');
   const lockScreen       = document.getElementById('lockScreen');
   const takeControlBtn   = document.getElementById('takeControlBtn');
   const releaseBtn       = document.getElementById('releaseBtn');
@@ -889,11 +598,6 @@
   const waitingListEl    = document.getElementById('waitingList');
   const waitingNameInput = document.getElementById('waitingNameInput');
   const operatorInput    = document.getElementById('operatorInput');
-  const currentSlotBar   = document.getElementById('currentSlotBar');
-  const currentSlotName  = document.getElementById('currentSlotName');
-  const currentSlotMeta  = document.getElementById('currentSlotMeta');
-  const agendaList       = document.getElementById('agendaList');
-  const agendaNextBtn    = document.getElementById('agendaNextBtn');
 
   sessionTag.textContent = `Session ${sessionId}`;
 
@@ -937,20 +641,6 @@
     return `${s < 0 ? '-' : ''}${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
   }
 
-  function escHtml(s) {
-    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
-  function slotTypeLabel(type) {
-    return { talk: 'Talk', break: 'Break', other: 'Other' }[type] || type;
-  }
-
-  function formatSecs(s) {
-    const m = Math.floor(s / 60);
-    const rem = s % 60;
-    return rem ? `${m}m ${rem}s` : `${m} min`;
-  }
-
   // ── Main render ────────────────────────────────────────────────────────────
   function render() {
     const { running, timeRemaining, overtime } = state;
@@ -970,7 +660,6 @@
     tabBar.classList.toggle('hidden', !hasControl);
     tabControl.classList.toggle('hidden', !hasControl || currentTab !== 'control');
     tabSetup.classList.toggle('hidden',   !hasControl || currentTab !== 'setup');
-    tabAgenda.classList.toggle('hidden',  !hasControl || currentTab !== 'agenda');
 
     lockScreen.classList.toggle('visible', !hasControl);
     takeControlBtn.classList.toggle('visible', !hasControl && controlAvailable);
@@ -992,141 +681,7 @@
         send({ type: 'pass_control_to', sessionId, targetId: btn.dataset.id })
       );
     });
-
-    renderAgenda();
   }
-
-  // ── Agenda render ──────────────────────────────────────────────────────────
-  function renderAgenda() {
-    const agenda = state.agenda || [];
-    const currentSlotId = state.currentSlotId;
-    const currentSlot = agenda.find(sl => sl.id === currentSlotId) || null;
-    const talks = agenda.filter(sl => sl.type === 'talk');
-    const hasNext = agenda.slice(
-      agenda.findIndex(sl => sl.id === currentSlotId) + 1
-    ).some(sl => !sl.done);
-
-    // Current slot bar in Control tab
-    currentSlotBar.classList.toggle('hidden', !currentSlot);
-    if (currentSlot) {
-      currentSlotName.textContent = currentSlot.label || slotTypeLabel(currentSlot.type);
-      if (currentSlot.type === 'talk' && talks.length > 0) {
-        const talkIdx = talks.findIndex(t => t.id === currentSlotId);
-        currentSlotMeta.textContent = talkIdx >= 0
-          ? `Talk ${talkIdx + 1} of ${talks.length}`
-          : 'Talk';
-      } else {
-        currentSlotMeta.textContent = slotTypeLabel(currentSlot.type);
-      }
-    }
-
-    // Style Next button based on whether there's a next item
-    agendaNextBtn.classList.toggle('has-next', !!currentSlot);
-    document.getElementById('controlNextBtn').style.display = currentSlot ? '' : 'none';
-
-    // Avoid rebuilding DOM if nothing changed (timer ticks every second)
-    const agendaJson = JSON.stringify({ agenda, currentSlotId });
-    if (agendaJson === lastAgendaJson) return;
-    lastAgendaJson = agendaJson;
-
-    // Divider
-    const divider = document.getElementById('agendaDivider');
-    divider.style.display = agenda.length ? '' : 'none';
-
-    if (!agenda.length) {
-      agendaList.innerHTML = '<div class="agenda-empty">No items yet — add one below</div>';
-      return;
-    }
-
-    agendaList.innerHTML = agenda.map((slot, idx) => {
-      const isCurrent = slot.id === currentSlotId;
-      const durStr = formatSecs(slot.duration);
-      const typeLabel = slotTypeLabel(slot.type);
-      return `
-        <div class="agenda-slot${isCurrent ? ' current' : ''}${slot.done ? ' done' : ''}" data-slot-id="${slot.id}">
-          <div class="slot-move-col">
-            <button class="slot-move-btn" data-dir="up" ${idx === 0 ? 'disabled' : ''}>↑</button>
-            <button class="slot-move-btn" data-dir="down" ${idx === agenda.length-1 ? 'disabled' : ''}>↓</button>
-          </div>
-          <div class="slot-body">
-            <div class="slot-badge ${slot.type}">${typeLabel}</div>
-            <div class="slot-label-text">${slot.label ? escHtml(slot.label) : `<span class="unnamed">${typeLabel}</span>`}</div>
-            <div class="slot-duration-text">${durStr}</div>
-          </div>
-          <div class="slot-actions">
-            <button class="slot-done-btn${slot.done ? ' is-done' : ''}" title="${slot.done ? 'Undo' : 'Done'}">✓</button>
-            <button class="slot-remove-btn" title="Remove">×</button>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  // ── Agenda list event delegation ───────────────────────────────────────────
-  agendaList.addEventListener('click', e => {
-    const slotEl = e.target.closest('[data-slot-id]');
-    if (!slotEl || !hasControl) return;
-    const id = slotEl.dataset.slotId;
-
-    if (e.target.closest('.slot-remove-btn')) {
-      send({ type: 'agenda_remove', sessionId, id });
-    } else if (e.target.closest('.slot-done-btn')) {
-      const isDone = slotEl.classList.contains('done');
-      send({ type: 'agenda_set_done', sessionId, id, done: !isDone });
-    } else if (e.target.closest('.slot-move-btn')) {
-      const dir = e.target.closest('.slot-move-btn').dataset.dir;
-      send({ type: 'agenda_move', sessionId, id, direction: dir });
-    } else if (e.target.closest('.slot-body')) {
-      send({ type: 'agenda_set_current', sessionId, id });
-    }
-  });
-
-  // ── Agenda type buttons ────────────────────────────────────────────────────
-  document.querySelectorAll('.agenda-type-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      agendaSelectedType = btn.dataset.type;
-      document.querySelectorAll('.agenda-type-btn').forEach(b =>
-        b.classList.toggle('active', b.dataset.type === agendaSelectedType)
-      );
-    });
-  });
-
-  // ── Agenda duration buttons ────────────────────────────────────────────────
-  document.querySelectorAll('.agenda-dur-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      agendaSelectedSecs = parseInt(btn.dataset.secs);
-      document.getElementById('agendaCustomMins').value = '';
-      document.querySelectorAll('.agenda-dur-btn').forEach(b =>
-        b.classList.toggle('active', b === btn)
-      );
-    });
-  });
-
-  // ── Add slot ───────────────────────────────────────────────────────────────
-  document.getElementById('agendaAddBtn').addEventListener('click', () => {
-    const customVal = parseInt(document.getElementById('agendaCustomMins').value);
-    const secs = customVal > 0 ? customVal * 60 : agendaSelectedSecs;
-    if (!secs) return;
-
-    send({
-      type: 'agenda_add',
-      sessionId,
-      slotType: agendaSelectedType,
-      label: document.getElementById('agendaLabel').value.trim(),
-      duration: secs,
-    });
-
-    // Reset form fields
-    document.getElementById('agendaLabel').value = '';
-    document.getElementById('agendaCustomMins').value = '';
-    document.querySelectorAll('.agenda-dur-btn').forEach(b => b.classList.remove('active'));
-    agendaSelectedSecs = null;
-  });
-
-  // ── Next slot (from both tabs) ─────────────────────────────────────────────
-  const sendNext = () => send({ type: 'agenda_next', sessionId });
-  document.getElementById('controlNextBtn').addEventListener('click', sendNext);
-  agendaNextBtn.addEventListener('click', sendNext);
 
   // ── Setup: Duration dial ───────────────────────────────────────────────────
   const DIAL_MAX    = 90;

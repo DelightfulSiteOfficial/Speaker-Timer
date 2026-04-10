@@ -518,7 +518,7 @@
 
     const entry = roomData[sessionId] || {};
     entry.status = 'connecting';
-    entry.state  = entry.state || { running: false, timeRemaining: 0, totalTime: 0, roomName: '', overtime: false, waitingList: [], runCount: 0, agenda: [], currentSlotId: null };
+    entry.state  = entry.state || { running: false, timeRemaining: 0, totalTime: 0, roomName: '', overtime: false, waitingList: [], runCount: 0 };
     roomData[sessionId] = entry;
 
     try {
@@ -582,7 +582,7 @@
     if (!el) return;
 
     const { state, status } = roomData[sessionId] || {};
-    const { running, timeRemaining, totalTime, roomName, overtime, waitingList = [], runCount = 0, agenda = [], currentSlotId = null } = state || {};
+    const { running, timeRemaining, totalTime, roomName, overtime, waitingList = [], runCount = 0 } = state || {};
     const offline = status === 'offline' || status === 'connecting';
     const tc = offline ? '' : timeClass(timeRemaining, overtime);
     const pct = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) * 100 : 100;
@@ -591,23 +591,8 @@
     const pillLabel = offline ? (status === 'connecting' ? 'Connecting' : 'Offline') : running ? 'Running' : (overtime ? 'Overtime' : 'Paused');
 
     const waitingCount = waitingList?.length || 0;
-    const currentSlot = agenda.find(sl => sl.id === currentSlotId);
-    const talks = agenda.filter(sl => sl.type === 'talk');
-    const doneTalks = talks.filter(sl => sl.done).length;
     const metaParts = [];
-    if (!offline && currentSlot) {
-      const label = currentSlot.label || (currentSlot.type === 'break' ? 'Break' : 'Talk');
-      if (currentSlot.type === 'talk' && talks.length > 0) {
-        const talkIdx = talks.findIndex(t => t.id === currentSlotId);
-        metaParts.push(`Talk ${talkIdx + 1}/${talks.length}`);
-      } else {
-        metaParts.push(label.length > 18 ? label.slice(0, 18) + '…' : label);
-      }
-    } else if (!offline && agenda.length > 0) {
-      metaParts.push(`${doneTalks}/${talks.length} talks done`);
-    } else if (!offline && runCount > 0) {
-      metaParts.push(`Timer ${runCount + 1}`);
-    }
+    if (!offline && runCount > 0) metaParts.push(`Timer ${runCount + 1}`);
     if (!offline && waitingCount > 0) metaParts.push(`<span class="waiting">${waitingCount} waiting</span>`);
 
     el.className = `room-card ${running && !offline ? 'running' : ''} ${offline ? 'offline' : ''}`;
