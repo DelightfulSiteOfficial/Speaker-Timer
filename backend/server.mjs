@@ -23,6 +23,8 @@ function createSession(id) {
       waitingList: [], // [{ id, name }] — visible to all clients
       message: '',     // operator message shown on display when QR is hidden
       runCount: 0,     // increments each time reset is called after a timer was started
+      agenda: [],      // [{ id, type, label, duration, done }]
+      currentSlotId: null,
     },
     clients: new Set(),
     tickInterval: null,
@@ -247,6 +249,89 @@ wss.on('connection', (ws, req) => {
         if (!delta || Math.abs(delta) > 3600) break;
         s.timeRemaining = Math.max(-1800, s.timeRemaining + delta);
         s.overtime = s.timeRemaining < 0;
+        broadcast(session);
+        break;
+      }
+
+      // ── Agenda handlers ────────────────────────────────────────────────────
+
+      case 'agenda_add': {
+        const secs = Math.min(18000, Math.max(1, parseInt(msg.duration) || 0));
+        if (!secs) break;
+        const slot = {
+          id: generateId(),
+          type: ['talk','break','other'].includes(msg.slotType) ? msg.slotType : 'talk',
+          label: (msg.label || '').slice(0, 80),
+          duration: secs,
+          done: false,
+        };
+        s.agenda.push(slot);
+        broadcast(session);
+        break;
+      }
+
+      case 'agenda_remove': {
+        const idx = s.agenda.findIndex(sl => sl.id === msg.id);
+        if (idx === -1) break;
+        const wasCurrent = s.currentSlotId === msg.id;
+        s.agenda.splice(idx, 1);
+        if (wasCurrent) {
+          const next = s.agenda.slice(idx).find(sl => !sl.done)
+                    ?? s.agenda.find(sl => !sl.done)
+                    ?? null;
+          s.currentSlotId = next?.id ?? null;
+        }
+        broadcast(session);
+        break;
+      }
+
+      case 'agenda_move': {
+        const idx = s.agenda.findIndex(sl => sl.id === msg.id);
+        if (idx === -1) break;
+        const newIdx = msg.direction === 'up' ? idx - 1 : idx + 1;
+        if (newIdx < 0 || newIdx >= s.agenda.length) break;
+        [s.agenda[idx], s.agenda[newIdx]] = [s.agenda[newIdx], s.agenda[idx]];
+        broadcast(session);
+        break;
+      }
+
+      case 'agenda_set_current': {
+        const slot = s.agenda.find(sl => sl.id === msg.id);
+        if (!slot) break;
+        s.currentSlotId = slot.id;
+        s.totalTime = slot.duration;
+        s.timeRemaining = slot.duration;
+        s.running = false;
+        s.overtime = false;
+        session.everStarted = false;
+        stopTick(session);
+        broadcast(session);
+        break;
+      }
+
+      case 'agenda_next': {
+        const currentIdx = s.agenda.findIndex(sl => sl.id === s.currentSlotId);
+        if (currentIdx !== -1) s.agenda[currentIdx].done = true;
+        const next = s.agenda.slice(currentIdx + 1).find(sl => !sl.done) ?? null;
+        if (next) {
+          s.currentSlotId = next.id;
+          s.totalTime = next.duration;
+          s.timeRemaining = next.duration;
+          s.running = false;
+          s.overtime = false;
+          session.everStarted = false;
+          stopTick(session);
+        } else {
+          s.currentSlotId = null;
+        }
+        broadcast(session);
+        break;
+      }
+
+      case 'agenda_set_done': {
+        const slot = s.agenda.find(sl => sl.id === msg.id);
+        if (!slot) break;
+        slot.done = !!msg.done;
         broadcast(session);
         break;
       }
