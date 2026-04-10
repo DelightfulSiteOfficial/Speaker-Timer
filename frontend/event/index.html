@@ -130,6 +130,86 @@
   .btn-header.accent:hover { background: rgba(232,255,71,0.06); }
   .btn-header.pip-active { border-color: var(--accent); color: var(--accent); }
 
+  /* ── "..." overflow menu ── */
+  .menu-wrap {
+    position: relative;
+  }
+
+  .btn-more {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 34px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 16px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1;
+    padding-bottom: 3px;
+  }
+  .btn-more:hover { border-color: #333; color: var(--text); }
+  .btn-more.open  { border-color: #333; color: var(--text); }
+
+  .overflow-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 6px;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.15s, transform 0.15s;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  .overflow-menu.open {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: left;
+    width: 100%;
+    white-space: nowrap;
+  }
+  .menu-item:hover { background: var(--surface2); color: var(--text); }
+  .menu-item.accent { color: var(--accent); }
+  .menu-item.accent:hover { background: rgba(232,255,71,0.06); }
+  .menu-item-icon { font-size: 13px; width: 16px; text-align: center; flex-shrink: 0; }
+
+  .menu-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 6px;
+  }
+
   /* ══════════════════════════════════════════
      MAIN TWO-PANEL LAYOUT
   ══════════════════════════════════════════ */
@@ -782,10 +862,24 @@
     <div class="conn-dot" id="connDot"></div>
   </div>
   <div class="header-right">
-    <button class="btn-header" id="shareBtn">Share</button>
-    <button class="btn-header" id="pipBtn">Pop Out Timer</button>
-    <button class="btn-header" id="openDisplayBtn">Open Display →</button>
-    <button class="btn-header accent" id="copyLinkBtn">Copy Display Link</button>
+    <div class="menu-wrap" id="menuWrap">
+      <button class="btn-more" id="moreBtn">···</button>
+      <div class="overflow-menu" id="overflowMenu">
+        <button class="menu-item" id="pipBtn">
+          <span class="menu-item-icon">⧉</span> Pop Out Timer
+        </button>
+        <button class="menu-item" id="shareBtn">
+          <span class="menu-item-icon">⬡</span> Share Session
+        </button>
+        <div class="menu-divider"></div>
+        <button class="menu-item" id="openDisplayBtn">
+          <span class="menu-item-icon">🖥</span> Open Display Screen
+        </button>
+        <button class="menu-item accent" id="copyLinkBtn">
+          <span class="menu-item-icon">⎘</span> Copy Display Link
+        </button>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -996,11 +1090,27 @@
     correctLevel: QRCode.CorrectLevel.M,
   });
 
-  document.getElementById('openDisplayBtn').addEventListener('click', () =>
-    window.open(displayUrl, '_blank'));
+  document.getElementById('openDisplayBtn').addEventListener('click', () => {
+    window.open(displayUrl, '_blank');
+    closeMenu();
+  });
 
   document.getElementById('copyLinkBtn').addEventListener('click', () => {
     navigator.clipboard.writeText(displayUrl).then(() => showToast('Display link copied ✓'));
+    closeMenu();
+  });
+
+  // ── "..." overflow menu ───────────────────────────────────────────────────
+  const moreBtn      = document.getElementById('moreBtn');
+  const overflowMenu = document.getElementById('overflowMenu');
+
+  function openMenu()  { overflowMenu.classList.add('open');  moreBtn.classList.add('open'); }
+  function closeMenu() { overflowMenu.classList.remove('open'); moreBtn.classList.remove('open'); }
+  function toggleMenu() { overflowMenu.classList.contains('open') ? closeMenu() : openMenu(); }
+
+  moreBtn.addEventListener('click', e => { e.stopPropagation(); toggleMenu(); });
+  document.addEventListener('click', e => {
+    if (!document.getElementById('menuWrap').contains(e.target)) closeMenu();
   });
 
   // ── Local tick interpolation ──────────────────────────────────────────────
@@ -1445,7 +1555,7 @@
     pipBtn.classList.remove('pip-active');
   }
 
-  pipBtn.addEventListener('click', () => pipWindow ? closePiP() : openPiP());
+  pipBtn.addEventListener('click', () => { pipWindow ? closePiP() : openPiP(); closeMenu(); });
 
   // Tap the welcome overlay to open PiP and get started
   overlay.addEventListener('click', () => {
@@ -1490,7 +1600,7 @@
     shareModalBackdrop.classList.remove('visible');
   }
 
-  shareBtnEl.addEventListener('click', openShareModal);
+  shareBtnEl.addEventListener('click', () => { openShareModal(); closeMenu(); });
   shareModalClose.addEventListener('click', closeShareModal);
   shareModalBackdrop.addEventListener('click', e => {
     if (e.target === shareModalBackdrop) closeShareModal();
