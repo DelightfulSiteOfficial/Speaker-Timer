@@ -827,9 +827,20 @@
     navigator.clipboard.writeText(displayUrl).then(() => showToast('Display link copied ✓'));
   });
 
+  // ── Local tick interpolation ──────────────────────────────────────────────
+  let lastServerAt = Date.now();   // wall-clock when last server state arrived
+  let lastServerRemaining = 0;     // timeRemaining value from that state
+
+  function liveTimeRemaining() {
+    if (!state.running) return state.timeRemaining;
+    const elapsed = Math.floor((Date.now() - lastServerAt) / 1000);
+    return lastServerRemaining - elapsed;
+  }
+
   // ── Render timer ──────────────────────────────────────────────────────────
   function renderTimer() {
-    const { running, timeRemaining, totalTime, overtime, roomName } = state;
+    const timeRemaining = liveTimeRemaining();
+    const { running, totalTime, overtime, roomName } = state;
     const pct       = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) : 1;
     const isWarning = timeRemaining <= 60  && timeRemaining > 0 && !overtime;
     const isDanger  = timeRemaining <= 30  && timeRemaining > 0 && !overtime;
@@ -1024,6 +1035,8 @@
         const msg = JSON.parse(e.data);
         if (msg.type === 'state') {
           state = { ...state, ...msg.payload };
+          lastServerAt = Date.now();
+          lastServerRemaining = state.timeRemaining;
           renderTimer();
         } else if (msg.type === 'control_granted') {
           hasControl = true;
@@ -1051,7 +1064,8 @@
 
   function updatePiP() {
     if (!pipWindow) return;
-    const { running, timeRemaining, totalTime, overtime, roomName } = state;
+    const { running, totalTime, overtime, roomName } = state;
+    const timeRemaining = liveTimeRemaining();
     const isWarning = timeRemaining <= 60 && timeRemaining > 0 && !overtime;
     const isDanger  = timeRemaining <= 30 && timeRemaining > 0 && !overtime;
     const tc = overtime ? 'overtime' : isDanger ? 'danger' : isWarning ? 'warning' : '';
@@ -1270,8 +1284,8 @@
   renderTimer();
   connect();
 
-  // Render timer + PiP every 500ms
-  setInterval(() => { renderTimer(); updatePiP(); }, 500);
+  // Render timer + PiP at 100ms — both use liveTimeRemaining() so they stay in sync
+  setInterval(() => { renderTimer(); updatePiP(); }, 100);
 </script>
 </body>
 </html>
