@@ -335,14 +335,17 @@
     transition: opacity 0.4s;
   }
 
-  .overlay.hidden { opacity: 0; pointer-events: none; }
+  .overlay.hidden  { opacity: 0; pointer-events: none; }
+  .overlay.pip-prompt { cursor: pointer; }
 
   .overlay-title {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 48px;
     color: var(--muted);
     letter-spacing: 0.05em;
+    transition: color 0.3s;
   }
+  .overlay.pip-prompt .overlay-title { color: var(--accent); font-size: clamp(40px, 6vw, 80px); }
 
   .overlay-sub {
     font-family: 'DM Mono', monospace;
@@ -351,6 +354,24 @@
     letter-spacing: 0.2em;
     text-transform: uppercase;
   }
+
+  .overlay-skip {
+    display: none;
+    background: none;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 8px 24px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: all 0.15s;
+  }
+  .overlay-skip:hover { border-color: #555; color: var(--text); }
+  .overlay.pip-prompt .overlay-skip { display: block; }
 
   /* ── Message flash overlay ── */
   .message-flash {
@@ -598,10 +619,11 @@
   <div class="flash-countdown" id="flashCountdown"></div>
 </div>
 
-<!-- Disconnected overlay -->
+<!-- Disconnected / PiP-prompt overlay -->
 <div class="overlay" id="overlay">
-  <div class="overlay-title">Connecting…</div>
-  <div class="overlay-sub">Reaching server</div>
+  <div class="overlay-title" id="overlayTitle">Connecting…</div>
+  <div class="overlay-sub" id="overlaySub">Reaching server</div>
+  <button class="overlay-skip" id="pipSkip">Skip</button>
 </div>
 
 <script>
@@ -726,8 +748,10 @@
   let ws, reconnectTimer;
   let everConnected = false;
 
-  const overlayTitle = document.querySelector('.overlay-title');
-  const overlaySub   = document.querySelector('.overlay-sub');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlaySub   = document.getElementById('overlaySub');
+  const pipSkip      = document.getElementById('pipSkip');
+  let pipPrompted    = false;
 
   function connect() {
     try {
@@ -735,10 +759,19 @@
     } catch(e) { scheduleReconnect(); return; }
 
     ws.onopen = () => {
-      overlay.classList.add('hidden');
       lastStateTime = Date.now(); // reset interpolation clock on (re)connect
       everConnected = true;
       ws.send(JSON.stringify({ type: 'join', role: 'display', sessionId }));
+
+      // First connect + PiP supported + not already open → show tap-to-open prompt
+      if (!pipPrompted && window.documentPictureInPicture && !pipWindow) {
+        pipPrompted = true;
+        overlayTitle.textContent = 'Tap to Open Pop-Out';
+        overlaySub.textContent   = 'Opens the floating timer window';
+        overlay.classList.add('pip-prompt');
+      } else {
+        overlay.classList.add('hidden');
+      }
     };
 
     ws.onmessage = (e) => {
@@ -761,6 +794,7 @@
     };
 
     ws.onclose = () => {
+      overlay.classList.remove('pip-prompt');
       overlay.classList.remove('hidden');
       if (everConnected) {
         overlayTitle.textContent = 'Reconnecting…';
@@ -1150,6 +1184,21 @@
   }
 
   pipBtn.addEventListener('click', () => pipWindow ? closePiP() : openPiP());
+
+  // Tap the pip-prompt overlay to open PiP
+  overlay.addEventListener('click', () => {
+    if (!overlay.classList.contains('pip-prompt')) return;
+    overlay.classList.remove('pip-prompt');
+    overlay.classList.add('hidden');
+    openPiP();
+  });
+
+  // Skip button — dismiss without opening PiP
+  pipSkip.addEventListener('click', (e) => {
+    e.stopPropagation();
+    overlay.classList.remove('pip-prompt');
+    overlay.classList.add('hidden');
+  });
 
   connect();
 
