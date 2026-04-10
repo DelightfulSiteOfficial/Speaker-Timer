@@ -921,6 +921,18 @@
     <button class="btn-main btn-reset-side" id="resetBtn">Reset</button>
   </div>
 
+  <!-- Presenter access toggle -->
+  <div class="access-row">
+    <div>
+      <div class="access-label-text">Presenter Control</div>
+      <span class="access-status allowed" id="accessStatus">Presenter can control timer</span>
+    </div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="presenterToggle" checked>
+      <span class="toggle-track"></span>
+    </label>
+  </div>
+
   <!-- Nudge -->
   <div class="nudge-row">
     <button class="nudge-btn sub" data-nudge="-60">−1m</button>
@@ -949,18 +961,6 @@
   <div class="waiting-section" id="waitingSection">
     <div class="section-label">Waiting to control</div>
     <div id="waitingList"></div>
-  </div>
-
-  <!-- Presenter access toggle -->
-  <div class="access-row">
-    <div>
-      <div class="access-label-text">Presenter Control</div>
-      <span class="access-status allowed" id="accessStatus">Presenter can control timer</span>
-    </div>
-    <label class="toggle-switch">
-      <input type="checkbox" id="presenterToggle" checked>
-      <span class="toggle-track"></span>
-    </label>
   </div>
 
 </div>
