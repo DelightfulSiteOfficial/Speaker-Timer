@@ -37,6 +37,7 @@ function createSession(id) {
       runCount: 0,     // increments each time reset is called after a timer was started
       coHost: false,
       coHostName: '',
+      presenterLocked: false,  // true = desktop presenter controls disabled
     },
     clients: new Set(),
     tickInterval: null,
@@ -520,7 +521,7 @@ wss.on('connection', (ws, req) => {
 
     // Co-host restrictions — cannot transfer or delegate control
     if (session.coHostWs === ws) {
-      if (['pass_control_to', 'approve_request', 'deny_request', 'release_control'].includes(msg.type)) return;
+      if (['pass_control_to', 'approve_request', 'deny_request', 'release_control', 'set_presenter_lock'].includes(msg.type)) return;
     }
 
     const s = session.state;
@@ -568,6 +569,11 @@ wss.on('connection', (ws, req) => {
 
       case 'set_room':
         s.roomName = (msg.name || '').slice(0, 60);
+        broadcast(session);
+        break;
+
+      case 'set_presenter_lock':
+        s.presenterLocked = !!msg.locked;
         broadcast(session);
         break;
 

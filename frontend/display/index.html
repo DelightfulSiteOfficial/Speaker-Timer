@@ -292,6 +292,7 @@
   .mode-tab:hover { color: var(--text); }
   .mode-tab.tab-active-presenter { background: #22c55e; color: #000; font-weight: 500; }
   .mode-tab.tab-active-admin     { background: var(--surface); color: var(--text); border: 1px solid #333; }
+  .mode-tab.tab-locked           { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 
   /* ── Utility buttons (top-right) ── */
   .toolbar {
@@ -617,7 +618,7 @@
   let state = {
     running: false, timeRemaining: 0, totalTime: 0,
     roomName: '', overtime: false, runCount: 0,
-    message: '', messageSeq: 0,
+    message: '', messageSeq: 0, presenterLocked: false,
   };
 
   // ── Client-side fallback tick ───────────────────────────────────────────────
@@ -704,6 +705,12 @@
       presenterStart.textContent = running ? 'Pause' : 'Start';
       presenterStart.className = 'presenter-btn ' + (running ? 'pause' : 'start');
     }
+
+    // Enforce presenter lock — boot off presenter mode if admin has locked it
+    const locked = !!state.presenterLocked;
+    tabPresenter.classList.toggle('tab-locked', locked);
+    tabPresenter.textContent = locked ? 'Presenter Mode 🔒' : 'Presenter Mode';
+    if (locked && presenterMode) setMode('admin');
 
     // Background pulse states
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
@@ -1076,7 +1083,7 @@
         if (e.key === 'Enter') {
           const mins = parseInt(pipMinInput.value);
           if (mins >= 1 && mins <= 300) {
-            if (!presenterMode) setMode('presenter');
+            if (!presenterMode) { if (state.presenterLocked) return; setMode('presenter'); }
             sendCtrl({ type: 'set_duration', seconds: mins * 60 });
           }
           hidePipInput();
@@ -1106,7 +1113,7 @@
         if (pipClickTimer) return;
         pipClickTimer = setTimeout(() => {
           pipClickTimer = null;
-          if (!presenterMode) setMode('presenter');
+          if (!presenterMode) { if (state.presenterLocked) return; setMode('presenter'); }
           sendCtrl({ type: state.running ? 'pause' : 'start' });
         }, 220);
       });
@@ -1115,7 +1122,7 @@
       pipTimerEl.addEventListener('dblclick', () => {
         clearTimeout(pipClickTimer);
         pipClickTimer = null;
-        if (!presenterMode) setMode('presenter');
+        if (!presenterMode) { if (state.presenterLocked) return; setMode('presenter'); }
         sendCtrl({ type: 'reset' });
       });
 
