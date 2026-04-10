@@ -170,6 +170,31 @@
   }
   .card-session-id:active { opacity: 0.6; }
 
+  /* agenda label in card-top */
+  .card-agenda-label {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .card-agenda-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(232,255,71,0.1);
+    border: 1px solid rgba(232,255,71,0.25);
+    border-radius: 4px;
+    padding: 2px 6px;
+  }
+  .card-agenda-session {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
   .card-status-row {
     display: flex;
     align-items: center;
@@ -681,6 +706,41 @@
     text-align: center;
   }
 
+  /* ── Sheet tabs ── */
+  .sheet-tabs {
+    display: flex;
+    gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+  }
+
+  .sheet-tab {
+    flex: 1;
+    height: 36px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .sheet-tab.active {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  /* ── Sheet panels ── */
+  .sheet-panel { display: none; flex-direction: column; gap: 12px; }
+  .sheet-panel.active { display: flex; }
+
   .sheet-input-row {
     display: flex;
     gap: 10px;
@@ -710,6 +770,21 @@
 
   .session-input:focus { border-color: var(--accent); }
 
+  .text-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .text-input::placeholder { color: var(--muted); }
+  .text-input:focus { border-color: var(--accent); }
+
   .btn-add-confirm {
     background: var(--accent);
     border: none;
@@ -726,6 +801,21 @@
 
   .btn-add-confirm:active { transform: scale(0.95); }
 
+  .btn-add-full {
+    width: 100%;
+    background: var(--accent);
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    color: #000;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-add-full:active { transform: scale(0.98); opacity: 0.85; }
+
   .sheet-error {
     font-family: 'DM Mono', monospace;
     font-size: 11px;
@@ -734,6 +824,345 @@
     text-align: center;
     min-height: 1.4em;
   }
+
+  /* ── Agenda view (full-screen slide-in from right) ── */
+  .agenda-view {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 100;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .agenda-view.visible { transform: translateX(0); }
+
+  .agenda-header {
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    align-items: center;
+    padding: calc(env(safe-area-inset-top, 16px) + 8px) 12px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--bg);
+  }
+
+  .agenda-back {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .agenda-back:active { background: var(--border); }
+
+  .agenda-header-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.05em;
+    color: var(--text);
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agenda-add-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    color: #000;
+    font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s;
+    margin-left: auto;
+  }
+  .agenda-add-btn:active { transform: scale(0.9); }
+
+  /* session status bar in agenda view */
+  .agenda-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+
+  .agenda-status-session {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .agenda-status-time {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .agenda-status-time.warning { color: var(--warn); }
+  .agenda-status-time.danger  { color: var(--danger); }
+  .agenda-status-time.overtime { color: var(--danger); }
+
+  .agenda-status-pill {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 100px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .agenda-status-pill.running { border-color: var(--accent); color: var(--accent); }
+  .agenda-status-pill.paused  { border-color: var(--warn); color: var(--warn); }
+  .agenda-status-pill.offline { border-color: var(--border); color: var(--muted); }
+
+  /* agenda items list */
+  .agenda-items-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .agenda-item-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.2s, opacity 0.2s;
+  }
+
+  .agenda-item-card.active-item {
+    border-color: var(--accent);
+    background: rgba(232,255,71,0.03);
+  }
+
+  .agenda-item-card.done-item {
+    opacity: 0.45;
+  }
+
+  .agenda-item-main {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .agenda-item-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+  }
+
+  .agenda-item-dur {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .agenda-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .btn-load {
+    background: rgba(232,255,71,0.1);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 7px 14px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-load:active { background: rgba(232,255,71,0.2); transform: scale(0.95); }
+
+  .badge-loaded {
+    background: rgba(232,255,71,0.1);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 7px 12px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .btn-reload {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-reload:active { background: var(--border); color: var(--text); }
+
+  .btn-item-delete {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-item-delete:active { background: var(--border); color: var(--danger); }
+
+  .agenda-empty {
+    text-align: center;
+    padding: 48px 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── Add item sheet (separate from main sheet) ── */
+  .item-sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 110;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .item-sheet-backdrop.visible { opacity: 1; pointer-events: all; }
+
+  .item-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px calc(env(safe-area-inset-bottom, 0px) + 28px);
+    z-index: 120;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .item-sheet.visible { transform: translateY(0); }
+
+  .item-sheet-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .duration-presets {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn-preset {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-preset:active { transform: scale(0.95); }
+  .btn-preset.selected {
+    background: rgba(232,255,71,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .custom-min-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .custom-min-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .custom-min-input {
+    width: 80px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .custom-min-input:focus { border-color: var(--accent); }
+  .custom-min-input::placeholder { color: var(--muted); }
 
 </style>
 </head>
@@ -764,24 +1193,81 @@
 <div class="empty-state" id="emptyState">
   <div class="empty-icon">--:--</div>
   <div class="empty-title">No rooms added</div>
-  <div class="empty-sub">Tap + to add a room by entering its session ID</div>
+  <div class="empty-sub">Tap + to add a room or agenda by entering its session ID</div>
 </div>
 
 <div class="rooms-list" id="roomsList"></div>
 
 <button class="fab" id="fabBtn">+</button>
 
+<!-- ── Main add sheet (Room | Agenda tabs) ── -->
 <div class="sheet-backdrop" id="sheetBackdrop"></div>
 <div class="sheet" id="sheet">
   <div class="sheet-handle"></div>
-  <div class="sheet-title">Add Room</div>
+  <div class="sheet-title">Add</div>
 
-  <div class="sheet-input-row">
-    <input class="session-input" id="sessionInput" type="text" placeholder="Session ID (e.g. ROOMA)" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false">
-    <button class="btn-add-confirm" id="addConfirmBtn">Add</button>
+  <!-- tabs -->
+  <div class="sheet-tabs">
+    <button class="sheet-tab active" id="tabRoom">Room</button>
+    <button class="sheet-tab" id="tabAgenda">Agenda</button>
   </div>
 
-  <div class="sheet-error" id="sheetError"></div>
+  <!-- Room panel -->
+  <div class="sheet-panel active" id="panelRoom">
+    <div class="sheet-input-row">
+      <input class="session-input" id="sessionInput" type="text" placeholder="Session ID (e.g. ROOMA)" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="btn-add-confirm" id="addConfirmBtn">Add</button>
+    </div>
+    <div class="sheet-error" id="sheetError"></div>
+  </div>
+
+  <!-- Agenda panel -->
+  <div class="sheet-panel" id="panelAgenda">
+    <input class="session-input" id="agendaSessionInput" type="text" placeholder="Session ID (e.g. ROOMA)" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false">
+    <input class="text-input" id="agendaTitleInput" type="text" placeholder="Agenda title (e.g. Morning Session)" maxlength="80">
+    <button class="btn-add-full" id="addAgendaBtn">Add Agenda</button>
+    <div class="sheet-error" id="sheetAgendaError"></div>
+  </div>
+</div>
+
+<!-- ── Agenda view (full-screen slide-in from right) ── -->
+<div class="agenda-view" id="agendaView">
+  <div class="agenda-header">
+    <button class="agenda-back" id="agendaBack">&#8592;</button>
+    <div class="agenda-header-title" id="agendaViewTitle">Agenda</div>
+    <button class="agenda-add-btn" id="agendaAddItemBtn">+</button>
+  </div>
+  <div class="agenda-status-bar" id="agendaStatusBar">
+    <span class="agenda-status-session" id="agendaStatusSession"></span>
+    <span class="agenda-status-time" id="agendaStatusTime">--:--</span>
+    <span class="agenda-status-pill offline" id="agendaStatusPill">
+      <span class="pill-dot"></span>
+      <span id="agendaStatusPillLabel">Offline</span>
+    </span>
+  </div>
+  <div class="agenda-items-scroll" id="agendaItemsList"></div>
+</div>
+
+<!-- ── Add item sheet ── -->
+<div class="item-sheet-backdrop" id="itemSheetBackdrop"></div>
+<div class="item-sheet" id="itemSheet">
+  <div class="sheet-handle"></div>
+  <div class="item-sheet-title">Add Item</div>
+  <input class="text-input" id="itemNameInput" type="text" placeholder="Speaker or item name" maxlength="60">
+  <div class="duration-presets" id="durationPresets">
+    <button class="btn-preset" data-min="5">5 min</button>
+    <button class="btn-preset" data-min="10">10 min</button>
+    <button class="btn-preset" data-min="15">15 min</button>
+    <button class="btn-preset" data-min="20">20 min</button>
+    <button class="btn-preset" data-min="30">30 min</button>
+    <button class="btn-preset" data-min="45">45 min</button>
+  </div>
+  <div class="custom-min-row">
+    <span class="custom-min-label">Custom</span>
+    <input class="custom-min-input" id="customMinInput" type="number" min="1" max="300" placeholder="—">
+  </div>
+  <button class="btn-add-full" id="addItemConfirmBtn">Add Item</button>
+  <div class="sheet-error" id="itemSheetError"></div>
 </div>
 
 <!-- ── Pass control modal ── -->
@@ -807,12 +1293,49 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-  const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
-  const HTTP_URL   = SERVER_URL.replace(/^wss?:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
-  const STORAGE_KEY = 'speakerTimerRooms';
+  const SERVER_URL  = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
+  const HTTP_URL    = SERVER_URL.replace(/^wss?:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+  const STORAGE_KEY  = 'speakerTimerRooms';
+  const AGENDAS_KEY  = 'speakerTimerAgendas';
 
   function escHtml(s) {
     return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function genId() {
+    return Math.random().toString(36).slice(2, 9);
+  }
+
+  // ── Agendas (localStorage) ───────────────────────────────────────────────────
+  function loadAgendas() {
+    try { return JSON.parse(localStorage.getItem(AGENDAS_KEY)) || {}; } catch { return {}; }
+  }
+  function saveAgendas(ag) {
+    localStorage.setItem(AGENDAS_KEY, JSON.stringify(ag));
+  }
+
+  let agendas = loadAgendas();
+  // agendas[sessionId] = { title, items: [{ id, name, minutes, status }] }
+
+  function addAgenda(sessionId, title) {
+    sessionId = sessionId.toUpperCase().trim();
+    if (!sessionId || !title.trim()) return 'Session ID and title are required';
+    if (rooms.includes(sessionId) && !agendas[sessionId]) return 'Session already added as a plain room';
+    if (agendas[sessionId]) return 'Agenda for this session already exists';
+    agendas[sessionId] = { title: title.trim(), items: [] };
+    saveAgendas(agendas);
+    if (!rooms.includes(sessionId)) {
+      rooms.push(sessionId);
+      saveRooms(rooms);
+    }
+    connectRoom(sessionId);
+    renderRooms();
+    return null;
+  }
+
+  function removeAgenda(sessionId) {
+    delete agendas[sessionId];
+    saveAgendas(agendas);
   }
 
   // ── Pass control modal ───────────────────────────────────────────────────────
@@ -830,7 +1353,7 @@
       listEl.innerHTML = waitingList.map(w => `
         <div class="pass-waiting-item">
           <span class="pass-waiting-name ${w.name ? '' : 'unnamed'}">${escHtml(w.name) || 'Unknown device'}</span>
-          <button class="btn-pass-to" data-target="${w.id}">Assign as Co-host →</button>
+          <button class="btn-pass-to" data-target="${w.id}">Assign as Co-host &rarr;</button>
         </div>
       `).join('');
 
@@ -858,7 +1381,7 @@
   passModal.addEventListener('click', e => { if (e.target === passModal) passModal.classList.remove('visible'); });
 
   // ── QR modal ─────────────────────────────────────────────────────────────────
-  const qrModal   = document.getElementById('qrModal');
+  const qrModal    = document.getElementById('qrModal');
   const qrCodeWrap = document.getElementById('qrCodeWrap');
 
   function openQrModal(sessionId) {
@@ -890,15 +1413,13 @@
     if (e.target === confirmModal) confirmModal.classList.remove('visible');
   });
   document.getElementById('confirmYes').addEventListener('click', () => {
-    // Close all open WebSocket connections
     Object.values(roomData).forEach(entry => {
       try { entry.ws?.close(); } catch {}
     });
-    // Clear all localStorage keys used by this app
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(AGENDAS_KEY);
     localStorage.removeItem('speakerTimerMyName');
     localStorage.removeItem('speakerTimerNamePromptSeen');
-    // Send to control page — name prompt will appear since keys are cleared
     window.location.href = '/control/';
   });
 
@@ -912,10 +1433,9 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rooms));
   }
 
-  let rooms = loadRooms(); // array of session ID strings
+  let rooms = loadRooms();
 
   // ── Live state per room ───────────────────────────────────────────────────────
-  // roomData[sessionId] = { state, ws, status: 'connecting'|'live'|'offline' }
   const roomData = {};
 
   function connectRoom(sessionId) {
@@ -933,6 +1453,7 @@
       ws.onopen = () => {
         entry.status = 'live';
         renderCard(sessionId);
+        if (agendaViewSessionId === sessionId) renderAgendaStatusBar(sessionId);
       };
 
       ws.onmessage = (e) => {
@@ -941,6 +1462,7 @@
           if (msg.type === 'state') {
             entry.state = { ...entry.state, ...msg.payload };
             renderCard(sessionId);
+            if (agendaViewSessionId === sessionId) renderAgendaStatusBar(sessionId);
           }
         } catch {}
       };
@@ -948,6 +1470,7 @@
       ws.onclose = () => {
         entry.status = 'offline';
         renderCard(sessionId);
+        if (agendaViewSessionId === sessionId) renderAgendaStatusBar(sessionId);
         setTimeout(() => {
           if (rooms.includes(sessionId)) connectRoom(sessionId);
         }, 4000);
@@ -982,8 +1505,82 @@
     return '';
   }
 
+  // ── Render agenda card ────────────────────────────────────────────────────────
+  function renderAgendaCard(sessionId) {
+    const el = document.getElementById(`card-${sessionId}`);
+    if (!el) return;
+
+    const agenda = agendas[sessionId];
+    if (!agenda) return;
+
+    const { state, status } = roomData[sessionId] || {};
+    const { running, timeRemaining, totalTime, overtime } = state || {};
+    const offline = status === 'offline' || status === 'connecting';
+    const tc = offline ? '' : timeClass(timeRemaining, overtime);
+    const pct = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) * 100 : 100;
+
+    const pillClass = offline ? 'offline' : running ? 'running' : 'paused';
+    const pillLabel = offline ? (status === 'connecting' ? 'Connecting' : 'Offline') : running ? 'Running' : (overtime ? 'Overtime' : 'Paused');
+
+    let pulseClass = '';
+    if (!offline) {
+      if (overtime)                                      pulseClass = 'card-overtime';
+      else if (timeRemaining <= 30 && timeRemaining > 0) pulseClass = 'pulse-danger-fast';
+      else if (timeRemaining <= 60 && timeRemaining > 0) pulseClass = 'pulse-danger-slow';
+      else if (timeRemaining <= 300)                     pulseClass = 'pulse-warn';
+    }
+    el.className = `room-card ${running && !offline ? 'running' : ''} ${offline ? 'offline' : ''} ${pulseClass}`.trim();
+
+    const items = agenda.items || [];
+    const activeItem = items.find(i => i.status === 'active');
+    const activeIndex = items.findIndex(i => i.status === 'active');
+    const itemCount = items.length;
+    const doneCount = items.filter(i => i.status === 'done').length;
+    const posLabel = itemCount > 0
+      ? (activeIndex >= 0 ? `${activeIndex + 1} of ${itemCount}` : `${doneCount} of ${itemCount} done`)
+      : 'No items';
+
+    el.innerHTML = `
+      <div class="card-top">
+        <div class="card-agenda-label">
+          <span class="card-agenda-badge">Agenda</span>
+          <span class="card-agenda-session">${escHtml(sessionId)}</span>
+        </div>
+        <div class="card-status-row">
+          <div class="card-pill ${pillClass}">
+            <span class="pill-dot ${running && !offline ? 'live' : ''}"></span>
+            ${pillLabel}
+          </div>
+          <button class="card-remove" data-id="${sessionId}" title="Remove agenda">×</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-time ${tc}">${offline ? '--:--' : formatTime(timeRemaining)}</div>
+        <div class="card-info">
+          <div class="card-speaker">${escHtml(agenda.title)}</div>
+          ${activeItem ? `<div class="card-speaker" style="font-size:12px;color:var(--muted)">${escHtml(activeItem.name)}</div>` : ''}
+          <div class="card-meta">${escHtml(posLabel)}</div>
+        </div>
+      </div>
+      <div class="card-progress">
+        <div class="card-progress-fill ${tc}" style="width:${offline ? '100' : pct}%"></div>
+      </div>
+    `;
+
+    el.querySelector('.card-remove').addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      removeAgenda(sessionId);
+      removeRoom(sessionId);
+    });
+  }
+
   // ── Render a single card ──────────────────────────────────────────────────────
   function renderCard(sessionId) {
+    if (agendas[sessionId]) {
+      renderAgendaCard(sessionId);
+      return;
+    }
+
     const el = document.getElementById(`card-${sessionId}`);
     if (!el) return;
 
@@ -999,7 +1596,7 @@
     const waitingCount = waitingList?.length || 0;
     const metaParts = [];
     if (!offline && runCount > 0) metaParts.push(`Timer ${runCount + 1}`);
-    if (!offline && waitingCount > 0) metaParts.push(`<span class="waiting waiting-tap">${waitingCount} waiting →</span>`);
+    if (!offline && waitingCount > 0) metaParts.push(`<span class="waiting waiting-tap">${waitingCount} waiting &rarr;</span>`);
 
     let pulseClass = '';
     if (!offline) {
@@ -1012,7 +1609,7 @@
 
     el.innerHTML = `
       <div class="card-top">
-        <div class="card-session-id card-session-qr" data-id="${sessionId}">${sessionId} ↗</div>
+        <div class="card-session-id card-session-qr" data-id="${sessionId}">${sessionId} &#8599;</div>
         <div class="card-status-row">
           <div class="card-pill ${pillClass}">
             <span class="pill-dot ${running && !offline ? 'live' : ''}"></span>
@@ -1034,7 +1631,7 @@
       ${!offline && controllerConnected ? `
       <div class="card-actions">
         ${coHost ? `
-          <span class="cohost-label">⬡ Co-host${coHostName ? ': ' + escHtml(coHostName) : ''}</span>
+          <span class="cohost-label">&#11041; Co-host${coHostName ? ': ' + escHtml(coHostName) : ''}</span>
           <button class="btn-revoke-cohost" data-id="${sessionId}">Revoke</button>
         ` : `
           <button class="btn-make-cohost" data-id="${sessionId}">Make Co-host</button>
@@ -1042,21 +1639,18 @@
       </div>` : ''}
     `;
 
-    // Remove button
     el.querySelector('.card-remove').addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       removeRoom(sessionId);
     });
 
-    // Session ID tap → QR modal
     el.querySelector('.card-session-qr').addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       openQrModal(sessionId);
     });
 
-    // Waiting count tap → pass control modal
     const waitingTap = el.querySelector('.waiting-tap');
     if (waitingTap) {
       waitingTap.addEventListener('click', (e) => {
@@ -1066,7 +1660,6 @@
       });
     }
 
-    // Make co-host
     const makeCoHostBtn = el.querySelector('.btn-make-cohost');
     if (makeCoHostBtn) {
       makeCoHostBtn.addEventListener('click', async (e) => {
@@ -1080,7 +1673,6 @@
       });
     }
 
-    // Revoke co-host
     const revokeCoHostBtn = el.querySelector('.btn-revoke-cohost');
     if (revokeCoHostBtn) {
       revokeCoHostBtn.addEventListener('click', async (e) => {
@@ -1097,7 +1689,7 @@
 
   // ── Render full rooms list ────────────────────────────────────────────────────
   function renderRooms() {
-    const list = document.getElementById('roomsList');
+    const list  = document.getElementById('roomsList');
     const empty = document.getElementById('emptyState');
     const count = document.getElementById('roomCount');
 
@@ -1108,19 +1700,33 @@
     } else {
       empty.style.display = 'none';
       list.style.display = '';
-      count.textContent = `${rooms.length} room${rooms.length !== 1 ? 's' : ''}`;
+      const total = rooms.length;
+      count.textContent = `${total} room${total !== 1 ? 's' : ''}`;
 
-      // Add missing cards, remove extra ones
       const existing = new Set([...list.querySelectorAll('.room-card')].map(el => el.dataset.id));
 
       rooms.forEach(id => {
         if (!existing.has(id)) {
-          const card = document.createElement('a');
+          const card = document.createElement(agendas[id] ? 'div' : 'a');
           card.id = `card-${id}`;
           card.dataset.id = id;
-          card.href = `/control/?session=${id}`;
+          if (!agendas[id]) card.href = `/control/?session=${id}`;
           list.appendChild(card);
           renderCard(id);
+        }
+      });
+
+      // For agenda cards, attach click → openAgendaView
+      rooms.forEach(id => {
+        if (agendas[id]) {
+          const card = document.getElementById(`card-${id}`);
+          if (card && !card._agendaClickBound) {
+            card._agendaClickBound = true;
+            card.addEventListener('click', (e) => {
+              if (e.target.classList.contains('card-remove')) return;
+              openAgendaView(id);
+            });
+          }
         }
       });
 
@@ -1139,7 +1745,7 @@
     saveRooms(rooms);
     connectRoom(sessionId);
     renderRooms();
-    return null; // no error
+    return null;
   }
 
   function removeRoom(sessionId) {
@@ -1150,15 +1756,43 @@
     renderRooms();
   }
 
-  // ── Sheet (add room UI) ───────────────────────────────────────────────────────
-  const sheet         = document.getElementById('sheet');
-  const backdrop      = document.getElementById('sheetBackdrop');
-  const sessionInput  = document.getElementById('sessionInput');
-  const sheetError    = document.getElementById('sheetError');
+  // ── Sheet (add room/agenda UI) ────────────────────────────────────────────────
+  const sheet        = document.getElementById('sheet');
+  const backdrop     = document.getElementById('sheetBackdrop');
+  const sessionInput = document.getElementById('sessionInput');
+  const sheetError   = document.getElementById('sheetError');
+
+  // Tab switching
+  const tabRoom    = document.getElementById('tabRoom');
+  const tabAgenda  = document.getElementById('tabAgenda');
+  const panelRoom  = document.getElementById('panelRoom');
+  const panelAgenda = document.getElementById('panelAgenda');
+
+  let activeTab = 'room';
+
+  tabRoom.addEventListener('click', () => {
+    activeTab = 'room';
+    tabRoom.classList.add('active');
+    tabAgenda.classList.remove('active');
+    panelRoom.classList.add('active');
+    panelAgenda.classList.remove('active');
+  });
+
+  tabAgenda.addEventListener('click', () => {
+    activeTab = 'agenda';
+    tabAgenda.classList.add('active');
+    tabRoom.classList.remove('active');
+    panelAgenda.classList.add('active');
+    panelRoom.classList.remove('active');
+  });
+
   function openSheet() {
     sheet.classList.add('visible');
     backdrop.classList.add('visible');
     sheetError.textContent = '';
+    document.getElementById('sheetAgendaError').textContent = '';
+    // Reset to room tab each open
+    tabRoom.click();
     setTimeout(() => sessionInput.focus(), 350);
   }
 
@@ -1166,7 +1800,10 @@
     sheet.classList.remove('visible');
     backdrop.classList.remove('visible');
     sessionInput.value = '';
+    document.getElementById('agendaSessionInput').value = '';
+    document.getElementById('agendaTitleInput').value = '';
     sheetError.textContent = '';
+    document.getElementById('sheetAgendaError').textContent = '';
   }
 
   document.getElementById('fabBtn').addEventListener('click', openSheet);
@@ -1180,6 +1817,198 @@
 
   sessionInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') document.getElementById('addConfirmBtn').click();
+  });
+
+  document.getElementById('addAgendaBtn').addEventListener('click', () => {
+    const sid   = document.getElementById('agendaSessionInput').value;
+    const title = document.getElementById('agendaTitleInput').value;
+    const err = addAgenda(sid, title);
+    if (err) { document.getElementById('sheetAgendaError').textContent = err; return; }
+    closeSheet();
+  });
+
+  // Force uppercase on session ID inputs
+  document.getElementById('agendaSessionInput').addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+  });
+
+  // ── Agenda view ───────────────────────────────────────────────────────────────
+  let agendaViewSessionId = null;
+  const agendaView = document.getElementById('agendaView');
+
+  function openAgendaView(sessionId) {
+    agendaViewSessionId = sessionId;
+    const agenda = agendas[sessionId];
+    document.getElementById('agendaViewTitle').textContent = agenda?.title || 'Agenda';
+    renderAgendaStatusBar(sessionId);
+    renderAgendaItems(sessionId);
+    agendaView.classList.add('visible');
+  }
+
+  function closeAgendaView() {
+    agendaView.classList.remove('visible');
+    agendaViewSessionId = null;
+  }
+
+  document.getElementById('agendaBack').addEventListener('click', closeAgendaView);
+
+  function renderAgendaStatusBar(sessionId) {
+    const { state, status } = roomData[sessionId] || {};
+    const { running, timeRemaining, overtime } = state || {};
+    const offline = !status || status === 'offline' || status === 'connecting';
+    const tc = offline ? '' : timeClass(timeRemaining, overtime);
+
+    const sessionEl  = document.getElementById('agendaStatusSession');
+    const timeEl     = document.getElementById('agendaStatusTime');
+    const pillEl     = document.getElementById('agendaStatusPill');
+    const pillLabel  = document.getElementById('agendaStatusPillLabel');
+    const pillDot    = pillEl.querySelector('.pill-dot');
+
+    sessionEl.textContent = sessionId;
+    timeEl.textContent    = offline ? '--:--' : formatTime(timeRemaining);
+    timeEl.className      = `agenda-status-time ${tc}`;
+
+    const pillClass = offline ? 'offline' : running ? 'running' : 'paused';
+    const pillLabelText = offline ? (status === 'connecting' ? 'Connecting' : 'Offline') : running ? 'Running' : (overtime ? 'Overtime' : 'Paused');
+    pillEl.className = `agenda-status-pill ${pillClass}`;
+    pillLabel.textContent = pillLabelText;
+    pillDot.className = `pill-dot ${running && !offline ? 'live' : ''}`;
+  }
+
+  function renderAgendaItems(sessionId) {
+    const agenda = agendas[sessionId];
+    const container = document.getElementById('agendaItemsList');
+    if (!agenda || agenda.items.length === 0) {
+      container.innerHTML = '<div class="agenda-empty">No items yet — tap + to add</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    agenda.items.forEach((item, idx) => {
+      const card = document.createElement('div');
+      card.className = `agenda-item-card ${item.status === 'active' ? 'active-item' : ''} ${item.status === 'done' ? 'done-item' : ''}`;
+
+      let actionHtml = '';
+      if (item.status === 'pending') {
+        actionHtml = `<button class="btn-load" data-idx="${idx}">Load</button>`;
+      } else if (item.status === 'active') {
+        actionHtml = `<span class="badge-loaded">Loaded</span>`;
+      } else {
+        actionHtml = `<button class="btn-reload" data-idx="${idx}">&#8617; Reload</button>`;
+      }
+
+      card.innerHTML = `
+        <div class="agenda-item-main">
+          <div class="agenda-item-name">${escHtml(item.name)}</div>
+          <div class="agenda-item-dur">${item.minutes} min</div>
+        </div>
+        <div class="agenda-item-actions">
+          ${actionHtml}
+          <button class="btn-item-delete" data-idx="${idx}" title="Remove item">×</button>
+        </div>
+      `;
+
+      // Load / Reload button
+      const loadBtn = card.querySelector('.btn-load, .btn-reload');
+      if (loadBtn) {
+        loadBtn.addEventListener('click', () => loadAgendaItem(sessionId, idx));
+      }
+
+      // Delete button
+      card.querySelector('.btn-item-delete').addEventListener('click', () => {
+        agenda.items.splice(idx, 1);
+        saveAgendas(agendas);
+        renderAgendaItems(sessionId);
+        renderCard(sessionId);
+      });
+
+      container.appendChild(card);
+    });
+  }
+
+  async function loadAgendaItem(sessionId, itemIdx) {
+    const agenda = agendas[sessionId];
+    if (!agenda) return;
+    const item = agenda.items[itemIdx];
+    if (!item) return;
+
+    try {
+      await fetch(`${HTTP_URL}/sessions/${sessionId}/load`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: item.name, seconds: item.minutes * 60 }),
+      });
+    } catch {}
+
+    // Update statuses: prior items → done, this item → active, subsequent → pending
+    agenda.items.forEach((it, i) => {
+      if (i < itemIdx)       it.status = 'done';
+      else if (i === itemIdx) it.status = 'active';
+      else                    it.status = 'pending';
+    });
+
+    saveAgendas(agendas);
+    renderAgendaItems(sessionId);
+    renderCard(sessionId);
+  }
+
+  // ── Add item sheet ────────────────────────────────────────────────────────────
+  const itemSheetBackdrop = document.getElementById('itemSheetBackdrop');
+  const itemSheet         = document.getElementById('itemSheet');
+  let selectedPresetMin   = null;
+
+  function openItemSheet() {
+    document.getElementById('itemNameInput').value = '';
+    document.getElementById('customMinInput').value = '';
+    document.getElementById('itemSheetError').textContent = '';
+    selectedPresetMin = null;
+    document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('selected'));
+    itemSheet.classList.add('visible');
+    itemSheetBackdrop.classList.add('visible');
+    setTimeout(() => document.getElementById('itemNameInput').focus(), 350);
+  }
+
+  function closeItemSheet() {
+    itemSheet.classList.remove('visible');
+    itemSheetBackdrop.classList.remove('visible');
+  }
+
+  document.getElementById('agendaAddItemBtn').addEventListener('click', openItemSheet);
+  itemSheetBackdrop.addEventListener('click', closeItemSheet);
+
+  // Preset buttons
+  document.querySelectorAll('.btn-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedPresetMin = parseInt(btn.dataset.min);
+      document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      document.getElementById('customMinInput').value = '';
+    });
+  });
+
+  // Custom input clears preset selection
+  document.getElementById('customMinInput').addEventListener('input', () => {
+    selectedPresetMin = null;
+    document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('selected'));
+  });
+
+  document.getElementById('addItemConfirmBtn').addEventListener('click', () => {
+    const name = document.getElementById('itemNameInput').value.trim();
+    const customVal = parseInt(document.getElementById('customMinInput').value);
+    const minutes = selectedPresetMin || (customVal > 0 ? customVal : null);
+
+    if (!name) { document.getElementById('itemSheetError').textContent = 'Enter a name'; return; }
+    if (!minutes || minutes < 1 || minutes > 300) { document.getElementById('itemSheetError').textContent = 'Select or enter a duration (1–300 min)'; return; }
+    if (!agendaViewSessionId) return;
+
+    const agenda = agendas[agendaViewSessionId];
+    if (!agenda) return;
+
+    agenda.items.push({ id: genId(), name, minutes, status: 'pending' });
+    saveAgendas(agendas);
+    renderAgendaItems(agendaViewSessionId);
+    renderCard(agendaViewSessionId);
+    closeItemSheet();
   });
 
   // ── Boot ──────────────────────────────────────────────────────────────────────
