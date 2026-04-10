@@ -2,7 +2,18 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'http';
 import { parse } from 'url';
 
-const PORT = process.env.PORT || 3000;
+const PORT       = process.env.PORT       || 3000;
+const STATS_KEY  = process.env.STATS_KEY  || 'speaker-timer-stats';
+
+// ── Lifetime stats (in-memory, resets on restart) ────────────────────────────
+const stats = {
+  serverStarted:    new Date(),
+  connections:      { control: 0, display: 0, view: 0 },
+  uniqueSessions:   new Set(),
+  peakConcurrent:   0,
+  timerStarts:      0,
+  messagesSent:     0,
+};
 
 // ── Session store ────────────────────────────────────────────────────────────
 const sessions = new Map();
@@ -132,6 +143,110 @@ const server = createServer(async (req, res) => {
       });
     }
     res.end(JSON.stringify({ sessions: list }));
+    return;
+  }
+
+  // GET /stats?key=…  — private usage dashboard
+  if (req.method === 'GET' && req.url.startsWith('/stats')) {
+    const { query: q } = parse(req.url, true);
+    if (q.key !== STATS_KEY) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Forbidden');
+      return;
+    }
+
+    // Count currently active connections across all sessions
+    let activeCx = 0;
+    for (const s of sessions.values()) activeCx += s.clients.size;
+
+    const upMs      = Date.now() - stats.serverStarted.getTime();
+    const upDays    = Math.floor(upMs / 86400000);
+    const upHours   = Math.floor((upMs % 86400000) / 3600000);
+    const upMins    = Math.floor((upMs % 3600000)  / 60000);
+    const upStr     = upDays > 0
+      ? `${upDays}d ${upHours}h ${upMins}m`
+      : upHours > 0 ? `${upHours}h ${upMins}m` : `${upMins}m`;
+
+    const total = stats.connections.control + stats.connections.display + stats.connections.view;
+
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Speaker Timer — Stats</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0a;color:#f0ede8;font-family:'DM Mono',ui-monospace,monospace;
+       padding:48px 40px;min-height:100vh}
+  h1{font-size:13px;letter-spacing:.25em;text-transform:uppercase;color:#555;margin-bottom:40px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:40px}
+  .card{background:#111;border:1px solid #1e1e1e;border-radius:12px;padding:24px 20px}
+  .card .val{font-size:42px;font-weight:700;letter-spacing:-.02em;color:#e8ff47;
+             font-family:system-ui,sans-serif;line-height:1;margin-bottom:8px}
+  .card .val.muted{color:#f0ede8}
+  .card .lbl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#555}
+  .section{margin-bottom:32px}
+  .section h2{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:#333;
+              margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #1a1a1a}
+  .row{display:flex;justify-content:space-between;align-items:center;
+       padding:10px 0;border-bottom:1px solid #141414;font-size:12px}
+  .row:last-child{border-bottom:none}
+  .row .k{color:#555;letter-spacing:.12em}
+  .row .v{color:#f0ede8}
+  .footer{font-size:10px;color:#333;letter-spacing:.15em;margin-top:32px}
+  @media(max-width:500px){body{padding:28px 20px}.card .val{font-size:32px}}
+</style>
+</head>
+<body>
+<h1>Speaker Timer &mdash; Usage Stats</h1>
+
+<div class="grid">
+  <div class="card">
+    <div class="val">${stats.connections.control.toLocaleString()}</div>
+    <div class="lbl">QR Scans (control joins)</div>
+  </div>
+  <div class="card">
+    <div class="val">${stats.uniqueSessions.size.toLocaleString()}</div>
+    <div class="lbl">Unique Sessions</div>
+  </div>
+  <div class="card">
+    <div class="val">${stats.timerStarts.toLocaleString()}</div>
+    <div class="lbl">Timer Starts</div>
+  </div>
+  <div class="card">
+    <div class="val">${stats.messagesSent.toLocaleString()}</div>
+    <div class="lbl">Messages Sent</div>
+  </div>
+  <div class="card">
+    <div class="val">${activeCx}</div>
+    <div class="lbl">Active Connections Now</div>
+  </div>
+  <div class="card">
+    <div class="val">${stats.peakConcurrent}</div>
+    <div class="lbl">Peak Concurrent</div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Connection breakdown (lifetime)</h2>
+  <div class="row"><span class="k">Control (QR scans)</span><span class="v">${stats.connections.control.toLocaleString()}</span></div>
+  <div class="row"><span class="k">Display screens</span><span class="v">${stats.connections.display.toLocaleString()}</span></div>
+  <div class="row"><span class="k">View-only</span><span class="v">${stats.connections.view.toLocaleString()}</span></div>
+  <div class="row"><span class="k">Total connections</span><span class="v">${total.toLocaleString()}</span></div>
+</div>
+
+<div class="section">
+  <h2>Server</h2>
+  <div class="row"><span class="k">Started</span><span class="v">${stats.serverStarted.toUTCString()}</span></div>
+  <div class="row"><span class="k">Uptime</span><span class="v">${upStr}</span></div>
+  <div class="row"><span class="k">Active sessions</span><span class="v">${sessions.size}</span></div>
+</div>
+
+<div class="footer">Stats reset on server restart &mdash; showing data since ${stats.serverStarted.toDateString()}</div>
+</body>
+</html>`);
     return;
   }
 
@@ -278,6 +393,14 @@ wss.on('connection', (ws, req) => {
   const session = getSession(sessionId);
   session.clients.add(ws);
 
+  // ── Track stats ──────────────────────────────────────────────────────────
+  stats.uniqueSessions.add(sessionId);
+  if (role === 'control' || role === 'display' || role === 'view') {
+    stats.connections[role]++;
+  }
+  const totalNow = wss.clients.size;
+  if (totalNow > stats.peakConcurrent) stats.peakConcurrent = totalNow;
+
   // Send current state immediately on join
   sendMsg(ws, { type: 'state', payload: session.state });
 
@@ -378,6 +501,7 @@ wss.on('connection', (ws, req) => {
         if (!s.running) {
           s.running = true;
           session.everStarted = true;
+          stats.timerStarts++;
           startTick(session, sessionId);
           broadcast(session);
         }
@@ -419,7 +543,7 @@ wss.on('connection', (ws, req) => {
 
       case 'set_message':
         s.message = (msg.text || '').slice(0, 200);
-        if (s.message) s.messageSeq++;
+        if (s.message) { s.messageSeq++; stats.messagesSent++; }
         broadcast(session);
         break;
 
