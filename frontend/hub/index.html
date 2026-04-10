@@ -270,6 +270,86 @@
 
   .card-remove:active { background: var(--border); color: var(--danger); }
 
+  /* ── Start Fresh button ── */
+  .btn-fresh {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-height: 32px;
+  }
+  .btn-fresh:active { background: var(--border); color: var(--text); }
+
+  /* ── Confirm modal ── */
+  .confirm-modal {
+    position: fixed; inset: 0;
+    background: rgba(10,10,10,0.9);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+    padding: 24px;
+  }
+  .confirm-modal.visible { opacity: 1; pointer-events: auto; }
+
+  .confirm-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px 24px;
+    width: 100%;
+    max-width: 340px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  .confirm-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .confirm-body {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .confirm-actions { display: flex; flex-direction: column; gap: 8px; }
+
+  .btn-confirm-yes {
+    width: 100%; height: 52px;
+    border-radius: 12px; border: none;
+    background: var(--danger);
+    color: #fff;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px; letter-spacing: 0.06em;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .btn-confirm-yes:active { opacity: 0.8; transform: scale(0.97); }
+
+  .btn-confirm-no {
+    width: 100%; height: 44px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .btn-confirm-no:active { background: var(--border); color: var(--text); }
+
   /* ── Add room FAB ── */
   .fab {
     position: fixed;
@@ -455,6 +535,19 @@
   <div class="header-title">Speaker Timer</div>
   <div class="header-right">
     <div class="room-count" id="roomCount"></div>
+    <button class="btn-fresh" id="freshBtn">Start Fresh</button>
+  </div>
+</div>
+
+<!-- ── Start Fresh confirmation ── -->
+<div class="confirm-modal" id="confirmModal">
+  <div class="confirm-box">
+    <div class="confirm-title">Start Fresh?</div>
+    <div class="confirm-body">This will remove all rooms from your list and reset your name. You'll be taken back to the setup screen.</div>
+    <div class="confirm-actions">
+      <button class="btn-confirm-yes" id="confirmYes">Yes, Clear Everything</button>
+      <button class="btn-confirm-no" id="confirmNo">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -496,6 +589,30 @@
 <script>
   const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
   const STORAGE_KEY = 'speakerTimerRooms';
+
+  // ── Start Fresh ──────────────────────────────────────────────────────────────
+  const confirmModal = document.getElementById('confirmModal');
+  document.getElementById('freshBtn').addEventListener('click', () => {
+    confirmModal.classList.add('visible');
+  });
+  document.getElementById('confirmNo').addEventListener('click', () => {
+    confirmModal.classList.remove('visible');
+  });
+  confirmModal.addEventListener('click', e => {
+    if (e.target === confirmModal) confirmModal.classList.remove('visible');
+  });
+  document.getElementById('confirmYes').addEventListener('click', () => {
+    // Close all open WebSocket connections
+    Object.values(roomData).forEach(entry => {
+      try { entry.ws?.close(); } catch {}
+    });
+    // Clear all localStorage keys used by this app
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('speakerTimerMyName');
+    localStorage.removeItem('speakerTimerNamePromptSeen');
+    // Send to control page — name prompt will appear since keys are cleared
+    window.location.href = '/control/';
+  });
 
   // ── Room list (persisted in localStorage) ────────────────────────────────────
   function loadRooms() {
