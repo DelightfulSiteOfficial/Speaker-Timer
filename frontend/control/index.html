@@ -479,6 +479,55 @@
 
   .btn-clear-msg:active { background: var(--border); }
 
+  /* ── Message status strip ── */
+  .msg-status {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-top: 4px;
+  }
+
+  .msg-status.visible { display: flex; }
+
+  .msg-status-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .msg-status-text.active { color: var(--accent); }
+  .msg-status-text.done   { color: var(--muted); }
+
+  .msg-status-bar-track {
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .msg-status-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transform-origin: left;
+    transform: scaleX(1);
+  }
+
+  .msg-status-bar-fill.drain {
+    animation: drainCtrl var(--d, 5s) linear forwards;
+  }
+
+  @keyframes drainCtrl {
+    from { transform: scaleX(1); }
+    to   { transform: scaleX(0); }
+  }
+
   /* ── Sticky controls ── */
   .controls-sticky {
     position: fixed;
@@ -645,6 +694,12 @@
     <button class="btn-send-msg" id="sendMsgBtn">Send to Display</button>
     <button class="btn-clear-msg" id="clearMsgBtn">Clear</button>
   </div>
+  <div class="msg-status" id="msgStatus">
+    <div class="msg-status-text" id="msgStatusText"></div>
+    <div class="msg-status-bar-track" id="msgBarTrack" style="display:none">
+      <div class="msg-status-bar-fill" id="msgBarFill"></div>
+    </div>
+  </div>
 </div>
 
 <div class="controls-sticky">
@@ -806,13 +861,66 @@
   });
 
   // Operator message
-  const messageInput = document.getElementById('messageInput');
-  const sendMsgBtn   = document.getElementById('sendMsgBtn');
-  const clearMsgBtn  = document.getElementById('clearMsgBtn');
+  const messageInput  = document.getElementById('messageInput');
+  const sendMsgBtn    = document.getElementById('sendMsgBtn');
+  const clearMsgBtn   = document.getElementById('clearMsgBtn');
+  const msgStatus     = document.getElementById('msgStatus');
+  const msgStatusText = document.getElementById('msgStatusText');
+  const msgBarTrack   = document.getElementById('msgBarTrack');
+  const msgBarFill    = document.getElementById('msgBarFill');
+  const FLASH_MS      = 5000;
+  let msgCountInterval = null;
+  let msgCountSecs     = 0;
+  let msgDoneTimer     = null;
+
+  function setMsgStatus(type, secs) {
+    msgStatus.classList.add('visible');
+    clearTimeout(msgDoneTimer);
+
+    if (type === 'displaying') {
+      msgStatusText.textContent = `Showing on display — ${secs}s`;
+      msgStatusText.className = 'msg-status-text active';
+      msgBarTrack.style.display = '';
+      msgBarFill.classList.remove('drain');
+      msgBarFill.style.setProperty('--d', (FLASH_MS / 1000) + 's');
+      void msgBarFill.offsetWidth;
+      msgBarFill.classList.add('drain');
+    } else if (type === 'autodismissed') {
+      msgStatusText.textContent = 'Auto-dismissed ✓';
+      msgStatusText.className = 'msg-status-text done';
+      msgBarTrack.style.display = 'none';
+      msgDoneTimer = setTimeout(() => msgStatus.classList.remove('visible'), 3000);
+    } else if (type === 'cleared') {
+      msgStatusText.textContent = 'Message cleared ✓';
+      msgStatusText.className = 'msg-status-text done';
+      msgBarTrack.style.display = 'none';
+      msgDoneTimer = setTimeout(() => msgStatus.classList.remove('visible'), 3000);
+    }
+  }
+
+  function startMsgCountdown() {
+    clearInterval(msgCountInterval);
+    msgCountSecs = Math.ceil(FLASH_MS / 1000);
+    setMsgStatus('displaying', msgCountSecs);
+    msgCountInterval = setInterval(() => {
+      msgCountSecs--;
+      if (msgCountSecs <= 0) {
+        clearInterval(msgCountInterval);
+        setMsgStatus('autodismissed');
+      } else {
+        msgStatusText.textContent = `Showing on display — ${msgCountSecs}s`;
+      }
+    }, 1000);
+  }
 
   sendMsgBtn.addEventListener('click', () => {
-    send({ type: 'set_message', sessionId, text: messageInput.value.trim() });
+    const text = messageInput.value.trim();
+    if (!text) return;
+    send({ type: 'set_message', sessionId, text });
     messageInput.blur();
+    // Button flash
+    sendMsgBtn.textContent = '✓ Sent';
+    setTimeout(() => { sendMsgBtn.textContent = 'Send to Display'; }, 1500);
   });
 
   messageInput.addEventListener('keydown', (e) => {
@@ -857,12 +965,20 @@
       try {
         const msg = JSON.parse(e.data);
         if (msg.type === 'state') {
+          const prevMessage = state.message;
           state = { ...state, ...msg.payload };
           if (msg.payload.speakerName !== undefined && document.activeElement !== speakerInput) {
             speakerInput.value = msg.payload.speakerName || '';
           }
           if (msg.payload.message !== undefined && document.activeElement !== messageInput) {
             messageInput.value = msg.payload.message || '';
+          }
+          // Message status tracking
+          if (state.message && state.message !== prevMessage) {
+            startMsgCountdown();
+          } else if (!state.message && prevMessage) {
+            clearInterval(msgCountInterval);
+            setMsgStatus('cleared');
           }
           render();
         } else if (msg.type === 'control_granted') {
