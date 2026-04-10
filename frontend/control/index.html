@@ -717,6 +717,55 @@
   .lock-screen.cohost-mode .request-feedback,
   .lock-screen.cohost-mode .btn-cancel-request { display: none !important; }
 
+  /* ── Message flash overlay ── */
+  .message-flash {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,10,0.96);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 80;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s;
+    padding: 40px 32px;
+  }
+  .message-flash.visible { opacity: 1; pointer-events: auto; }
+
+  .flash-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .flash-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: clamp(26px, 7vw, 52px);
+    font-weight: 300;
+    color: var(--text);
+    text-align: center;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+
+  .flash-countdown {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 3px;
+    background: var(--accent);
+    width: 100%;
+    transform-origin: left;
+  }
+  .flash-countdown.animating {
+    animation: drainFlash var(--flash-duration, 5s) linear forwards;
+  }
+  @keyframes drainFlash { from{transform:scaleX(1)} to{transform:scaleX(0)} }
+
   /* ── Background warning pulses ── */
   @keyframes bgPulseWarn        { 0%,100%{background-color:#0a0a0a} 50%{background-color:#221d08} }
   @keyframes bgPulseDangerSlow  { 0%,100%{background-color:#0a0a0a} 50%{background-color:#280606} }
@@ -849,6 +898,13 @@
 </div>
 
 <button class="btn-take-control" id="takeControlBtn">Take Control</button>
+
+<!-- ── Message flash overlay ── -->
+<div class="message-flash" id="messageFlash">
+  <div class="flash-label">Message</div>
+  <div class="flash-text" id="flashText"></div>
+  <div class="flash-countdown" id="flashCountdown"></div>
+</div>
 
 <!-- ── Incoming control request modal (shown to the current controller) ── -->
 <div class="ctrl-request-modal" id="ctrlRequestModal">
@@ -1261,7 +1317,31 @@
   const msgStatusText = document.getElementById('msgStatusText');
   const msgBarTrack   = document.getElementById('msgBarTrack');
   const msgBarFill    = document.getElementById('msgBarFill');
+  const messageFlash  = document.getElementById('messageFlash');
+  const flashText     = document.getElementById('flashText');
+  const flashCountdown = document.getElementById('flashCountdown');
   const FLASH_MS      = 5000;
+  let flashTimer      = null;
+
+  function triggerFlash(msg) {
+    flashText.textContent = msg;
+    messageFlash.classList.add('visible');
+    flashCountdown.classList.remove('animating');
+    flashCountdown.style.setProperty('--flash-duration', (FLASH_MS / 1000) + 's');
+    void flashCountdown.offsetWidth;
+    flashCountdown.classList.add('animating');
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => messageFlash.classList.remove('visible'), FLASH_MS);
+  }
+
+  function dismissFlash() {
+    clearTimeout(flashTimer);
+    messageFlash.classList.remove('visible');
+    flashCountdown.classList.remove('animating');
+  }
+
+  // Tap the flash to dismiss early
+  messageFlash.addEventListener('click', dismissFlash);
   let msgCountInterval = null, msgCountSecs = 0, msgDoneTimer = null;
 
   function setMsgStatus(type, secs) {
@@ -1367,8 +1447,14 @@
             speakerInput.value = msg.payload.roomName || '';
 
 
-          if (state.message && state.messageSeq !== prevMessageSeq) startMsgCountdown();
-          else if (!state.message && prevMessage) { clearInterval(msgCountInterval); setMsgStatus('cleared'); }
+          if (state.message && state.messageSeq !== prevMessageSeq) {
+            startMsgCountdown();
+            triggerFlash(state.message);
+          } else if (!state.message && prevMessage) {
+            clearInterval(msgCountInterval);
+            setMsgStatus('cleared');
+            dismissFlash();
+          }
 
           render();
 
