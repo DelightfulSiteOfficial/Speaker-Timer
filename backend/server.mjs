@@ -21,6 +21,7 @@ function createSession(id) {
       overtime: false,
       controllerConnected: false,
       waitingList: [], // [{ id, name }] — visible to all clients
+      message: '',     // operator message shown on display when QR is hidden
     },
     clients: new Set(),
     tickInterval: null,
@@ -228,6 +229,11 @@ wss.on('connection', (ws, req) => {
 
       case 'set_speaker':
         s.speakerName = (msg.name || '').slice(0, 60);
+        broadcast(session);
+        break;
+
+      case 'set_message':
+        s.message = (msg.text || '').slice(0, 200);
         broadcast(session);
         break;
 

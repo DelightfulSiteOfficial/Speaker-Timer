@@ -416,6 +416,52 @@
   .btn-take-control.visible { display: block; }
   .btn-take-control:active { background: rgba(232,255,71,0.08); transform: scale(0.97); }
 
+  /* ── Operator message ── */
+  .message-row { flex-shrink: 0; }
+
+  .message-input-wrap {
+    display: flex;
+    gap: 8px;
+  }
+
+  .message-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+    min-height: 48px;
+  }
+
+  .message-input::placeholder { color: var(--muted); font-size: 13px; }
+  .message-input:focus { border-color: var(--accent); }
+
+  .btn-clear-msg {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0 16px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    min-height: 48px;
+    transition: all 0.15s;
+    display: none;
+  }
+
+  .btn-clear-msg.visible { display: flex; align-items: center; }
+  .btn-clear-msg:active { background: var(--border); }
+
   /* ── Sticky controls ── */
   .controls-sticky {
     position: fixed;
@@ -575,6 +621,14 @@
 
 <button class="btn-take-control" id="takeControlBtn">Take Control</button>
 
+<div class="message-row">
+  <div class="field-label">Message on display</div>
+  <div class="message-input-wrap">
+    <input class="message-input" id="messageInput" type="text" placeholder="Type a message for the presenter…" maxlength="200">
+    <button class="btn-clear-msg" id="clearMsgBtn">Clear</button>
+  </div>
+</div>
+
 <div class="controls-sticky">
   <div class="controls">
     <button class="btn-main btn-start" id="mainBtn">Start</button>
@@ -733,6 +787,25 @@
     }, 500);
   });
 
+  // Operator message (debounced)
+  const messageInput = document.getElementById('messageInput');
+  const clearMsgBtn  = document.getElementById('clearMsgBtn');
+  let msgTimer;
+
+  messageInput.addEventListener('input', () => {
+    clearTimeout(msgTimer);
+    clearMsgBtn.className = 'btn-clear-msg' + (messageInput.value ? ' visible' : '');
+    msgTimer = setTimeout(() => {
+      send({ type: 'set_message', sessionId, text: messageInput.value });
+    }, 400);
+  });
+
+  clearMsgBtn.addEventListener('click', () => {
+    messageInput.value = '';
+    clearMsgBtn.className = 'btn-clear-msg';
+    send({ type: 'set_message', sessionId, text: '' });
+  });
+
   // Take control
   takeControlBtn.addEventListener('click', () => {
     controlAvailable = false;
@@ -769,6 +842,10 @@
           state = { ...state, ...msg.payload };
           if (msg.payload.speakerName !== undefined && document.activeElement !== speakerInput) {
             speakerInput.value = msg.payload.speakerName || '';
+          }
+          if (msg.payload.message !== undefined && document.activeElement !== messageInput) {
+            messageInput.value = msg.payload.message || '';
+            clearMsgBtn.className = 'btn-clear-msg' + (messageInput.value ? ' visible' : '');
           }
           render();
         } else if (msg.type === 'control_granted') {

@@ -262,6 +262,42 @@
     margin-top: 4px;
   }
 
+  /* ── Operator message panel ── */
+  .message-panel {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-left: 48px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s;
+  }
+
+  .message-panel.visible { opacity: 1; }
+
+  .message-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: clamp(20px, 2.8vw, 40px);
+    font-weight: 300;
+    color: var(--text);
+    text-align: center;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+    word-break: break-word;
+  }
+
+  .message-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
   /* ── Overlay for disconnected state ── */
   .overlay {
     position: fixed;
@@ -340,6 +376,11 @@
 <div class="overlay" id="overlay">
   <div class="overlay-title">Connecting…</div>
   <div class="overlay-sub">Reaching server</div>
+</div>
+
+<div class="message-panel" id="messagePanel">
+  <div class="message-label">Message</div>
+  <div class="message-text" id="messageText"></div>
 </div>
 
 <button class="qr-toggle" id="qrToggle">Hide QR</button>
@@ -453,6 +494,7 @@
         if (msg.type === 'state') {
           state = { ...state, ...msg.payload };
           render();
+          updateMessagePanel();
         }
       } catch {}
     };
@@ -470,15 +512,24 @@
     reconnectTimer = setTimeout(connect, 3000);
   }
 
-  // ── QR toggle ─────────────────────────────────────────────────────────────
-  const qrPanel  = document.querySelector('.qr-panel');
-  const qrToggle = document.getElementById('qrToggle');
-  let qrVisible  = true;
+  // ── QR toggle + message panel ─────────────────────────────────────────────
+  const qrPanel      = document.querySelector('.qr-panel');
+  const qrToggle     = document.getElementById('qrToggle');
+  const messagePanel = document.getElementById('messagePanel');
+  const messageText  = document.getElementById('messageText');
+  let qrVisible = true;
+
+  function updateMessagePanel() {
+    const msg = state.message || '';
+    messageText.textContent = msg;
+    messagePanel.classList.toggle('visible', !qrVisible && msg.length > 0);
+  }
 
   qrToggle.addEventListener('click', () => {
     qrVisible = !qrVisible;
     qrPanel.classList.toggle('hidden', !qrVisible);
     qrToggle.textContent = qrVisible ? 'Hide QR' : 'Show QR';
+    updateMessagePanel();
   });
 
   connect();
