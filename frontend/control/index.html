@@ -168,12 +168,92 @@
   }
   .conn-dot.live { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 
+  /* ── Room chip ── */
+  .room-chip {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 5px 11px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    max-width: 110px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: all 0.15s;
+    min-height: 28px;
+  }
+  .room-chip.has-room { color: var(--text); border-color: #333; }
+  .room-chip:active { background: var(--border); }
+
+  /* ── Room modal ── */
+  .room-modal {
+    position: fixed; inset: 0;
+    background: rgba(10,10,10,0.88);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 150;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .room-modal.visible { opacity: 1; pointer-events: auto; }
+
+  .room-modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px 20px 20px;
+    width: calc(100% - 40px);
+    max-width: 360px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+
+  .room-modal-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .room-modal-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 18px;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .room-modal-input::placeholder { color: var(--muted); }
+  .room-modal-input:focus { border-color: var(--accent); }
+
+  .room-modal-done {
+    width: 100%;
+    height: 52px;
+    border-radius: 12px;
+    border: none;
+    background: var(--accent);
+    color: #000;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .room-modal-done:active { transform: scale(0.97); opacity: 0.85; }
+
   /* ── Timer display ── */
   .time-preview {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
+    align-items: center;
+    gap: 14px;
     flex-shrink: 0;
   }
 
@@ -190,29 +270,12 @@
   .time-big.overtime { color: var(--danger); }
   @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-  .time-meta {
-    text-align: right;
-    flex-shrink: 0;
-  }
   .time-status {
     font-family: 'DM Mono', monospace;
     font-size: 10px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
-    display: block;
-  }
-  .time-room {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    font-weight: 300;
-    color: var(--muted);
-    display: block;
-    margin-top: 3px;
-    max-width: 130px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   /* ── Overtime banner ── */
@@ -246,8 +309,8 @@
   /* ── Duration dial ── */
   .dial-wrapper {
     position: relative;
-    width: 200px;
-    height: 200px;
+    width: min(200px, 54vw);
+    height: min(200px, 54vw);
     margin: 0 auto 12px;
   }
 
@@ -365,24 +428,6 @@
   .nudge-btn.add { color: var(--accent); border-color: rgba(232,255,71,0.2); background: rgba(232,255,71,0.04); }
   .nudge-btn.sub { color: var(--warn);   border-color: rgba(255,153,0,0.2);  background: rgba(255,153,0,0.04); }
 
-  /* ── Text input ── */
-  .text-input {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 16px;
-    font-weight: 300;
-    outline: none;
-    transition: border-color 0.2s;
-    min-height: 52px;
-  }
-  .text-input::placeholder { color: var(--muted); }
-  .text-input:focus { border-color: var(--accent); }
-
   /* ── Message section ── */
   .message-input-wrap { display: flex; gap: 8px; align-items: stretch; }
 
@@ -453,13 +498,6 @@
 
   .btn-pass { background: transparent; border: 1px solid var(--accent); border-radius: 8px; padding: 7px 16px; color: var(--accent); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; flex-shrink: 0; transition: all 0.15s; min-height: 36px; }
   .btn-pass:active { background: rgba(232,255,71,0.1); transform: scale(0.95); }
-
-  /* ── Divider ── */
-  .section-divider {
-    height: 1px;
-    background: var(--border);
-    flex-shrink: 0;
-  }
 
   /* ── Lock screen ── */
   .lock-screen {
@@ -536,6 +574,7 @@
 <div class="header">
   <div class="session-tag" id="sessionTag">Session —</div>
   <div class="header-right">
+    <button class="room-chip" id="roomChip">Set room…</button>
     <button class="btn-rooms" id="roomsBtn">All Rooms</button>
     <div class="conn-dot" id="connDot"></div>
   </div>
@@ -544,9 +583,15 @@
 <!-- ── Timer ── -->
 <div class="time-preview">
   <div class="time-big" id="timeBig">--:--</div>
-  <div class="time-meta">
-    <span class="time-status" id="timeStatus">Stopped</span>
-    <span class="time-room" id="timeRoom"></span>
+  <span class="time-status" id="timeStatus">Stopped</span>
+</div>
+
+<!-- ── Room name modal ── -->
+<div class="room-modal" id="roomModal">
+  <div class="room-modal-box">
+    <div class="room-modal-label">Room name</div>
+    <input class="room-modal-input" id="speakerInput" type="text" placeholder="e.g. Ballroom A, Room 101…" maxlength="60">
+    <button class="room-modal-done" id="roomModalDone">Done</button>
   </div>
 </div>
 
@@ -587,14 +632,6 @@
     <button class="nudge-btn sub" data-nudge="-30">−30s</button>
     <button class="nudge-btn add" data-nudge="30">+30s</button>
     <button class="nudge-btn add" data-nudge="60">+1m</button>
-  </div>
-
-  <div class="section-divider"></div>
-
-  <!-- Room name -->
-  <div>
-    <div class="section-label">Room name</div>
-    <input class="text-input" id="speakerInput" type="text" placeholder="e.g. Ballroom A, Room 101…" maxlength="60">
   </div>
 
   <!-- Message flash -->
@@ -663,7 +700,6 @@
   // ── DOM ────────────────────────────────────────────────────────────────────
   const timeBig          = document.getElementById('timeBig');
   const timeStatus       = document.getElementById('timeStatus');
-  const timeRoom         = document.getElementById('timeRoom');
   const mainBtn          = document.getElementById('mainBtn');
   const resetBtn         = document.getElementById('resetBtn');
   const speakerInput     = document.getElementById('speakerInput');
@@ -742,6 +778,26 @@
     return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  // ── Room chip / modal ──────────────────────────────────────────────────────
+  const roomChip      = document.getElementById('roomChip');
+  const roomModal     = document.getElementById('roomModal');
+  const roomModalDone = document.getElementById('roomModalDone');
+
+  function openRoomModal() {
+    roomModal.classList.add('visible');
+    setTimeout(() => { speakerInput.focus(); speakerInput.select(); }, 80);
+  }
+
+  function closeRoomModal() {
+    roomModal.classList.remove('visible');
+    send({ type: 'set_room', sessionId, name: speakerInput.value.trim() });
+  }
+
+  roomChip.addEventListener('click', openRoomModal);
+  roomModalDone.addEventListener('click', closeRoomModal);
+  roomModal.addEventListener('click', e => { if (e.target === roomModal) closeRoomModal(); });
+  speakerInput.addEventListener('keydown', e => { if (e.key === 'Enter') closeRoomModal(); });
+
   // ── Main render ────────────────────────────────────────────────────────────
   function render() {
     const { running, timeRemaining, overtime, roomName } = state;
@@ -752,7 +808,9 @@
     timeBig.className = 'time-big' +
       (overtime ? ' overtime' : isDanger ? ' danger' : isWarning ? ' warning' : '');
     timeStatus.textContent = running ? 'Running' : (overtime ? 'Overtime' : 'Paused');
-    timeRoom.textContent = roomName || '';
+
+    roomChip.textContent = roomName || 'Set room…';
+    roomChip.classList.toggle('has-room', !!roomName);
 
     mainBtn.textContent = running ? 'Pause' : 'Start';
     mainBtn.className = 'btn-main ' + (running ? 'btn-pause' : 'btn-start');
@@ -900,14 +958,6 @@
 
   updateDial(10, false);
 
-  // ── Room name ──────────────────────────────────────────────────────────────
-  let roomNameTimer;
-  speakerInput.addEventListener('input', () => {
-    clearTimeout(roomNameTimer);
-    roomNameTimer = setTimeout(() =>
-      send({ type: 'set_room', sessionId, name: speakerInput.value.trim() }), 500);
-  });
-
   // ── Waiting name input (lock screen) ──────────────────────────────────────
   let waitingNameTimer;
   waitingNameInput.addEventListener('input', () => {
@@ -1039,7 +1089,7 @@
           if (msg.payload.totalTime !== undefined && !dialDragging)
             updateDial(Math.max(1, Math.round(state.totalTime / 60)), false);
 
-          if (msg.payload.roomName !== undefined && document.activeElement !== speakerInput)
+          if (msg.payload.roomName !== undefined && !roomModal.classList.contains('visible'))
             speakerInput.value = msg.payload.roomName || '';
 
           if (msg.payload.message !== undefined && document.activeElement !== messageInput)
