@@ -20,7 +20,6 @@
     --accent: #e8ff47;
     --danger: #ff4444;
     --warn: #ff9900;
-    --blue: #6bb5ff;
   }
 
   html {
@@ -33,11 +32,97 @@
   body {
     min-height: 100dvh;
     padding: env(safe-area-inset-top, 16px) 16px 0;
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 140px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 100px);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
   }
+
+  /* ── Name prompt overlay ── */
+  .name-prompt {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+    transition: opacity 0.25s;
+  }
+  .name-prompt.hidden { opacity: 0; pointer-events: none; }
+
+  .name-prompt-inner {
+    width: 100%; max-width: 380px;
+    padding: 0 28px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+
+  .name-prompt-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .name-prompt-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 14vw, 64px);
+    letter-spacing: 0.02em;
+    color: var(--text);
+    line-height: 0.95;
+    margin-top: -4px;
+  }
+
+  .name-prompt-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .name-prompt-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 20px;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-top: 6px;
+  }
+  .name-prompt-input::placeholder { color: var(--muted); font-size: 15px; }
+  .name-prompt-input:focus { border-color: var(--accent); }
+
+  .name-prompt-btn {
+    height: 62px;
+    border-radius: 14px;
+    border: none;
+    background: var(--accent);
+    color: #000;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 30px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .name-prompt-btn:active { transform: scale(0.97); opacity: 0.85; }
+
+  .name-prompt-skip {
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    background: none; border: none;
+    padding: 4px;
+    transition: color 0.15s;
+  }
+  .name-prompt-skip:active { color: var(--text); }
 
   /* ── Header ── */
   .header {
@@ -84,12 +169,18 @@
   .conn-dot.live { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 
   /* ── Timer display ── */
-  .time-preview { text-align: center; padding: 4px 0 0; flex-shrink: 0; }
+  .time-preview {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-shrink: 0;
+  }
 
   .time-big {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(80px, 22vw, 130px);
-    line-height: 0.95;
+    font-size: clamp(60px, 17vw, 96px);
+    line-height: 0.9;
     letter-spacing: -0.01em;
     transition: color 0.4s;
     font-variant-numeric: tabular-nums;
@@ -97,16 +188,31 @@
   .time-big.warning { color: var(--warn); }
   .time-big.danger  { color: var(--danger); animation: flash 1s step-end infinite; }
   .time-big.overtime { color: var(--danger); }
-
   @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
+  .time-meta {
+    text-align: right;
+    flex-shrink: 0;
+  }
   .time-status {
     font-family: 'DM Mono', monospace;
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
-    margin-top: 4px;
+    display: block;
+  }
+  .time-room {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    color: var(--muted);
+    display: block;
+    margin-top: 3px;
+    max-width: 130px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* ── Overtime banner ── */
@@ -115,10 +221,10 @@
     background: var(--danger);
     color: #fff;
     text-align: center;
-    padding: 12px;
-    border-radius: 12px;
+    padding: 10px;
+    border-radius: 10px;
     font-family: 'DM Mono', monospace;
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.15em;
     text-transform: uppercase;
     animation: flashBg 1s step-end infinite;
@@ -127,40 +233,8 @@
   @keyframes flashBg { 0%,100%{opacity:1} 50%{opacity:0.5} }
   .overtime-banner.visible { display: block; }
 
-  /* ── Tab bar ── */
-  .tab-bar {
-    display: flex;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 4px;
-    gap: 4px;
-    flex-shrink: 0;
-  }
-  .tab-bar.hidden { display: none; }
-
-  .tab-btn {
-    flex: 1;
-    height: 38px;
-    border: none;
-    border-radius: 9px;
-    background: transparent;
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .tab-btn.active { background: var(--bg); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
-
-  /* ── Tab panels ── */
-  .tab-panel { display: flex; flex-direction: column; gap: 12px; }
-  .tab-panel.hidden { display: none; }
-
-  /* ── Field label ── */
-  .field-label {
+  /* ── Section label ── */
+  .section-label {
     font-family: 'DM Mono', monospace;
     font-size: 10px;
     letter-spacing: 0.2em;
@@ -169,7 +243,105 @@
     margin-bottom: 8px;
   }
 
-  /* ── Nudge ── */
+  /* ── Duration dial ── */
+  .dial-wrapper {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 12px;
+  }
+
+  .dial-svg {
+    width: 100%; height: 100%;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: pointer;
+    overflow: visible;
+  }
+
+  .dial-center-overlay {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .dial-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 62px;
+    line-height: 1;
+    color: var(--text);
+    letter-spacing: 0.02em;
+    transition: color 0.2s;
+  }
+
+  .dial-unit {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: -8px;
+  }
+
+  .dial-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+    opacity: 0.6;
+  }
+
+  .dial-direct-input {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120px;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+    border-radius: 14px;
+    padding: 6px 10px;
+    color: var(--text);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 44px;
+    text-align: center;
+    outline: none;
+    display: none;
+    z-index: 10;
+    -moz-appearance: textfield;
+  }
+  .dial-direct-input::-webkit-outer-spin-button,
+  .dial-direct-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  .dial-presets {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .dial-preset {
+    height: 40px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dial-preset:active { transform: scale(0.95); }
+  .dial-preset.active { background: rgba(232,255,71,0.1); border-color: rgba(232,255,71,0.35); color: var(--accent); }
+
+  /* ── Nudge row ── */
   .nudge-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -181,23 +353,37 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
-    height: 56px;
+    height: 52px;
     color: var(--text);
     font-family: 'DM Mono', monospace;
     font-size: 13px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     transition: all 0.15s;
   }
   .nudge-btn:active { transform: scale(0.95); background: var(--border); }
   .nudge-btn.add { color: var(--accent); border-color: rgba(232,255,71,0.2); background: rgba(232,255,71,0.04); }
   .nudge-btn.sub { color: var(--warn);   border-color: rgba(255,153,0,0.2);  background: rgba(255,153,0,0.04); }
 
-  /* ── Message section ── */
-  .message-section { flex-shrink: 0; }
+  /* ── Text input ── */
+  .text-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+    min-height: 52px;
+  }
+  .text-input::placeholder { color: var(--muted); }
+  .text-input:focus { border-color: var(--accent); }
 
+  /* ── Message section ── */
   .message-input-wrap { display: flex; gap: 8px; align-items: stretch; }
 
   .message-input {
@@ -247,7 +433,6 @@
   }
   .btn-clear-msg:active { color: var(--text); }
 
-  /* ── Message status ── */
   .msg-status { display: none; flex-direction: column; gap: 6px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-top: 6px; }
   .msg-status.visible { display: flex; }
   .msg-status-text { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
@@ -261,7 +446,6 @@
   /* ── Waiting list ── */
   .waiting-section { display: none; flex-direction: column; gap: 8px; flex-shrink: 0; }
   .waiting-section.visible { display: flex; }
-  .waiting-section-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
 
   .waiting-item { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; gap: 12px; min-height: 52px; }
   .waiting-item-name { font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -270,123 +454,12 @@
   .btn-pass { background: transparent; border: 1px solid var(--accent); border-radius: 8px; padding: 7px 16px; color: var(--accent); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; flex-shrink: 0; transition: all 0.15s; min-height: 36px; }
   .btn-pass:active { background: rgba(232,255,71,0.1); transform: scale(0.95); }
 
-  /* ── Setup tab inputs ── */
-  .setup-field { flex-shrink: 0; }
-
-  .text-input {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 16px;
-    font-weight: 300;
-    outline: none;
-    transition: border-color 0.2s;
-    min-height: 52px;
+  /* ── Divider ── */
+  .section-divider {
+    height: 1px;
+    background: var(--border);
+    flex-shrink: 0;
   }
-  .text-input::placeholder { color: var(--muted); }
-  .text-input:focus { border-color: var(--accent); }
-
-  /* ── Duration dial (Setup tab) ── */
-  .dial-wrapper {
-    position: relative;
-    width: 230px;
-    height: 230px;
-    margin: 0 auto 14px;
-  }
-
-  .dial-svg {
-    width: 100%; height: 100%;
-    touch-action: none;
-    -webkit-user-select: none;
-    user-select: none;
-    cursor: pointer;
-    overflow: visible;
-  }
-
-  .dial-center-overlay {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    cursor: pointer;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-
-  .dial-value {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 68px;
-    line-height: 1;
-    color: var(--text);
-    letter-spacing: 0.02em;
-    transition: color 0.2s;
-  }
-
-  .dial-unit {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-top: -8px;
-  }
-
-  .dial-hint {
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-top: 4px;
-    opacity: 0.6;
-  }
-
-  .dial-direct-input {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 130px;
-    background: var(--bg);
-    border: 2px solid var(--accent);
-    border-radius: 14px;
-    padding: 8px 10px;
-    color: var(--text);
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 48px;
-    text-align: center;
-    outline: none;
-    display: none;
-    z-index: 10;
-    -moz-appearance: textfield;
-  }
-  .dial-direct-input::-webkit-outer-spin-button,
-  .dial-direct-input::-webkit-inner-spin-button { -webkit-appearance: none; }
-
-  .dial-presets {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-  }
-
-  .dial-preset {
-    height: 44px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .dial-preset:active { transform: scale(0.95); }
-  .dial-preset.active { background: rgba(232,255,71,0.1); border-color: rgba(232,255,71,0.35); color: var(--accent); }
 
   /* ── Lock screen ── */
   .lock-screen {
@@ -415,25 +488,29 @@
   /* ── Sticky controls ── */
   .controls-sticky {
     position: fixed; bottom: 0; left: 0; right: 0;
-    padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px);
+    padding: 10px 16px calc(env(safe-area-inset-bottom, 0px) + 10px);
     background: var(--bg);
     border-top: 1px solid var(--border);
-    display: flex; flex-direction: column; gap: 8px;
+    display: flex; flex-direction: column; gap: 6px;
     z-index: 20;
   }
   .controls { display: flex; gap: 10px; }
 
-  .btn-main { flex: 2; height: 60px; border-radius: 14px; border: none; font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: 0.06em; cursor: pointer; transition: all 0.15s; }
+  .btn-main { flex: 2; height: 56px; border-radius: 14px; border: none; font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 0.06em; cursor: pointer; transition: all 0.15s; }
   .btn-main:active { transform: scale(0.97); }
   .btn-start { background: var(--accent); color: #000; }
   .btn-pause { background: var(--warn); color: #000; }
 
-  .btn-reset { flex: 1; height: 60px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
+  .btn-reset { flex: 1; height: 56px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
   .btn-reset:active { transform: scale(0.97); background: var(--border); }
 
-  .btn-release { display: none; width: 100%; padding: 6px; background: none; border: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; text-align: center; }
+  .btn-release { display: none; width: 100%; padding: 4px; background: none; border: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; text-align: center; }
   .btn-release.visible { display: block; }
   .btn-release:active { color: var(--text); }
+
+  /* ── Control panel (hidden until hasControl) ── */
+  .control-panel { display: none; flex-direction: column; gap: 14px; }
+  .control-panel.visible { display: flex; }
 
   /* ── Overlay ── */
   .overlay { position: fixed; inset: 0; background: rgba(10,10,10,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 100; transition: opacity 0.3s; }
@@ -442,6 +519,18 @@
 </style>
 </head>
 <body>
+
+<!-- ── Name prompt (shown on first visit) ── -->
+<div class="name-prompt" id="namePrompt">
+  <div class="name-prompt-inner">
+    <div class="name-prompt-eyebrow">Speaker Timer</div>
+    <div class="name-prompt-title">What's your name?</div>
+    <div class="name-prompt-sub">Used when passing control to another device. You can change it any time.</div>
+    <input class="name-prompt-input" id="namePromptInput" type="text" placeholder="Your name…" maxlength="40" autocomplete="name">
+    <button class="name-prompt-btn" id="namePromptBtn">Get Started →</button>
+    <button class="name-prompt-skip" id="namePromptSkip">Skip for now</button>
+  </div>
+</div>
 
 <!-- ── Header ── -->
 <div class="header">
@@ -455,67 +544,21 @@
 <!-- ── Timer ── -->
 <div class="time-preview">
   <div class="time-big" id="timeBig">--:--</div>
-  <div class="time-status" id="timeStatus">Stopped</div>
+  <div class="time-meta">
+    <span class="time-status" id="timeStatus">Stopped</span>
+    <span class="time-room" id="timeRoom"></span>
+  </div>
 </div>
 
 <!-- ── Overtime banner ── -->
 <div class="overtime-banner" id="overtimeBanner">⚠ Speaker is over time</div>
 
-<!-- ── Tab bar ── -->
-<div class="tab-bar hidden" id="tabBar">
-  <button class="tab-btn active" data-tab="control">Control</button>
-  <button class="tab-btn" data-tab="setup">Setup</button>
-</div>
+<!-- ── Main control panel (only when hasControl) ── -->
+<div class="control-panel" id="controlPanel">
 
-<!-- ── CONTROL tab ── -->
-<div class="tab-panel" id="tabControl">
-
-  <div class="nudge-row">
-    <button class="nudge-btn sub" data-nudge="-60">−1m</button>
-    <button class="nudge-btn sub" data-nudge="-30">−30s</button>
-    <button class="nudge-btn add" data-nudge="30">+30s</button>
-    <button class="nudge-btn add" data-nudge="60">+1m</button>
-  </div>
-
-  <div class="message-section">
-    <div class="field-label">Message on display</div>
-    <div class="message-input-wrap">
-      <input class="message-input" id="messageInput" type="text" placeholder="Flash a message to the presenter…" maxlength="200">
-      <button class="btn-send-msg" id="sendMsgBtn">Send</button>
-    </div>
-    <div class="msg-actions">
-      <button class="btn-clear-msg" id="clearMsgBtn">Clear message</button>
-    </div>
-    <div class="msg-status" id="msgStatus">
-      <div class="msg-status-text" id="msgStatusText"></div>
-      <div class="msg-status-bar-track" id="msgBarTrack" style="display:none">
-        <div class="msg-status-bar-fill" id="msgBarFill"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="waiting-section" id="waitingSection">
-    <div class="waiting-section-label">Waiting to control</div>
-    <div id="waitingList"></div>
-  </div>
-
-</div>
-
-<!-- ── SETUP tab ── -->
-<div class="tab-panel hidden" id="tabSetup">
-
-  <div class="setup-field">
-    <div class="field-label">Room name</div>
-    <input class="text-input" id="speakerInput" type="text" placeholder="e.g. Ballroom A, Room 101…" maxlength="60">
-  </div>
-
-  <div class="setup-field">
-    <div class="field-label">Your name <span style="color:var(--muted);font-weight:300;text-transform:none;letter-spacing:0">(for passing control)</span></div>
-    <input class="text-input" id="operatorInput" type="text" placeholder="Enter your name…" maxlength="40">
-  </div>
-
-  <div class="setup-field">
-    <div class="field-label">Duration</div>
+  <!-- Duration dial -->
+  <div>
+    <div class="section-label">Duration</div>
     <div class="dial-wrapper">
       <svg class="dial-svg" id="durationDial" viewBox="0 0 240 240">
         <path id="dialBgArc" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round"
@@ -538,10 +581,49 @@
     </div>
   </div>
 
+  <!-- Nudge -->
+  <div class="nudge-row">
+    <button class="nudge-btn sub" data-nudge="-60">−1m</button>
+    <button class="nudge-btn sub" data-nudge="-30">−30s</button>
+    <button class="nudge-btn add" data-nudge="30">+30s</button>
+    <button class="nudge-btn add" data-nudge="60">+1m</button>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- Room name -->
+  <div>
+    <div class="section-label">Room name</div>
+    <input class="text-input" id="speakerInput" type="text" placeholder="e.g. Ballroom A, Room 101…" maxlength="60">
+  </div>
+
+  <!-- Message flash -->
+  <div>
+    <div class="section-label">Message on display</div>
+    <div class="message-input-wrap">
+      <input class="message-input" id="messageInput" type="text" placeholder="Flash a message to the presenter…" maxlength="200">
+      <button class="btn-send-msg" id="sendMsgBtn">Send</button>
+    </div>
+    <div class="msg-actions">
+      <button class="btn-clear-msg" id="clearMsgBtn">Clear message</button>
+    </div>
+    <div class="msg-status" id="msgStatus">
+      <div class="msg-status-text" id="msgStatusText"></div>
+      <div class="msg-status-bar-track" id="msgBarTrack" style="display:none">
+        <div class="msg-status-bar-fill" id="msgBarFill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Waiting list -->
+  <div class="waiting-section" id="waitingSection">
+    <div class="section-label">Waiting to control</div>
+    <div id="waitingList"></div>
+  </div>
+
 </div>
 
-
-<!-- ── Lock screen ── -->
+<!-- ── Lock screen (when someone else has control) ── -->
 <div class="lock-screen" id="lockScreen">
   <div class="lock-title">Control Active</div>
   <div class="lock-sub">Another device is controlling<br>this session</div>
@@ -567,19 +649,20 @@
   const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get('session') || 'NOSESSION';
+  const MY_NAME_KEY = 'speakerTimerMyName';
 
   let state = {
     running: false, timeRemaining: 0, totalTime: 0, roomName: '',
     overtime: false, waitingList: [], message: '', runCount: 0,
   };
-  let hasControl     = false;
+  let hasControl       = false;
   let controlAvailable = false;
-  let waitingId      = null;
-  let currentTab     = 'control';
+  let waitingId        = null;
 
   // ── DOM ────────────────────────────────────────────────────────────────────
   const timeBig          = document.getElementById('timeBig');
   const timeStatus       = document.getElementById('timeStatus');
+  const timeRoom         = document.getElementById('timeRoom');
   const mainBtn          = document.getElementById('mainBtn');
   const resetBtn         = document.getElementById('resetBtn');
   const speakerInput     = document.getElementById('speakerInput');
@@ -587,9 +670,7 @@
   const overlay          = document.getElementById('overlay');
   const overtimeBanner   = document.getElementById('overtimeBanner');
   const sessionTag       = document.getElementById('sessionTag');
-  const tabBar           = document.getElementById('tabBar');
-  const tabControl       = document.getElementById('tabControl');
-  const tabSetup         = document.getElementById('tabSetup');
+  const controlPanel     = document.getElementById('controlPanel');
   const lockScreen       = document.getElementById('lockScreen');
   const takeControlBtn   = document.getElementById('takeControlBtn');
   const releaseBtn       = document.getElementById('releaseBtn');
@@ -597,17 +678,40 @@
   const waitingSection   = document.getElementById('waitingSection');
   const waitingListEl    = document.getElementById('waitingList');
   const waitingNameInput = document.getElementById('waitingNameInput');
-  const operatorInput    = document.getElementById('operatorInput');
 
   sessionTag.textContent = `Session ${sessionId}`;
 
-  // Restore saved name
-  const MY_NAME_KEY = 'speakerTimerMyName';
+  // ── Name prompt ────────────────────────────────────────────────────────────
+  const namePrompt      = document.getElementById('namePrompt');
+  const namePromptInput = document.getElementById('namePromptInput');
+  const namePromptBtn   = document.getElementById('namePromptBtn');
+  const namePromptSkip  = document.getElementById('namePromptSkip');
+
   const savedMyName = localStorage.getItem(MY_NAME_KEY) || '';
-  if (savedMyName) {
-    waitingNameInput.value = savedMyName;
-    operatorInput.value    = savedMyName;
+
+  function dismissNamePrompt(name) {
+    if (name) localStorage.setItem(MY_NAME_KEY, name);
+    waitingNameInput.value = name;
+    namePrompt.classList.add('hidden');
   }
+
+  if (savedMyName) {
+    // Already have a name — skip prompt
+    waitingNameInput.value = savedMyName;
+    namePrompt.classList.add('hidden');
+  } else {
+    // Show prompt; focus input after animation settles
+    setTimeout(() => namePromptInput.focus(), 100);
+  }
+
+  namePromptBtn.addEventListener('click', () =>
+    dismissNamePrompt(namePromptInput.value.trim()));
+
+  namePromptInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') dismissNamePrompt(namePromptInput.value.trim());
+  });
+
+  namePromptSkip.addEventListener('click', () => dismissNamePrompt(''));
 
   // ── All Rooms ──────────────────────────────────────────────────────────────
   document.getElementById('roomsBtn').addEventListener('click', () => {
@@ -621,17 +725,6 @@
     window.location.href = '/hub/';
   });
 
-  // ── Tabs ───────────────────────────────────────────────────────────────────
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentTab = btn.dataset.tab;
-      document.querySelectorAll('.tab-btn').forEach(b =>
-        b.classList.toggle('active', b.dataset.tab === currentTab)
-      );
-      render();
-    });
-  });
-
   // ── Helpers ────────────────────────────────────────────────────────────────
   function formatTime(s) {
     if (s == null || isNaN(s)) return '--:--';
@@ -641,9 +734,13 @@
     return `${s < 0 ? '-' : ''}${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
   }
 
+  function escHtml(s) {
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
   // ── Main render ────────────────────────────────────────────────────────────
   function render() {
-    const { running, timeRemaining, overtime } = state;
+    const { running, timeRemaining, overtime, roomName } = state;
     const isWarning = timeRemaining <= 60 && timeRemaining > 0 && !overtime;
     const isDanger  = timeRemaining <= 30 && timeRemaining > 0 && !overtime;
 
@@ -651,19 +748,16 @@
     timeBig.className = 'time-big' +
       (overtime ? ' overtime' : isDanger ? ' danger' : isWarning ? ' warning' : '');
     timeStatus.textContent = running ? 'Running' : (overtime ? 'Overtime' : 'Paused');
+    timeRoom.textContent = roomName || '';
 
     mainBtn.textContent = running ? 'Pause' : 'Start';
     mainBtn.className = 'btn-main ' + (running ? 'btn-pause' : 'btn-start');
 
     overtimeBanner.className = 'overtime-banner' + (overtime && hasControl ? ' visible' : '');
 
-    tabBar.classList.toggle('hidden', !hasControl);
-    tabControl.classList.toggle('hidden', !hasControl || currentTab !== 'control');
-    tabSetup.classList.toggle('hidden',   !hasControl || currentTab !== 'setup');
-
+    controlPanel.classList.toggle('visible', hasControl);
     lockScreen.classList.toggle('visible', !hasControl);
     takeControlBtn.classList.toggle('visible', !hasControl && controlAvailable);
-
     controlsRow.style.display = hasControl ? '' : 'none';
     releaseBtn.classList.toggle('visible', hasControl);
 
@@ -683,11 +777,11 @@
     });
   }
 
-  // ── Setup: Duration dial ───────────────────────────────────────────────────
-  const DIAL_MAX    = 90;
-  const DIAL_START  = 210;   // degrees CW from top where arc begins
-  const DIAL_SWEEP  = 300;   // total arc sweep in degrees
-  const DIAL_R      = 96;    // arc radius in SVG units (viewBox 240×240, center 120,120)
+  // ── Duration dial ──────────────────────────────────────────────────────────
+  const DIAL_MAX   = 90;
+  const DIAL_START = 210;
+  const DIAL_SWEEP = 300;
+  const DIAL_R     = 96;
 
   const durationDial      = document.getElementById('durationDial');
   const dialArcEl         = document.getElementById('dialArc');
@@ -715,22 +809,16 @@
   function updateDial(mins, sendUpdate) {
     mins = Math.max(1, Math.min(300, Math.round(mins)));
     dialMins = mins;
-
     const displayMins = Math.min(mins, DIAL_MAX);
     const endAngle = (DIAL_START + (displayMins / DIAL_MAX) * DIAL_SWEEP) % 360;
-
     dialArcEl.setAttribute('d', dialDescribeArc(DIAL_START, endAngle, DIAL_R));
-
     const [tx, ty] = dialPolarToXY(endAngle, DIAL_R);
     dialThumb.setAttribute('cx', tx.toFixed(2));
     dialThumb.setAttribute('cy', ty.toFixed(2));
-
     dialValue.textContent = mins;
-
     document.querySelectorAll('.dial-preset').forEach(btn => {
       btn.classList.toggle('active', parseInt(btn.dataset.mins) === mins);
     });
-
     if (sendUpdate) send({ type: 'set_duration', sessionId, seconds: mins * 60 });
   }
 
@@ -747,7 +835,6 @@
     let angle = Math.atan2(dx, -dy) * 180 / Math.PI;
     angle = ((angle % 360) + 360) % 360;
     let offset = ((angle - DIAL_START) + 360) % 360;
-    // clamp to arc: if beyond the end, snap to nearest endpoint
     if (offset > DIAL_SWEEP) {
       offset = offset < (DIAL_SWEEP + (360 - DIAL_SWEEP) / 2) ? DIAL_SWEEP : 0;
     }
@@ -759,16 +846,14 @@
     dialDragging = true;
     durationDial.setPointerCapture(e.pointerId);
     const [cx, cy] = clientToDialCoords(e);
-    const raw = coordsToMins(cx, cy);
-    updateDial(Math.round(raw / 5) * 5 || 5, false);
+    updateDial(Math.round(coordsToMins(cx, cy) / 5) * 5 || 5, false);
     e.preventDefault();
   });
 
   durationDial.addEventListener('pointermove', e => {
     if (!dialDragging) return;
     const [cx, cy] = clientToDialCoords(e);
-    const raw = coordsToMins(cx, cy);
-    updateDial(Math.round(raw / 5) * 5 || 5, false);
+    updateDial(Math.round(coordsToMins(cx, cy) / 5) * 5 || 5, false);
     e.preventDefault();
   });
 
@@ -809,31 +894,21 @@
     });
   });
 
-  // Initialise to default 10 min
   updateDial(10, false);
 
   // ── Room name ──────────────────────────────────────────────────────────────
-  let nameTimer;
+  let roomNameTimer;
   speakerInput.addEventListener('input', () => {
-    clearTimeout(nameTimer);
-    nameTimer = setTimeout(() =>
+    clearTimeout(roomNameTimer);
+    roomNameTimer = setTimeout(() =>
       send({ type: 'set_room', sessionId, name: speakerInput.value.trim() }), 500);
   });
 
-  // ── Operator name ──────────────────────────────────────────────────────────
+  // ── Waiting name input (lock screen) ──────────────────────────────────────
   let waitingNameTimer;
-  operatorInput.addEventListener('input', () => {
-    const name = operatorInput.value.trim();
-    if (name) { localStorage.setItem(MY_NAME_KEY, name); waitingNameInput.value = name; }
-    clearTimeout(waitingNameTimer);
-    waitingNameTimer = setTimeout(() => {
-      if (waitingId) send({ type: 'set_waiting_name', waitingId, name });
-    }, 500);
-  });
-
   waitingNameInput.addEventListener('input', () => {
     const name = waitingNameInput.value.trim();
-    if (name) { localStorage.setItem(MY_NAME_KEY, name); operatorInput.value = name; }
+    if (name) localStorage.setItem(MY_NAME_KEY, name);
     clearTimeout(waitingNameTimer);
     waitingNameTimer = setTimeout(() => {
       if (waitingId) send({ type: 'set_waiting_name', waitingId, name });
@@ -975,8 +1050,9 @@
           hasControl = true;
           waitingId = null;
           controlAvailable = false;
+          // Pre-fill room name from operator name if room is unnamed
           if (!state.roomName) {
-            const myName = operatorInput.value.trim() || localStorage.getItem(MY_NAME_KEY) || '';
+            const myName = localStorage.getItem(MY_NAME_KEY) || '';
             if (myName) { speakerInput.value = myName; send({ type: 'set_room', sessionId, name: myName }); }
           }
           render();
