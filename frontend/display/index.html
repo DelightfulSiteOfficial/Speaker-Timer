@@ -338,13 +338,6 @@
   .overlay.hidden  { opacity: 0; pointer-events: none; }
   .overlay.pip-prompt { cursor: pointer; }
 
-  .overlay-eyebrow { display: none; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); }
-  .overlay-headline { display: none; font-family: 'Bebas Neue', sans-serif; font-size: clamp(72px, 12vw, 140px); color: var(--accent); letter-spacing: 0.04em; line-height: 0.9; margin: 8px 0 4px; }
-  .overlay.pip-prompt .overlay-eyebrow { display: block; }
-  .overlay.pip-prompt .overlay-headline { display: block; }
-  .overlay.pip-prompt .overlay-title { display: none; }
-  .overlay.pip-prompt .overlay-sub { font-size: 11px; letter-spacing: 0.25em; margin-top: 24px; }
-
   .overlay-title {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 48px;
@@ -352,6 +345,7 @@
     letter-spacing: 0.05em;
     transition: color 0.3s;
   }
+  .overlay.pip-prompt .overlay-title { color: var(--accent); font-size: clamp(40px, 6vw, 80px); }
 
   .overlay-sub {
     font-family: 'DM Mono', monospace;
@@ -442,12 +436,12 @@
   .presenter-panel {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    background: rgba(10,10,10,0.97);
+    background: rgba(10,10,10,0.95);
     border-top: 1px solid #1e1e1e;
-    padding: 20px 36px 32px;
+    padding: 20px 40px 28px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
     z-index: 60;
     opacity: 0;
     pointer-events: none;
@@ -461,41 +455,51 @@
     transform: translateY(0);
   }
 
-  .presenter-dur-header {
+  .presenter-row {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
   }
-  .presenter-dur-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--muted);
+
+  /* ── Duration slider block ── */
+  .presenter-slider-block {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    min-width: 0;
   }
+
   .presenter-dur-display {
     display: flex;
     align-items: baseline;
     gap: 5px;
+    flex-shrink: 0;
+    min-width: 80px;
   }
+
   .presenter-dur-val {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 36px;
+    font-size: 52px;
     line-height: 1;
     color: var(--text);
+    letter-spacing: -0.01em;
   }
+
   .presenter-dur-unit {
     font-family: 'DM Mono', monospace;
     font-size: 11px;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
   }
 
   .presenter-slider-wrap {
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 6px;
+    min-width: 0;
   }
 
   .presenter-slider {
@@ -547,48 +551,29 @@
   .presenter-slider-ticks span:first-child { transform: translateX(0); }
   .presenter-slider-ticks span:last-child  { transform: translateX(-100%); }
 
-  .presenter-btn-start {
-    width: 100%;
-    height: 72px;
-    border-radius: 16px;
+  .presenter-actions {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+  }
+
+  .presenter-btn {
+    height: 42px;
+    padding: 0 28px;
+    border-radius: 10px;
     border: none;
-    background: #22c55e;
-    color: #000;
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 40px;
-    letter-spacing: 0.08em;
+    font-size: 22px;
+    letter-spacing: 0.05em;
     cursor: pointer;
     transition: all 0.15s;
-    margin-top: 4px;
   }
-  .presenter-btn-start.pause { background: #ef4444; color: #fff; }
-  .presenter-btn-start:hover { opacity: 0.9; }
-  .presenter-btn-start:active { transform: scale(0.98); opacity: 0.85; }
 
-  .presenter-btn-reset {
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    cursor: pointer;
-    padding: 4px;
-    text-align: center;
-    transition: color 0.15s;
-    width: 100%;
-  }
-  .presenter-btn-reset:hover { color: var(--text); }
-
-  .presenter-hint {
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: #333;
-    text-align: center;
-  }
+  .presenter-btn.start  { background: #22c55e; color: #000; }
+  .presenter-btn.pause  { background: var(--danger); color: #fff; }
+  .presenter-btn.reset  { background: none; border: 1px solid var(--border); color: var(--muted); font-size: 14px; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; }
+  .presenter-btn:hover  { opacity: 0.85; }
+  .presenter-btn:active { transform: scale(0.96); }
 
   /* ── Hold-to-set duration overlay (main timer) ── */
   .timer-hold-overlay {
@@ -641,47 +626,6 @@
 
   body.presenter-mode .time-display { cursor: pointer; }
 
-  /* Presenter-mode top bar */
-  .presenter-topbar {
-    display: none;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    pointer-events: auto;
-  }
-  body.presenter-mode .presenter-topbar { display: flex; }
-  body.presenter-mode .mode-tabs { display: none; }
-  body.presenter-mode .toolbar { display: none; }
-
-  .presenter-topbar-room {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--muted);
-    background: rgba(14,14,14,0.9);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 7px 14px;
-    backdrop-filter: blur(12px);
-  }
-
-  .presenter-topbar-admin {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--muted);
-    background: rgba(14,14,14,0.9);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 7px 16px;
-    cursor: pointer;
-    transition: all 0.2s;
-    backdrop-filter: blur(12px);
-  }
-  .presenter-topbar-admin:hover { color: var(--text); border-color: #444; }
-
   /* ── Compact / small window ── */
   @media (max-width: 520px), (max-height: 400px) {
     body { padding: 20px; }
@@ -733,15 +677,11 @@
 
 <!-- Top bar: mode tabs + utility buttons -->
 <div class="top-bar">
-  <div class="presenter-topbar" id="presenterTopbar">
-    <div class="presenter-topbar-room" id="presenterTopbarRoom">Session —</div>
-    <button class="presenter-topbar-admin" id="presenterTopbarAdmin">Admin Mode</button>
-  </div>
-  <div class="mode-tabs" id="modeTabs">
+  <div class="mode-tabs">
     <button class="mode-tab tab-active-presenter" id="tabPresenter">Presenter Mode</button>
     <button class="mode-tab" id="tabAdmin">Admin Mode</button>
   </div>
-  <div class="toolbar" id="toolbar">
+  <div class="toolbar">
     <button class="toolbar-btn" id="pipBtn">Pop Out</button>
     <button class="toolbar-btn" id="infoToggle">Hide Info</button>
     <button class="toolbar-btn" id="qrToggle">Hide QR</button>
@@ -750,27 +690,30 @@
 
 <!-- Presenter controls panel -->
 <div class="presenter-panel" id="presenterPanel">
-  <div class="presenter-dur-header">
-    <span class="presenter-dur-label">Set Duration</span>
-    <div class="presenter-dur-display">
-      <span class="presenter-dur-val" id="presenterDurVal">10</span>
-      <span class="presenter-dur-unit">min</span>
+  <div class="presenter-row">
+    <div class="presenter-slider-block">
+      <div class="presenter-dur-display">
+        <span class="presenter-dur-val" id="presenterDurVal">10</span>
+        <span class="presenter-dur-unit">min</span>
+      </div>
+      <div class="presenter-slider-wrap">
+        <input type="range" class="presenter-slider" id="presenterSlider" min="1" max="90" value="10" step="1">
+        <div class="presenter-slider-ticks">
+          <!-- positions: (value-1)/89*100 -->
+          <span style="left:0%">1m</span>
+          <span style="left:15.7%">15m</span>
+          <span style="left:32.6%">30m</span>
+          <span style="left:49.4%">45m</span>
+          <span style="left:66.3%">60m</span>
+          <span style="left:100%">90m</span>
+        </div>
+      </div>
+    </div>
+    <div class="presenter-actions">
+      <button class="presenter-btn reset" id="presenterReset">Reset</button>
+      <button class="presenter-btn start" id="presenterStart">Start</button>
     </div>
   </div>
-  <div class="presenter-slider-wrap">
-    <input type="range" class="presenter-slider" id="presenterSlider" min="1" max="90" value="10" step="1">
-    <div class="presenter-slider-ticks">
-      <span style="left:0%">1m</span>
-      <span style="left:15.7%">15m</span>
-      <span style="left:32.6%">30m</span>
-      <span style="left:49.4%">45m</span>
-      <span style="left:66.3%">60m</span>
-      <span style="left:100%">90m</span>
-    </div>
-  </div>
-  <button class="presenter-btn-start start" id="presenterStart">Start</button>
-  <button class="presenter-btn-reset" id="presenterReset">Reset</button>
-  <div class="presenter-hint">Hold the timer to type a custom duration</div>
 </div>
 
 <!-- Message flash -->
@@ -782,8 +725,6 @@
 
 <!-- Disconnected / PiP-prompt overlay -->
 <div class="overlay" id="overlay">
-  <div class="overlay-eyebrow">Speaker Timer</div>
-  <div class="overlay-headline">Welcome</div>
   <div class="overlay-title" id="overlayTitle">Connecting…</div>
   <div class="overlay-sub" id="overlaySub">Reaching server</div>
 </div>
@@ -887,9 +828,8 @@
     // Keep presenter panel in sync
     if (presenterStart) {
       presenterStart.textContent = running ? 'Pause' : 'Start';
-      presenterStart.className = 'presenter-btn-start ' + (running ? 'pause' : 'start');
+      presenterStart.className = 'presenter-btn ' + (running ? 'pause' : 'start');
     }
-    if (presenterTopbarRoom) presenterTopbarRoom.textContent = state.roomName || `Session ${sessionId}`;
     if (presenterSlider && !sliderDragging) {
       const mins = Math.max(1, Math.min(90, Math.round(state.totalTime / 60)));
       presenterSlider.value        = mins;
@@ -1003,13 +943,11 @@
   });
 
   // ── Mode switching (Presenter / Admin) ───────────────────────────────────
-  const tabPresenter        = document.getElementById('tabPresenter');
-  const tabAdmin            = document.getElementById('tabAdmin');
-  const presenterPanel      = document.getElementById('presenterPanel');
-  const presenterStart      = document.getElementById('presenterStart');
-  const presenterReset      = document.getElementById('presenterReset');
-  const presenterTopbarRoom  = document.getElementById('presenterTopbarRoom');
-  const presenterTopbarAdmin = document.getElementById('presenterTopbarAdmin');
+  const tabPresenter  = document.getElementById('tabPresenter');
+  const tabAdmin      = document.getElementById('tabAdmin');
+  const presenterPanel = document.getElementById('presenterPanel');
+  const presenterStart = document.getElementById('presenterStart');
+  const presenterReset = document.getElementById('presenterReset');
 
   let presenterMode = true;
   let ctrlWs        = null;
@@ -1040,9 +978,6 @@
     tabAdmin.className     = 'mode-tab' + (!presenterMode ? ' tab-active-admin' : '');
     document.body.classList.toggle('presenter-mode', presenterMode);
 
-    // Update presenter topbar room label
-    presenterTopbarRoom.textContent = state.roomName || `Session ${sessionId}`;
-
     // Show/hide presenter panel
     presenterPanel.classList.toggle('visible', presenterMode);
 
@@ -1058,7 +993,6 @@
 
   tabPresenter.addEventListener('click', () => setMode('presenter'));
   tabAdmin.addEventListener('click',     () => setMode('admin'));
-  presenterTopbarAdmin.addEventListener('click', () => setMode('admin'));
 
   // Duration slider
   const presenterSlider  = document.getElementById('presenterSlider');
