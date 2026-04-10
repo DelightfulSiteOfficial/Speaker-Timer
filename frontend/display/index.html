@@ -865,7 +865,10 @@
   const infoToggle = document.getElementById('infoToggle');
 
   let qrVisible   = true;
-  let infoVisible = true;
+  let infoVisible = false;
+  document.body.classList.add('hide-info');
+  infoToggle.textContent = 'Show Info';
+  infoToggle.classList.add('active');
 
   qrToggle.addEventListener('click', () => {
     qrVisible = !qrVisible;
