@@ -649,7 +649,8 @@
   const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get('session') || 'NOSESSION';
-  const MY_NAME_KEY = 'speakerTimerMyName';
+  const MY_NAME_KEY      = 'speakerTimerMyName';
+  const NAME_PROMPTED_KEY = 'speakerTimerNamePromptSeen';
 
   let state = {
     running: false, timeRemaining: 0, totalTime: 0, roomName: '',
@@ -687,21 +688,24 @@
   const namePromptBtn   = document.getElementById('namePromptBtn');
   const namePromptSkip  = document.getElementById('namePromptSkip');
 
-  const savedMyName = localStorage.getItem(MY_NAME_KEY) || '';
+  const savedMyName     = localStorage.getItem(MY_NAME_KEY) || '';
+  const promptAlreadySeen = !!localStorage.getItem(NAME_PROMPTED_KEY);
 
   function dismissNamePrompt(name) {
+    localStorage.setItem(NAME_PROMPTED_KEY, '1');
     if (name) localStorage.setItem(MY_NAME_KEY, name);
-    waitingNameInput.value = name;
+    waitingNameInput.value = name || savedMyName;
     namePrompt.classList.add('hidden');
   }
 
-  if (savedMyName) {
-    // Already have a name — skip prompt
+  if (promptAlreadySeen) {
+    // Already been through the prompt before — skip straight in
     waitingNameInput.value = savedMyName;
     namePrompt.classList.add('hidden');
   } else {
-    // Show prompt; focus input after animation settles
-    setTimeout(() => namePromptInput.focus(), 100);
+    // First visit — show prompt, pre-fill any previously saved name
+    namePromptInput.value = savedMyName;
+    setTimeout(() => { namePromptInput.focus(); namePromptInput.select(); }, 100);
   }
 
   namePromptBtn.addEventListener('click', () =>
