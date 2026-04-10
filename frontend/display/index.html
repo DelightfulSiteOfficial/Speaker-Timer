@@ -765,10 +765,8 @@
 
     const t = pipWindow.document.getElementById('pt');
     const s = pipWindow.document.getElementById('ps');
-    const d = pipWindow.document.getElementById('pd');
     if (t) { t.textContent = formatTime(timeRemaining); t.className = 'time ' + tc; }
     if (s) { s.textContent = name || ''; }
-    if (d) { d.textContent = running ? 'Live' : (overtime ? 'Overtime' : 'Paused'); d.className = 'dot ' + (running ? 'live' : ''); }
 
     // Background pulse — same thresholds as main display
     const pb = pipWindow.document.body;
@@ -870,9 +868,6 @@
           width: 6px; height: 6px; border-radius: 50%;
           background: #333; transition: background 0.3s;
         }
-        .dot.live { background: #e8ff47; box-shadow: 0 0 6px #e8ff47;
-          animation: pulse 2s ease-in-out infinite; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         #pip-timer { display:flex; flex-direction:column; align-items:center; gap:6px; }
         #pip-msg {
           flex-direction:column; align-items:center; justify-content:center;
@@ -897,7 +892,6 @@
 
       pipWindow.document.body.innerHTML = `
         <div id="pip-timer">
-          <div class="dot" id="pd"></div>
           <div class="time" id="pt">--:--</div>
           <div class="speaker" id="ps"></div>
         </div>
