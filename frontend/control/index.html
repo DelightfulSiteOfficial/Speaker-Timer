@@ -596,7 +596,7 @@
 <div class="header">
   <div class="session-tag" id="sessionTag">Session —</div>
   <div class="header-right">
-    <button class="room-chip" id="roomChip">Set room…</button>
+    <button class="room-chip" id="roomChip">Room Name</button>
     <button class="btn-rooms" id="roomsBtn">All Rooms</button>
     <div class="conn-dot" id="connDot"></div>
   </div>
@@ -824,7 +824,7 @@
       (overtime ? ' overtime' : isDanger ? ' danger' : isWarning ? ' warning' : '');
     timeStatus.textContent = running ? 'Running' : (overtime ? 'Overtime' : 'Paused');
 
-    roomChip.textContent = roomName || 'Set room…';
+    roomChip.textContent = roomName || 'Room Name';
     roomChip.classList.toggle('has-room', !!roomName);
 
     mainBtn.textContent = running ? 'Pause' : 'Start';
