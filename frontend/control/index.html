@@ -744,6 +744,11 @@
 
   sessionTag.textContent = `Session ${sessionId}`;
 
+  // Restore saved name for this device
+  const MY_NAME_KEY = 'speakerTimerMyName';
+  const savedMyName = localStorage.getItem(MY_NAME_KEY) || '';
+  if (savedMyName) waitingNameInput.value = savedMyName;
+
   // All Rooms button — save this room and go to hub
   document.getElementById('roomsBtn').addEventListener('click', () => {
     try {
@@ -825,12 +830,14 @@
     }
   });
 
-  // Speaker name (debounced)
+  // Speaker name (debounced) — also persists to localStorage
   let nameTimer;
   speakerInput.addEventListener('input', () => {
+    const name = speakerInput.value.trim();
+    if (name) localStorage.setItem(MY_NAME_KEY, name);
     clearTimeout(nameTimer);
     nameTimer = setTimeout(() => {
-      send({ type: 'set_speaker', sessionId, name: speakerInput.value.trim() });
+      send({ type: 'set_speaker', sessionId, name });
     }, 500);
   });
 
@@ -851,12 +858,14 @@
     });
   });
 
-  // Waiting name (debounced)
+  // Waiting name (debounced) — also persists to localStorage
   let waitingNameTimer;
   waitingNameInput.addEventListener('input', () => {
+    const name = waitingNameInput.value.trim();
+    if (name) localStorage.setItem(MY_NAME_KEY, name);
     clearTimeout(waitingNameTimer);
     waitingNameTimer = setTimeout(() => {
-      if (waitingId) send({ type: 'set_waiting_name', waitingId, name: waitingNameInput.value.trim() });
+      if (waitingId) send({ type: 'set_waiting_name', waitingId, name });
     }, 500);
   });
 
@@ -985,10 +994,21 @@
           hasControl = true;
           waitingId = null;
           controlAvailable = false;
+          // Auto-fill speaker name from saved device name if field is blank
+          if (!state.speakerName) {
+            const myName = localStorage.getItem(MY_NAME_KEY) || '';
+            if (myName) {
+              speakerInput.value = myName;
+              send({ type: 'set_speaker', sessionId, name: myName });
+            }
+          }
           render();
         } else if (msg.type === 'control_denied') {
           hasControl = false;
           waitingId = msg.waitingId;
+          // Auto-send saved name so it shows in the controller's waiting list
+          const myName = localStorage.getItem(MY_NAME_KEY) || '';
+          if (myName) send({ type: 'set_waiting_name', waitingId, name: myName });
           render();
         } else if (msg.type === 'control_available') {
           controlAvailable = true;
