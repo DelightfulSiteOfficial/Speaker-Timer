@@ -198,7 +198,35 @@
     justify-content: center;
     gap: 16px;
     padding-left: 48px;
+    transition: opacity 0.3s, transform 0.3s;
   }
+
+  .qr-panel.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(12px);
+  }
+
+  /* ── QR toggle button ── */
+  .qr-toggle {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 50;
+  }
+
+  .qr-toggle:hover { border-color: var(--muted); color: var(--text); }
 
   .qr-frame {
     width: 160px;
@@ -314,6 +342,7 @@
   <div class="overlay-sub">Reaching server</div>
 </div>
 
+<button class="qr-toggle" id="qrToggle">Hide QR</button>
 <div class="scan-hint">Scan QR to control</div>
 
 <script>
@@ -440,6 +469,17 @@
     clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(connect, 3000);
   }
+
+  // ── QR toggle ─────────────────────────────────────────────────────────────
+  const qrPanel  = document.querySelector('.qr-panel');
+  const qrToggle = document.getElementById('qrToggle');
+  let qrVisible  = true;
+
+  qrToggle.addEventListener('click', () => {
+    qrVisible = !qrVisible;
+    qrPanel.classList.toggle('hidden', !qrVisible);
+    qrToggle.textContent = qrVisible ? 'Hide QR' : 'Show QR';
+  });
 
   connect();
 
