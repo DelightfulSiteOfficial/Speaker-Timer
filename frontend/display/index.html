@@ -575,6 +575,57 @@
   .presenter-btn:hover  { opacity: 0.85; }
   .presenter-btn:active { transform: scale(0.96); }
 
+  /* ── Hold-to-set duration overlay (main timer) ── */
+  .timer-hold-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10,10,10,0.94);
+    z-index: 55;
+  }
+  .timer-hold-overlay.visible { display: flex; }
+
+  .timer-hold-field {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(120px, 22vw, 300px);
+    background: none;
+    border: none;
+    border-bottom: 3px solid var(--accent);
+    color: var(--accent);
+    text-align: center;
+    width: 70%;
+    max-width: 700px;
+    outline: none;
+    line-height: 1;
+    -moz-appearance: textfield;
+  }
+  .timer-hold-field::-webkit-outer-spin-button,
+  .timer-hold-field::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  .timer-hold-unit {
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(18px, 2vw, 28px);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    opacity: 0.6;
+    margin-top: 8px;
+  }
+
+  .timer-hold-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 32px;
+  }
+
+  body.presenter-mode .time-display { cursor: pointer; }
+
   /* ── Compact / small window ── */
   @media (max-width: 520px), (max-height: 400px) {
     body { padding: 20px; }
@@ -606,6 +657,13 @@
     <div class="overtime-badge" id="overtimeBadge">Overtime</div>
     <div class="run-counter" id="runCounter"></div>
   </div>
+</div>
+
+<!-- Hold-to-set duration overlay -->
+<div class="timer-hold-overlay" id="timerHoldOverlay">
+  <input class="timer-hold-field" id="timerHoldField" type="number" min="1" max="300" placeholder="—">
+  <div class="timer-hold-unit">minutes</div>
+  <div class="timer-hold-hint">enter to set &nbsp;·&nbsp; esc to cancel</div>
 </div>
 
 <!-- QR panel — bottom-right corner -->
@@ -918,6 +976,7 @@
     // Tab styles
     tabPresenter.className = 'mode-tab' + (presenterMode ? ' tab-active-presenter' : '');
     tabAdmin.className     = 'mode-tab' + (!presenterMode ? ' tab-active-admin' : '');
+    document.body.classList.toggle('presenter-mode', presenterMode);
 
     // Show/hide presenter panel
     presenterPanel.classList.toggle('visible', presenterMode);
@@ -951,6 +1010,46 @@
     sliderDragging = false;
     sendCtrl({ type: 'set_duration', seconds: parseInt(presenterSlider.value) * 60 });
   });
+
+  // ── Hold-to-type on main timer ─────────────────────────────────────────────
+  const timerHoldOverlay = document.getElementById('timerHoldOverlay');
+  const timerHoldField   = document.getElementById('timerHoldField');
+  let   timerHoldTimer   = null;
+
+  function showTimerInput() {
+    if (!presenterMode || state.presenterLocked) return;
+    timerHoldField.value = Math.max(1, Math.round(state.totalTime / 60));
+    timerHoldOverlay.classList.add('visible');
+    timerHoldField.focus();
+    timerHoldField.select();
+  }
+
+  function hideTimerInput() {
+    timerHoldOverlay.classList.remove('visible');
+  }
+
+  timeDisplay.addEventListener('mousedown', () => {
+    timerHoldTimer = setTimeout(() => { timerHoldTimer = null; showTimerInput(); }, 500);
+  });
+  timeDisplay.addEventListener('mouseup',    () => clearTimeout(timerHoldTimer));
+  timeDisplay.addEventListener('mouseleave', () => clearTimeout(timerHoldTimer));
+  timeDisplay.addEventListener('touchstart', () => {
+    timerHoldTimer = setTimeout(() => { timerHoldTimer = null; showTimerInput(); }, 500);
+  }, { passive: true });
+  timeDisplay.addEventListener('touchend',   () => clearTimeout(timerHoldTimer));
+
+  timerHoldField.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const mins = parseInt(timerHoldField.value);
+      if (mins >= 1 && mins <= 300) sendCtrl({ type: 'set_duration', seconds: mins * 60 });
+      hideTimerInput();
+    } else if (e.key === 'Escape') {
+      hideTimerInput();
+    }
+  });
+
+  timerHoldField.addEventListener('blur', () => setTimeout(hideTimerInput, 150));
+  timerHoldOverlay.addEventListener('click', e => { if (e.target === timerHoldOverlay) hideTimerInput(); });
 
   // Start / Pause toggle
   presenterStart.addEventListener('click', () => {
