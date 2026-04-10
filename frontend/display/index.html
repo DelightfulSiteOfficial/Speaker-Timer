@@ -536,14 +536,20 @@
   }
 
   .presenter-slider-ticks {
-    display: flex;
-    justify-content: space-between;
+    position: relative;
+    height: 14px;
+  }
+  .presenter-slider-ticks span {
+    position: absolute;
+    transform: translateX(-50%);
     font-family: 'DM Mono', monospace;
     font-size: 9px;
     letter-spacing: 0.1em;
     color: var(--muted);
-    padding: 0 2px;
+    white-space: nowrap;
   }
+  .presenter-slider-ticks span:first-child { transform: translateX(0); }
+  .presenter-slider-ticks span:last-child  { transform: translateX(-100%); }
 
   .presenter-actions {
     display: flex;
@@ -635,7 +641,13 @@
       <div class="presenter-slider-wrap">
         <input type="range" class="presenter-slider" id="presenterSlider" min="1" max="90" value="10" step="1">
         <div class="presenter-slider-ticks">
-          <span>1m</span><span>15m</span><span>30m</span><span>45m</span><span>60m</span><span>90m</span>
+          <!-- positions: (value-1)/89*100 -->
+          <span style="left:0%">1m</span>
+          <span style="left:15.7%">15m</span>
+          <span style="left:32.6%">30m</span>
+          <span style="left:49.4%">45m</span>
+          <span style="left:66.3%">60m</span>
+          <span style="left:100%">90m</span>
         </div>
       </div>
     </div>
