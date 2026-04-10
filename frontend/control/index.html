@@ -935,6 +935,7 @@
     overtime: false, waitingList: [], message: '', runCount: 0,
   };
   let hasControl       = false;
+  let initialStateReceived = false;
   let controlAvailable = false;
   let waitingId        = null;
 
@@ -1423,6 +1424,7 @@
   }
 
   function connect() {
+    initialStateReceived = false;
     try {
       ws = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control`);
     } catch(e) { scheduleReconnect(); return; }
@@ -1447,7 +1449,9 @@
             speakerInput.value = msg.payload.roomName || '';
 
 
-          if (state.message && state.messageSeq !== prevMessageSeq) {
+          if (!initialStateReceived) {
+            initialStateReceived = true;
+          } else if (state.message && state.messageSeq !== prevMessageSeq) {
             startMsgCountdown();
             triggerFlash(state.message);
           } else if (!state.message && prevMessage) {
