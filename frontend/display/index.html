@@ -458,41 +458,92 @@
   .presenter-row {
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    gap: 20px;
   }
 
-  .presenter-label {
+  /* ── Duration slider block ── */
+  .presenter-slider-block {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    min-width: 0;
+  }
+
+  .presenter-dur-display {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    flex-shrink: 0;
+    min-width: 80px;
+  }
+
+  .presenter-dur-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    line-height: 1;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+
+  .presenter-dur-unit {
     font-family: 'DM Mono', monospace;
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
-    flex-shrink: 0;
-    width: 60px;
   }
 
-  .presenter-presets {
+  .presenter-slider-wrap {
+    flex: 1;
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
   }
 
-  .presenter-preset {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 6px 14px;
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.1em;
+  .presenter-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
     cursor: pointer;
-    transition: all 0.15s;
+    outline: none;
+  }
+  .presenter-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    transition: transform 0.1s;
+    box-shadow: 0 0 8px rgba(232,255,71,0.4);
+  }
+  .presenter-slider:active::-webkit-slider-thumb { transform: scale(1.25); }
+  .presenter-slider::-moz-range-thumb {
+    width: 22px; height: 22px;
+    border: none; border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(232,255,71,0.4);
+  }
+  .presenter-slider::-moz-range-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
   }
 
-  .presenter-preset:hover { border-color: var(--muted); color: var(--text); }
-  .presenter-preset.selected { border-color: var(--accent); color: var(--accent); }
+  .presenter-slider-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    padding: 0 2px;
+  }
 
   .presenter-actions {
     display: flex;
@@ -576,18 +627,18 @@
 <!-- Presenter controls panel -->
 <div class="presenter-panel" id="presenterPanel">
   <div class="presenter-row">
-    <span class="presenter-label">Duration</span>
-    <div class="presenter-presets">
-      <button class="presenter-preset" data-mins="5">5 min</button>
-      <button class="presenter-preset" data-mins="10">10 min</button>
-      <button class="presenter-preset" data-mins="15">15 min</button>
-      <button class="presenter-preset" data-mins="20">20 min</button>
-      <button class="presenter-preset" data-mins="30">30 min</button>
-      <button class="presenter-preset" data-mins="45">45 min</button>
-      <button class="presenter-preset" data-mins="60">60 min</button>
+    <div class="presenter-slider-block">
+      <div class="presenter-dur-display">
+        <span class="presenter-dur-val" id="presenterDurVal">10</span>
+        <span class="presenter-dur-unit">min</span>
+      </div>
+      <div class="presenter-slider-wrap">
+        <input type="range" class="presenter-slider" id="presenterSlider" min="1" max="90" value="10" step="1">
+        <div class="presenter-slider-ticks">
+          <span>1m</span><span>15m</span><span>30m</span><span>45m</span><span>60m</span><span>90m</span>
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="presenter-row">
     <div class="presenter-actions">
       <button class="presenter-btn reset" id="presenterReset">Reset</button>
       <button class="presenter-btn start" id="presenterStart">Start</button>
@@ -704,10 +755,15 @@
     liveDot.className = 'dot' + (running ? ' live' : '');
     labelText.textContent = running ? 'Live' : 'Standby';
 
-    // Keep presenter panel start button in sync
+    // Keep presenter panel in sync
     if (presenterStart) {
       presenterStart.textContent = running ? 'Pause' : 'Start';
       presenterStart.className = 'presenter-btn ' + (running ? 'pause' : 'start');
+    }
+    if (presenterSlider && !sliderDragging) {
+      const mins = Math.max(1, Math.min(90, Math.round(state.totalTime / 60)));
+      presenterSlider.value        = mins;
+      presenterDurVal.textContent  = mins;
     }
 
     // Enforce presenter lock — boot off presenter mode if admin has locked it
@@ -864,13 +920,21 @@
   tabPresenter.addEventListener('click', () => setMode('presenter'));
   tabAdmin.addEventListener('click',     () => setMode('admin'));
 
-  // Duration presets
-  document.querySelectorAll('.presenter-preset').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.presenter-preset').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      sendCtrl({ type: 'set_duration', seconds: parseInt(btn.dataset.mins) * 60 });
-    });
+  // Duration slider
+  const presenterSlider  = document.getElementById('presenterSlider');
+  const presenterDurVal  = document.getElementById('presenterDurVal');
+  let sliderDragging = false;
+
+  presenterSlider.addEventListener('mousedown',  () => { sliderDragging = true; });
+  presenterSlider.addEventListener('touchstart', () => { sliderDragging = true; }, { passive: true });
+
+  presenterSlider.addEventListener('input', () => {
+    presenterDurVal.textContent = presenterSlider.value;
+  });
+
+  presenterSlider.addEventListener('change', () => {
+    sliderDragging = false;
+    sendCtrl({ type: 'set_duration', seconds: parseInt(presenterSlider.value) * 60 });
   });
 
   // Start / Pause toggle
