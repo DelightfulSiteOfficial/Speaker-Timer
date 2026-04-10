@@ -670,7 +670,7 @@
 <!-- ── QR code modal ── -->
 <div class="qr-modal" id="qrModal">
   <div class="qr-modal-box">
-    <div class="qr-modal-eyebrow">Scan to Control</div>
+    <div class="qr-modal-eyebrow">Scan to View Timer</div>
     <div class="qr-code-wrap" id="qrCodeWrap"></div>
     <div class="qr-modal-session" id="qrModalSession"></div>
     <div class="qr-modal-url" id="qrModalUrl"></div>
@@ -689,7 +689,7 @@
   const qrCodeWrap = document.getElementById('qrCodeWrap');
 
   function openQrModal(sessionId) {
-    const controlUrl = `${window.location.origin}/control/?session=${sessionId}`;
+    const controlUrl = `${window.location.origin}/view/?session=${sessionId}`;
     document.getElementById('qrModalSession').textContent = sessionId;
     document.getElementById('qrModalUrl').textContent = controlUrl;
     qrCodeWrap.innerHTML = '';
