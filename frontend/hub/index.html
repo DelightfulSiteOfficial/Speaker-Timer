@@ -242,6 +242,7 @@
   }
 
   .card-meta .waiting { color: var(--warn); }
+  .card-meta .waiting-tap { cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
   .card-progress {
     height: 2px;
@@ -278,6 +279,109 @@
   }
 
   .card-remove:active { background: var(--border); color: var(--danger); }
+
+  /* ── Pass control modal ── */
+  .pass-modal {
+    position: fixed; inset: 0;
+    background: rgba(10,10,10,0.92);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 210;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .pass-modal.visible { opacity: 1; pointer-events: auto; }
+
+  .pass-modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 24px 20px 20px;
+    width: calc(100% - 40px);
+    max-width: 380px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+
+  .pass-modal-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .pass-modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    margin-top: -4px;
+  }
+
+  .pass-waiting-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .pass-waiting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .pass-waiting-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--text);
+    flex: 1;
+  }
+  .pass-waiting-name.unnamed { color: var(--muted); font-style: italic; }
+
+  .btn-pass-to {
+    background: transparent;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 7px 16px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .btn-pass-to:active { background: rgba(232,255,71,0.1); transform: scale(0.95); }
+
+  .pass-empty {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+    padding: 16px 0;
+  }
+
+  .pass-modal-cancel {
+    width: 100%;
+    height: 46px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 4px;
+  }
+  .pass-modal-cancel:active { background: var(--border); color: var(--text); }
 
   /* ── QR modal ── */
   .qr-modal {
@@ -667,6 +771,16 @@
   <div class="sheet-error" id="sheetError"></div>
 </div>
 
+<!-- ── Pass control modal ── -->
+<div class="pass-modal" id="passModal">
+  <div class="pass-modal-box">
+    <div class="pass-modal-eyebrow">Pass Control</div>
+    <div class="pass-modal-title" id="passModalTitle">Who should take over?</div>
+    <div class="pass-waiting-list" id="passWaitingList"></div>
+    <button class="pass-modal-cancel" id="passModalCancel">Cancel</button>
+  </div>
+</div>
+
 <!-- ── QR code modal ── -->
 <div class="qr-modal" id="qrModal">
   <div class="qr-modal-box">
@@ -682,7 +796,50 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
   const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
+  const HTTP_URL   = SERVER_URL.replace(/^wss?:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
   const STORAGE_KEY = 'speakerTimerRooms';
+
+  // ── Pass control modal ───────────────────────────────────────────────────────
+  const passModal = document.getElementById('passModal');
+  let passSessionId = null;
+
+  function openPassModal(sessionId) {
+    passSessionId = sessionId;
+    const waitingList = roomData[sessionId]?.state?.waitingList || [];
+    const listEl = document.getElementById('passWaitingList');
+
+    if (waitingList.length === 0) {
+      listEl.innerHTML = '<div class="pass-empty">No one waiting</div>';
+    } else {
+      listEl.innerHTML = waitingList.map(w => `
+        <div class="pass-waiting-item">
+          <span class="pass-waiting-name ${w.name ? '' : 'unnamed'}">${w.name || 'Unknown device'}</span>
+          <button class="btn-pass-to" data-target="${w.id}">Pass →</button>
+        </div>
+      `).join('');
+
+      listEl.querySelectorAll('.btn-pass-to').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          btn.textContent = '…';
+          btn.disabled = true;
+          try {
+            await fetch(`${HTTP_URL}/sessions/${passSessionId}/pass`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ targetId: btn.dataset.target }),
+            });
+          } catch {}
+          passModal.classList.remove('visible');
+          passSessionId = null;
+        });
+      });
+    }
+
+    passModal.classList.add('visible');
+  }
+
+  document.getElementById('passModalCancel').addEventListener('click', () => passModal.classList.remove('visible'));
+  passModal.addEventListener('click', e => { if (e.target === passModal) passModal.classList.remove('visible'); });
 
   // ── QR modal ─────────────────────────────────────────────────────────────────
   const qrModal   = document.getElementById('qrModal');
@@ -826,7 +983,7 @@
     const waitingCount = waitingList?.length || 0;
     const metaParts = [];
     if (!offline && runCount > 0) metaParts.push(`Timer ${runCount + 1}`);
-    if (!offline && waitingCount > 0) metaParts.push(`<span class="waiting">${waitingCount} waiting</span>`);
+    if (!offline && waitingCount > 0) metaParts.push(`<span class="waiting waiting-tap">${waitingCount} waiting →</span>`);
 
     el.className = `room-card ${running && !offline ? 'running' : ''} ${offline ? 'offline' : ''}`;
 
@@ -866,6 +1023,16 @@
       e.stopPropagation();
       openQrModal(sessionId);
     });
+
+    // Waiting count tap → pass control modal
+    const waitingTap = el.querySelector('.waiting-tap');
+    if (waitingTap) {
+      waitingTap.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openPassModal(sessionId);
+      });
+    }
   }
 
   // ── Render full rooms list ────────────────────────────────────────────────────
