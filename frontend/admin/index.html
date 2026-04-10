@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speaker Timer — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #1e1e1e;
+    --text: #f0ede8;
+    --muted: #555;
+    --accent: #e8ff47;
+    --danger: #ff4444;
+    --warn: #ff9900;
+  }
+
+  html, body {
+    min-height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  body {
+    padding: 32px;
+  }
+
+  /* ── Header ── */
+  .page-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+  }
+
+  .page-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+
+  .page-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* ── Session grid ── */
+  .sessions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  .empty-state {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 80px 0;
+    grid-column: 1 / -1;
+  }
+
+  /* ── Session card ── */
+  .session-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: border-color 0.3s;
+  }
+
+  .session-card.running {
+    border-color: #2a2e14;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .session-id {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .status-pill.running { border-color: var(--accent); color: var(--accent); }
+  .status-pill.paused  { border-color: var(--warn);   color: var(--warn); }
+
+  .pill-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .pill-dot.live { animation: pulse 2s ease-in-out infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .card-time {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 56px;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    transition: color 0.4s;
+  }
+
+  .card-time.warning { color: var(--warn); }
+  .card-time.danger  { color: var(--danger); }
+  .card-time.overtime { color: var(--danger); }
+
+  .progress-bar {
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 1s linear, background 0.5s;
+  }
+
+  .progress-fill.warning { background: var(--warn); }
+  .progress-fill.danger  { background: var(--danger); }
+
+  .card-speaker {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    color: var(--muted);
+    min-height: 1.4em;
+  }
+
+  .card-speaker.has-name { color: rgba(240,237,232,0.7); }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .card-clients {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .card-waiting {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .card-waiting.has-waiting { color: var(--warn); }
+
+  .card-open-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    transition: all 0.15s;
+  }
+
+  .card-open-btn:hover { border-color: var(--muted); color: var(--text); }
+
+  /* ── Controller info ── */
+  .controller-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .controller-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .controller-dot.connected { background: var(--accent); }
+
+  /* ── Waiting names list ── */
+  .waiting-names {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .waiting-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--warn);
+    border: 1px solid rgba(255,153,0,0.3);
+    border-radius: 6px;
+    padding: 3px 8px;
+    letter-spacing: 0.08em;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="page-title">Admin — All Sessions</div>
+  <div class="page-meta" id="pollStatus">Connecting…</div>
+</div>
+
+<div class="sessions-grid" id="sessionsGrid">
+  <div class="empty-state">No active sessions</div>
+</div>
+
+<script>
+  const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
+  const HTTP_URL = SERVER_URL.replace(/^wss?:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+
+  const grid       = document.getElementById('sessionsGrid');
+  const pollStatus = document.getElementById('pollStatus');
+
+  function formatTime(seconds) {
+    const abs = Math.abs(seconds);
+    const m = Math.floor(abs / 60);
+    const s = abs % 60;
+    const sign = seconds < 0 ? '-' : '';
+    return `${sign}${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  function timeClass(timeRemaining, overtime) {
+    if (overtime) return 'overtime';
+    if (timeRemaining <= 30) return 'danger';
+    if (timeRemaining <= 60) return 'warning';
+    return '';
+  }
+
+  function renderSessions(sessions) {
+    if (!sessions.length) {
+      grid.innerHTML = '<div class="empty-state">No active sessions</div>';
+      return;
+    }
+
+    grid.innerHTML = sessions.map(({ id, state, clientCount }) => {
+      const { running, timeRemaining, totalTime, speakerName, overtime, controllerConnected, waitingList = [] } = state;
+      const pct = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) * 100 : 100;
+      const tc = timeClass(timeRemaining, overtime);
+      const displayUrl = `${window.location.origin}/display/?session=${id}`;
+      const waitingNames = waitingList.filter(w => w.name);
+
+      return `
+        <div class="session-card ${running ? 'running' : ''}">
+          <div class="card-header">
+            <div class="session-id">${id}</div>
+            <div class="status-pill ${running ? 'running' : 'paused'}">
+              <span class="pill-dot ${running ? 'live' : ''}"></span>
+              ${running ? 'Running' : (overtime ? 'Overtime' : 'Paused')}
+            </div>
+          </div>
+
+          <div class="card-time ${tc}">${formatTime(timeRemaining)}</div>
+
+          <div class="progress-bar">
+            <div class="progress-fill ${tc}" style="width:${pct}%"></div>
+          </div>
+
+          <div class="card-speaker ${speakerName ? 'has-name' : ''}">${speakerName || 'No speaker set'}</div>
+
+          <div class="controller-row">
+            <span class="controller-dot ${controllerConnected ? 'connected' : ''}"></span>
+            ${controllerConnected ? 'Controller connected' : 'No controller'}
+          </div>
+
+          ${waitingList.length > 0 ? `
+            <div class="waiting-names">
+              ${waitingList.map(w => `<span class="waiting-tag">${w.name || 'Unknown'}</span>`).join('')}
+            </div>
+          ` : ''}
+
+          <div class="card-footer">
+            <span class="card-clients">${clientCount} client${clientCount !== 1 ? 's' : ''}</span>
+            <span class="card-waiting ${waitingList.length > 0 ? 'has-waiting' : ''}">${waitingList.length > 0 ? `${waitingList.length} waiting` : ''}</span>
+            <a class="card-open-btn" href="${displayUrl}" target="_blank">Open Display ↗</a>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function poll() {
+    try {
+      const res = await fetch(`${HTTP_URL}/sessions`);
+      const { sessions } = await res.json();
+      renderSessions(sessions);
+      pollStatus.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    } catch (e) {
+      pollStatus.textContent = 'Error reaching server';
+    }
+  }
+
+  poll();
+  setInterval(poll, 2000);
+</script>
+</body>
+</html>
