@@ -768,6 +768,16 @@
     if (t) { t.textContent = formatTime(timeRemaining); t.className = 'time ' + tc; }
     if (s) { s.textContent = name || ''; }
     if (d) { d.textContent = running ? 'Live' : (overtime ? 'Overtime' : 'Paused'); d.className = 'dot ' + (running ? 'live' : ''); }
+
+    // Background pulse — same thresholds as main display
+    const pb = pipWindow.document.body;
+    const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
+    const isWarn1  = timeRemaining <= 60  && timeRemaining > 30 && !overtime;
+    const isWarn30 = timeRemaining <= 30  && timeRemaining > 0  && !overtime;
+    pb.classList.toggle('pulse-warn',        isWarn5);
+    pb.classList.toggle('pulse-danger-slow', isWarn1);
+    pb.classList.toggle('pulse-danger-fast', isWarn30);
+    pb.classList.toggle('bg-overtime',       !!overtime);
   }
 
   let pipFlashTimer = null;
@@ -838,9 +848,15 @@
           transition: color 0.4s;
         }
         .time.warning { color: #ff9900; }
-        .time.danger  { color: #ff4444; animation: flash 1s step-end infinite; }
+        .time.danger  { color: #ff4444; }
         .time.overtime { color: #ff4444; }
-        @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        @keyframes bgPulseWarn        { 0%,100%{background-color:#0a0a0a} 50%{background-color:#221d08} }
+        @keyframes bgPulseDangerSlow  { 0%,100%{background-color:#0a0a0a} 50%{background-color:#280606} }
+        @keyframes bgPulseDangerFast  { 0%,100%{background-color:#0a0a0a} 50%{background-color:#360808} }
+        body.pulse-warn        { animation: bgPulseWarn       5.5s ease-in-out infinite; }
+        body.pulse-danger-slow { animation: bgPulseDangerSlow 2.8s ease-in-out infinite; }
+        body.pulse-danger-fast { animation: bgPulseDangerFast 1.6s ease-in-out infinite; }
+        body.bg-overtime       { background-color: #200404 !important; animation: none; }
         .speaker {
           font-family: 'DM Mono', monospace;
           font-size: clamp(9px, 2.5vw, 13px);
