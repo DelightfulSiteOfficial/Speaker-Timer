@@ -1054,11 +1054,6 @@
           hasControl = true;
           waitingId = null;
           controlAvailable = false;
-          // Pre-fill room name from operator name if room is unnamed
-          if (!state.roomName) {
-            const myName = localStorage.getItem(MY_NAME_KEY) || '';
-            if (myName) { speakerInput.value = myName; send({ type: 'set_room', sessionId, name: myName }); }
-          }
           render();
 
         } else if (msg.type === 'control_denied') {
