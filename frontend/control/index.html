@@ -522,44 +522,42 @@
   .btn-take-control.visible { display: block; }
   .btn-take-control:active { background: rgba(232,255,71,0.08); transform: scale(0.97); }
 
-  /* ── Dial row: Start | Dial | Reset ── */
-  .dial-row {
-    display: flex;
-    align-items: stretch;
-    gap: 10px;
-  }
-
+  /* ── Dial section ── */
   .dial-area {
-    flex: 1;
-    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
 
-  .btn-side {
-    width: 68px;
-    flex-shrink: 0;
+  /* ── Start / Reset button row ── */
+  .action-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .btn-main {
+    height: 68px;
     border-radius: 16px;
     border: none;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 22px;
-    letter-spacing: 0.05em;
+    font-size: 28px;
+    letter-spacing: 0.06em;
     cursor: pointer;
     transition: all 0.15s;
-    min-height: 100px;
-    writing-mode: vertical-rl;
   }
-  .btn-side:active { transform: scale(0.96); opacity: 0.85; }
+  .btn-main:active { transform: scale(0.96); opacity: 0.85; }
 
-  .btn-start { background: var(--accent); color: #000; transform: rotate(180deg); }
-  .btn-start:active { transform: rotate(180deg) scale(0.96); opacity: 0.85; }
-  .btn-pause { background: var(--warn); color: #000; transform: rotate(180deg); }
-  .btn-pause:active { transform: rotate(180deg) scale(0.96); opacity: 0.85; }
-  .btn-reset-side { background: var(--surface); border: 1px solid var(--border) !important; color: var(--muted); }
+  .btn-start { background: var(--accent); color: #000; }
+  .btn-pause  { background: var(--warn);   color: #000; }
+  .btn-reset-side {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
   .btn-reset-side:active { background: var(--border); color: var(--text); transform: scale(0.96); }
 
   .btn-release { display: none; width: 100%; padding: 6px; background: none; border: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; text-align: center; }
@@ -621,32 +619,34 @@
 <!-- ── Main control panel (only when hasControl) ── -->
 <div class="control-panel" id="controlPanel">
 
-  <!-- Start | Dial | Reset row -->
-  <div class="dial-row">
-    <button class="btn-side btn-start" id="mainBtn">Start</button>
-    <div class="dial-area">
-      <div class="dial-wrapper">
-        <svg class="dial-svg" id="durationDial" viewBox="0 0 240 240">
-          <path id="dialBgArc" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round"
-                d="M 72.00 203.08 A 96 96 0 1 1 168.00 203.08"/>
-          <path id="dialArc" fill="none" stroke="#e8ff47" stroke-width="10" stroke-linecap="round"/>
-          <circle id="dialThumb" r="14" fill="#e8ff47"/>
-        </svg>
-        <div class="dial-center-overlay" id="dialCenterOverlay">
-          <div class="dial-value" id="dialValue">10</div>
-          <div class="dial-unit">min</div>
-          <div class="dial-hint">tap to type</div>
-        </div>
-        <input class="dial-direct-input" id="dialDirectInput" type="number" min="1" max="300">
+  <!-- Dial -->
+  <div class="dial-area">
+    <div class="dial-wrapper">
+      <svg class="dial-svg" id="durationDial" viewBox="0 0 240 240">
+        <path id="dialBgArc" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round"
+              d="M 72.00 203.08 A 96 96 0 1 1 168.00 203.08"/>
+        <path id="dialArc" fill="none" stroke="#e8ff47" stroke-width="10" stroke-linecap="round"/>
+        <circle id="dialThumb" r="14" fill="#e8ff47"/>
+      </svg>
+      <div class="dial-center-overlay" id="dialCenterOverlay">
+        <div class="dial-value" id="dialValue">10</div>
+        <div class="dial-unit">min</div>
+        <div class="dial-hint">tap to type</div>
       </div>
-      <div class="dial-presets">
-        <button class="dial-preset" data-mins="15">15m</button>
-        <button class="dial-preset" data-mins="20">20m</button>
-        <button class="dial-preset" data-mins="30">30m</button>
-        <button class="dial-preset" data-mins="45">45m</button>
-      </div>
+      <input class="dial-direct-input" id="dialDirectInput" type="number" min="1" max="300">
     </div>
-    <button class="btn-side btn-reset-side" id="resetBtn">Reset</button>
+    <div class="dial-presets">
+      <button class="dial-preset" data-mins="15">15m</button>
+      <button class="dial-preset" data-mins="20">20m</button>
+      <button class="dial-preset" data-mins="30">30m</button>
+      <button class="dial-preset" data-mins="45">45m</button>
+    </div>
+  </div>
+
+  <!-- Start / Reset -->
+  <div class="action-row">
+    <button class="btn-main btn-start" id="mainBtn">Start</button>
+    <button class="btn-main btn-reset-side" id="resetBtn">Reset</button>
   </div>
 
   <!-- Nudge -->
@@ -828,7 +828,7 @@
     roomChip.classList.toggle('has-room', !!roomName);
 
     mainBtn.textContent = running ? 'Pause' : 'Start';
-    mainBtn.className = 'btn-side ' + (running ? 'btn-pause' : 'btn-start');
+    mainBtn.className = 'btn-main ' + (running ? 'btn-pause' : 'btn-start');
 
     overtimeBanner.className = 'overtime-banner' + (overtime && hasControl ? ' visible' : '');
 
