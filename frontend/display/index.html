@@ -668,13 +668,14 @@
         const msg = JSON.parse(e.data);
         if (msg.type === 'state') {
           const prevMessage = state.message;
+          const prevMessageSeq = state.messageSeq;
           state = { ...state, ...msg.payload };
           render();
           updateMessagePanel();
           updatePiP();
 
-          // Flash when a new non-empty message arrives
-          if (state.message && state.message !== prevMessage) {
+          // Flash when a new message arrives (seq covers same-text resends)
+          if (state.message && state.messageSeq !== prevMessageSeq) {
             triggerFlash(state.message);
           } else if (!state.message && prevMessage) {
             dismissFlash();
