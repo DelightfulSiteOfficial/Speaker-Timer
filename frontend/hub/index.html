@@ -652,27 +652,6 @@
 
   .btn-add-confirm:active { transform: scale(0.95); }
 
-  .btn-scan-qr {
-    width: 100%;
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px;
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  .btn-scan-qr:active { background: var(--border); }
-
   .sheet-error {
     font-family: 'DM Mono', monospace;
     font-size: 11px;
@@ -682,35 +661,6 @@
     min-height: 1.4em;
   }
 
-  /* ── QR scanner ── */
-  .qr-scanner {
-    display: none;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .qr-scanner.visible { display: flex; }
-
-  #qrVideo {
-    width: 100%;
-    border-radius: 12px;
-    background: #000;
-    aspect-ratio: 1;
-    object-fit: cover;
-  }
-
-  .btn-cancel-scan {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 10px;
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    cursor: pointer;
-  }
 </style>
 </head>
 <body>
@@ -740,7 +690,7 @@
 <div class="empty-state" id="emptyState">
   <div class="empty-icon">--:--</div>
   <div class="empty-title">No rooms added</div>
-  <div class="empty-sub">Tap + to add a room by entering<br>its session ID or scanning its QR code</div>
+  <div class="empty-sub">Tap + to add a room by entering its session ID</div>
 </div>
 
 <div class="rooms-list" id="roomsList"></div>
@@ -755,17 +705,6 @@
   <div class="sheet-input-row">
     <input class="session-input" id="sessionInput" type="text" placeholder="Session ID (e.g. ROOMA)" maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false">
     <button class="btn-add-confirm" id="addConfirmBtn">Add</button>
-  </div>
-
-  <button class="btn-scan-qr" id="scanQrBtn">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
-    Scan QR Code
-  </button>
-
-  <div class="qr-scanner" id="qrScanner">
-    <video id="qrVideo" playsinline autoplay muted></video>
-    <canvas id="qrCanvas" style="display:none"></canvas>
-    <button class="btn-cancel-scan" id="cancelScanBtn">Cancel Scan</button>
   </div>
 
   <div class="sheet-error" id="sheetError"></div>
@@ -792,7 +731,6 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
   const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
@@ -1095,8 +1033,6 @@
   const backdrop      = document.getElementById('sheetBackdrop');
   const sessionInput  = document.getElementById('sessionInput');
   const sheetError    = document.getElementById('sheetError');
-  const qrScanner     = document.getElementById('qrScanner');
-
   function openSheet() {
     sheet.classList.add('visible');
     backdrop.classList.add('visible');
@@ -1109,7 +1045,6 @@
     backdrop.classList.remove('visible');
     sessionInput.value = '';
     sheetError.textContent = '';
-    stopScan();
   }
 
   document.getElementById('fabBtn').addEventListener('click', openSheet);
@@ -1124,100 +1059,6 @@
   sessionInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') document.getElementById('addConfirmBtn').click();
   });
-
-  // ── QR scanner ───────────────────────────────────────────────────────────────
-  let scanStream    = null;
-  let scanAnimFrame = null;
-  let scanActive    = false;
-
-  function handleScanResult(raw) {
-    let sessionId = raw.trim();
-    try {
-      const url   = new URL(raw);
-      const param = new URLSearchParams(url.search).get('session');
-      if (param) sessionId = param.toUpperCase().trim();
-    } catch {}
-    stopScan();
-    const err = addRoom(sessionId);
-    if (err) { sheetError.textContent = err; return; }
-    closeSheet();
-  }
-
-  async function startScan() {
-    qrScanner.classList.add('visible');
-    sheetError.textContent = '';
-    scanActive = true;
-
-    let stream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
-    } catch {
-      sheetError.textContent = 'Camera access denied';
-      qrScanner.classList.remove('visible');
-      scanActive = false;
-      return;
-    }
-
-    scanStream = stream;
-    const video = document.getElementById('qrVideo');
-    video.srcObject = stream;
-
-    // Wait for video dimensions to be available before scanning
-    await new Promise(resolve => {
-      video.onloadedmetadata = resolve;
-      video.load();
-    });
-    try { await video.play(); } catch {}
-
-    // Use native BarcodeDetector if available (Chrome/Android — much faster)
-    if ('BarcodeDetector' in window) {
-      let detector;
-      try { detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch {}
-      if (detector) {
-        const nativeScan = async () => {
-          if (!scanActive) return;
-          try {
-            const codes = await detector.detect(video);
-            if (codes.length > 0) { handleScanResult(codes[0].rawValue); return; }
-          } catch {}
-          scanAnimFrame = requestAnimationFrame(nativeScan);
-        };
-        nativeScan();
-        return;
-      }
-    }
-
-    // Fallback: jsQR canvas decode (Safari / iOS)
-    const canvas = document.getElementById('qrCanvas');
-    const ctx    = canvas.getContext('2d');
-    const jsqrScan = () => {
-      if (!scanActive) return;
-      if (video.readyState >= 2 && video.videoWidth > 0) {
-        canvas.width  = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
-        if (code) { handleScanResult(code.data); return; }
-      }
-      scanAnimFrame = requestAnimationFrame(jsqrScan);
-    };
-    jsqrScan();
-  }
-
-  function stopScan() {
-    scanActive = false;
-    if (scanAnimFrame) { cancelAnimationFrame(scanAnimFrame); scanAnimFrame = null; }
-    if (scanStream)    { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
-    const video = document.getElementById('qrVideo');
-    video.srcObject = null;
-    qrScanner.classList.remove('visible');
-  }
-
-  document.getElementById('scanQrBtn').addEventListener('click', startScan);
-  document.getElementById('cancelScanBtn').addEventListener('click', stopScan);
 
   // ── Boot ──────────────────────────────────────────────────────────────────────
   renderRooms();
