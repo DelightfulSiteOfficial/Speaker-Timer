@@ -1715,13 +1715,23 @@
         }
       });
 
-      // For agenda cards, attach click → openAgendaView
+      // For agenda cards, ensure they are <div> not <a> and bind click → openAgendaView
       rooms.forEach(id => {
         if (agendas[id]) {
-          const card = document.getElementById(`card-${id}`);
+          let card = document.getElementById(`card-${id}`);
+          // If it was previously created as an <a> (plain room), replace with <div>
+          if (card && card.tagName === 'A') {
+            const div = document.createElement('div');
+            div.id = `card-${id}`;
+            div.dataset.id = id;
+            card.replaceWith(div);
+            card = div;
+            renderCard(id);
+          }
           if (card && !card._agendaClickBound) {
             card._agendaClickBound = true;
             card.addEventListener('click', (e) => {
+              e.preventDefault();
               if (e.target.classList.contains('card-remove')) return;
               openAgendaView(id);
             });
