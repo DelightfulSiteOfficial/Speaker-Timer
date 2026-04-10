@@ -1263,7 +1263,6 @@
   const msgBarFill    = document.getElementById('msgBarFill');
   const FLASH_MS      = 5000;
   let msgCountInterval = null, msgCountSecs = 0, msgDoneTimer = null;
-  let lastSentMessage = null; // suppress field refill when server echoes back our sent text
 
   function setMsgStatus(type, secs) {
     msgStatus.classList.add('visible');
@@ -1307,7 +1306,6 @@
   sendMsgBtn.addEventListener('click', () => {
     const text = messageInput.value.trim();
     if (!text) return;
-    lastSentMessage = text;
     send({ type: 'set_message', sessionId, text });
     messageInput.value = '';
     messageInput.blur();
@@ -1368,13 +1366,6 @@
           if (msg.payload.roomName !== undefined && !roomModal.classList.contains('visible'))
             speakerInput.value = msg.payload.roomName || '';
 
-          if (msg.payload.message !== undefined && document.activeElement !== messageInput) {
-            if (lastSentMessage !== null && msg.payload.message === lastSentMessage) {
-              lastSentMessage = null; // server confirmed our send — keep field empty
-            } else {
-              messageInput.value = msg.payload.message || '';
-            }
-          }
 
           if (state.message && state.messageSeq !== prevMessageSeq) startMsgCountdown();
           else if (!state.message && prevMessage) { clearInterval(msgCountInterval); setMsgStatus('cleared'); }
