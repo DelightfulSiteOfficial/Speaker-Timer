@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speaker Timer — Event</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:      #0a0a0a;
+    --surface: #111111;
+    --surface2: #161616;
+    --border:  #1e1e1e;
+    --border2: #262626;
+    --text:    #f0ede8;
+    --muted:   #555;
+    --accent:  #e8ff47;
+    --danger:  #ff4444;
+    --warn:    #ff9900;
+    --green:   #22c55e;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ══════════════════════════════════════════
+     HEADER
+  ══════════════════════════════════════════ */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 56px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 16px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.06em;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .logo span { color: var(--accent); }
+
+  .event-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 3px 10px;
+  }
+
+  .header-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .session-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 12px;
+  }
+
+  .conn-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+    flex-shrink: 0;
+  }
+  .conn-dot.live { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-header:hover { border-color: #333; color: var(--text); }
+  .btn-header.accent { border-color: rgba(232,255,71,0.3); color: var(--accent); }
+  .btn-header.accent:hover { background: rgba(232,255,71,0.06); }
+
+  /* ══════════════════════════════════════════
+     MAIN TWO-PANEL LAYOUT
+  ══════════════════════════════════════════ */
+  .main {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  @media (max-width: 900px) {
+    html, body { overflow: auto; }
+    .main { grid-template-columns: 1fr; overflow: visible; }
+    body { overflow: auto; }
+  }
+
+  /* ══════════════════════════════════════════
+     AGENDA PANEL (LEFT)
+  ══════════════════════════════════════════ */
+  .agenda-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .agenda-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .agenda-panel-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .agenda-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  .agenda-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+
+  .agenda-list::-webkit-scrollbar { width: 4px; }
+  .agenda-list::-webkit-scrollbar-track { background: transparent; }
+  .agenda-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* ── Agenda item ── */
+  .agenda-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+    position: relative;
+  }
+  .agenda-item:last-child { border-bottom: none; }
+  .agenda-item:hover { background: var(--surface); }
+  .agenda-item.active {
+    background: rgba(232,255,71,0.04);
+    border-left: 2px solid var(--accent);
+    padding-left: 18px;
+  }
+  .agenda-item.done { opacity: 0.4; }
+
+  .item-status {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 9px;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+  .item-status.active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #000;
+    font-size: 10px;
+  }
+  .item-status.done {
+    border-color: #333;
+    background: #1a1a1a;
+    color: #333;
+  }
+
+  .item-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .item-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  .agenda-item.active .item-name { color: var(--accent); }
+  .agenda-item.done .item-name { text-decoration: line-through; }
+
+  .item-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .item-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .agenda-item:hover .item-actions { opacity: 1; }
+  .agenda-item.active .item-actions { opacity: 1; }
+
+  .btn-load {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(232,255,71,0.08);
+    border: 1px solid rgba(232,255,71,0.25);
+    border-radius: 6px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-load:hover { background: rgba(232,255,71,0.15); }
+  .btn-load.loaded { color: var(--muted); background: none; border-color: var(--border); }
+
+  .btn-item-del {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    background: none;
+    border: 1px solid transparent;
+    color: var(--muted);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+  .btn-item-del:hover { border-color: var(--border); color: var(--danger); }
+
+  /* ── Add item form ── */
+  .add-form {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+    background: var(--surface2);
+  }
+
+  .add-form-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .add-form-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .add-name-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .add-name-input::placeholder { color: var(--muted); font-size: 13px; }
+  .add-name-input:focus { border-color: #333; }
+
+  .add-dur-input {
+    width: 72px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 10px;
+    color: var(--text);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+  }
+  .add-dur-input::-webkit-outer-spin-button,
+  .add-dur-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .add-dur-input::placeholder { font-size: 14px; font-family: 'DM Mono', monospace; }
+  .add-dur-input:focus { border-color: #333; }
+
+  .add-dur-label {
+    display: flex;
+    align-items: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .btn-add {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0 18px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-add:hover { border-color: #333; background: #1a1a1a; }
+  .btn-add:active { transform: scale(0.97); }
+
+  /* Empty state */
+  .agenda-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 10px;
+    padding: 40px;
+    text-align: center;
+  }
+  .agenda-empty-icon { font-size: 32px; opacity: 0.3; }
+  .agenda-empty-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  /* ══════════════════════════════════════════
+     TIMER PANEL (RIGHT)
+  ══════════════════════════════════════════ */
+  .timer-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 32px 48px 28px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Now presenting label */
+  .now-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .now-speaker {
+    font-family: 'DM Sans', sans-serif;
+    font-size: clamp(16px, 2vw, 24px);
+    font-weight: 300;
+    color: rgba(240,237,232,0.55);
+    letter-spacing: 0.02em;
+    min-height: 1.5em;
+    text-align: center;
+    margin-bottom: 10px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .now-speaker.has-name { color: rgba(240,237,232,0.7); }
+
+  /* Big timer */
+  .time-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(100px, 18vw, 220px);
+    line-height: 0.88;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    transition: color 0.5s;
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+    cursor: pointer;
+  }
+  .time-display.warning { color: var(--warn); }
+  .time-display.danger  { color: var(--danger); animation: flash 1s step-end infinite; }
+  .time-display.overtime { color: var(--danger); }
+  @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+  /* Progress bar */
+  .progress-bar {
+    width: min(100%, 560px);
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 14px 0 20px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.9s linear, background 0.5s;
+  }
+  .progress-fill.warning { background: var(--warn); }
+  .progress-fill.danger  { background: var(--danger); }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: min(100%, 480px);
+  }
+
+  .btn-start {
+    width: 100%;
+    height: 66px;
+    border-radius: 16px;
+    border: none;
+    background: var(--green);
+    color: #000;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-start.pause { background: var(--danger); color: #fff; }
+  .btn-start:hover { opacity: 0.9; }
+  .btn-start:active { transform: scale(0.97); }
+
+  .btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .btn-secondary {
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover { border-color: #333; color: var(--text); }
+  .btn-secondary:active { transform: scale(0.96); }
+  .btn-secondary.next-btn {
+    border-color: rgba(232,255,71,0.25);
+    color: var(--accent);
+    background: rgba(232,255,71,0.04);
+  }
+  .btn-secondary.next-btn:hover { background: rgba(232,255,71,0.1); }
+  .btn-secondary.next-btn:disabled { opacity: 0.25; cursor: not-allowed; transform: none; }
+
+  .nudge-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    width: 100%;
+  }
+  .nudge-btn {
+    height: 38px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .nudge-btn:active { transform: scale(0.95); background: var(--border); }
+  .nudge-btn.add { color: var(--accent); border-color: rgba(232,255,71,0.2); background: rgba(232,255,71,0.04); }
+  .nudge-btn.sub { color: var(--warn); border-color: rgba(255,153,0,0.2); background: rgba(255,153,0,0.04); }
+
+  /* Overtime */
+  .overtime-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--danger);
+    background: rgba(255,68,68,0.08);
+    border: 1px solid rgba(255,68,68,0.3);
+    border-radius: 100px;
+    padding: 4px 14px;
+    display: none;
+    animation: flash 1s step-end infinite;
+  }
+  .overtime-badge.visible { display: block; }
+
+  /* QR corner */
+  .qr-corner {
+    position: absolute;
+    bottom: 20px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .qr-corner canvas, .qr-corner img { border-radius: 4px; }
+  .qr-corner-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* ── Hold-to-type overlay ── */
+  .hold-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10,10,10,0.94);
+    z-index: 200;
+  }
+  .hold-overlay.visible { display: flex; }
+  .hold-field {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(100px, 16vw, 220px);
+    background: none;
+    border: none;
+    border-bottom: 3px solid var(--accent);
+    color: var(--accent);
+    text-align: center;
+    width: 50%;
+    min-width: 280px;
+    outline: none;
+    line-height: 1;
+    -moz-appearance: textfield;
+  }
+  .hold-field::-webkit-outer-spin-button,
+  .hold-field::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .hold-unit {
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    opacity: 0.5;
+    margin-top: 10px;
+  }
+  .hold-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 28px;
+  }
+
+  /* ── Copy toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    opacity: 0;
+    transition: all 0.25s;
+    pointer-events: none;
+    z-index: 300;
+    white-space: nowrap;
+  }
+  .toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── Background pulses ── */
+  @keyframes bgWarn       { 0%,100%{background:#0a0a0a} 50%{background:#221d08} }
+  @keyframes bgDangerSlow { 0%,100%{background:#0a0a0a} 50%{background:#280606} }
+  @keyframes bgDangerFast { 0%,100%{background:#0a0a0a} 50%{background:#360808} }
+  body.pulse-warn         { animation: bgWarn        5.5s ease-in-out infinite; }
+  body.pulse-danger-slow  { animation: bgDangerSlow  2.8s ease-in-out infinite; }
+  body.pulse-danger-fast  { animation: bgDangerFast  1.6s ease-in-out infinite; }
+  body.bg-overtime        { background: #200404 !important; animation: none; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo">Speaker<span>Timer</span></div>
+    <div class="event-badge">Event</div>
+  </div>
+  <div class="header-center">
+    <div class="session-pill" id="sessionPill">Session —</div>
+    <div class="conn-dot" id="connDot"></div>
+  </div>
+  <div class="header-right">
+    <button class="btn-header" id="openDisplayBtn">Open Display →</button>
+    <button class="btn-header accent" id="copyLinkBtn">Copy Display Link</button>
+  </div>
+</header>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- ── Agenda panel ── -->
+  <div class="agenda-panel">
+    <div class="agenda-panel-header">
+      <div class="agenda-panel-title">Agenda</div>
+      <div class="agenda-count" id="agendaCount">0 items</div>
+    </div>
+
+    <div class="agenda-list" id="agendaList">
+      <div class="agenda-empty" id="agendaEmpty">
+        <div class="agenda-empty-icon">📋</div>
+        <div class="agenda-empty-text">No agenda items yet.<br>Add speakers below to get started.</div>
+      </div>
+    </div>
+
+    <div class="add-form">
+      <div class="add-form-label">Add to agenda</div>
+      <div class="add-form-row">
+        <input class="add-name-input" id="addNameInput" type="text"
+               placeholder="Speaker or session name…" maxlength="60" autocomplete="off">
+        <input class="add-dur-input" id="addDurInput" type="number"
+               min="1" max="300" placeholder="min">
+        <span class="add-dur-label">min</span>
+        <button class="btn-add" id="addItemBtn">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Timer panel ── -->
+  <div class="timer-panel">
+    <div class="now-label">Now Presenting</div>
+    <div class="now-speaker" id="nowSpeaker">—</div>
+
+    <div class="time-display" id="timeDisplay">--:--</div>
+
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:100%"></div>
+    </div>
+
+    <div class="overtime-badge" id="overtimeBadge">Overtime</div>
+
+    <div class="controls">
+      <button class="btn-start" id="startBtn">Start</button>
+      <div class="btn-row">
+        <button class="btn-secondary" id="resetBtn">Reset</button>
+        <button class="btn-secondary next-btn" id="nextBtn">Next →</button>
+      </div>
+      <div class="nudge-row">
+        <button class="nudge-btn sub" data-nudge="-60">−1m</button>
+        <button class="nudge-btn sub" data-nudge="-30">−30s</button>
+        <button class="nudge-btn add" data-nudge="30">+30s</button>
+        <button class="nudge-btn add" data-nudge="60">+1m</button>
+      </div>
+    </div>
+
+    <!-- QR for display page -->
+    <div class="qr-corner">
+      <div id="qrCode"></div>
+      <div class="qr-corner-label">Display screen</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Hold-to-type duration overlay -->
+<div class="hold-overlay" id="holdOverlay">
+  <input class="hold-field" id="holdField" type="number" min="1" max="300" placeholder="—">
+  <div class="hold-unit">minutes</div>
+  <div class="hold-hint">enter to set · esc to cancel</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
+  const params     = new URLSearchParams(window.location.search);
+  const sessionId  = (params.get('session') || '').toUpperCase().trim()
+                     || Math.random().toString(36).slice(2,8).toUpperCase();
+
+  // Sync session ID into URL if generated
+  if (!params.get('session')) {
+    history.replaceState(null, '', `?session=${sessionId}`);
+  }
+
+  // ── Agenda (localStorage) ──────────────────────────────────────────────────
+  const AGENDA_KEY = 'speakerTimerAgendas';
+
+  function loadAgenda() {
+    try { return (JSON.parse(localStorage.getItem(AGENDA_KEY)) || {})[sessionId] || []; }
+    catch { return []; }
+  }
+  function saveAgenda() {
+    try {
+      const all = JSON.parse(localStorage.getItem(AGENDA_KEY)) || {};
+      all[sessionId] = agenda;
+      localStorage.setItem(AGENDA_KEY, JSON.stringify(all));
+    } catch {}
+  }
+  function genItemId() { return Math.random().toString(36).slice(2, 9); }
+
+  let agenda = loadAgenda();
+
+  // ── Timer state ────────────────────────────────────────────────────────────
+  let state = {
+    running: false, timeRemaining: 0, totalTime: 0,
+    roomName: '', overtime: false,
+  };
+  let hasControl = false;
+
+  // ── DOM refs ───────────────────────────────────────────────────────────────
+  const sessionPill   = document.getElementById('sessionPill');
+  const connDot       = document.getElementById('connDot');
+  const agendaList    = document.getElementById('agendaList');
+  const agendaEmpty   = document.getElementById('agendaEmpty');
+  const agendaCount   = document.getElementById('agendaCount');
+  const addNameInput  = document.getElementById('addNameInput');
+  const addDurInput   = document.getElementById('addDurInput');
+  const addItemBtn    = document.getElementById('addItemBtn');
+  const timeDisplay   = document.getElementById('timeDisplay');
+  const progressFill  = document.getElementById('progressFill');
+  const overtimeBadge = document.getElementById('overtimeBadge');
+  const nowSpeaker    = document.getElementById('nowSpeaker');
+  const startBtn      = document.getElementById('startBtn');
+  const resetBtn      = document.getElementById('resetBtn');
+  const nextBtn       = document.getElementById('nextBtn');
+  const holdOverlay   = document.getElementById('holdOverlay');
+  const holdField     = document.getElementById('holdField');
+  const toast         = document.getElementById('toast');
+
+  sessionPill.textContent = `Session ${sessionId}`;
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function formatTime(s) {
+    if (!Number.isFinite(s)) return '--:--';
+    const abs = Math.abs(s);
+    const m   = Math.floor(abs / 60);
+    const sec = abs % 60;
+    return `${s < 0 ? '-' : ''}${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  }
+
+  function showToast(msg, ms = 2000) {
+    toast.textContent = msg;
+    toast.classList.add('visible');
+    setTimeout(() => toast.classList.remove('visible'), ms);
+  }
+
+  // ── QR code ───────────────────────────────────────────────────────────────
+  const displayUrl = `${window.location.origin}/display/?session=${sessionId}`;
+  new QRCode(document.getElementById('qrCode'), {
+    text: displayUrl, width: 72, height: 72,
+    colorDark: '#f0ede8', colorLight: '#0a0a0a',
+    correctLevel: QRCode.CorrectLevel.M,
+  });
+
+  document.getElementById('openDisplayBtn').addEventListener('click', () =>
+    window.open(displayUrl, '_blank'));
+
+  document.getElementById('copyLinkBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(displayUrl).then(() => showToast('Display link copied ✓'));
+  });
+
+  // ── Render timer ──────────────────────────────────────────────────────────
+  function renderTimer() {
+    const { running, timeRemaining, totalTime, overtime, roomName } = state;
+    const pct       = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) : 1;
+    const isWarning = timeRemaining <= 60  && timeRemaining > 0 && !overtime;
+    const isDanger  = timeRemaining <= 30  && timeRemaining > 0 && !overtime;
+
+    timeDisplay.textContent = formatTime(timeRemaining);
+    timeDisplay.className = 'time-display' +
+      (overtime ? ' overtime' : isDanger ? ' danger' : isWarning ? ' warning' : '');
+
+    progressFill.style.width = (pct * 100) + '%';
+    progressFill.className = 'progress-fill' +
+      (overtime || isDanger ? ' danger' : isWarning ? ' warning' : '');
+
+    overtimeBadge.classList.toggle('visible', !!overtime);
+
+    startBtn.textContent = running ? 'Pause' : 'Start';
+    startBtn.className   = 'btn-start' + (running ? ' pause' : '');
+
+    nowSpeaker.textContent = roomName || '—';
+    nowSpeaker.classList.toggle('has-name', !!roomName);
+
+    // Next button: disabled when no pending items
+    const hasNext = agenda.some(i => i.status === 'pending');
+    nextBtn.disabled = !hasNext;
+
+    // Background pulses
+    const isWarn5  = timeRemaining <= 300 && timeRemaining > 60  && !overtime;
+    const isWarn1  = timeRemaining <= 60  && timeRemaining > 30  && !overtime;
+    const isWarn30 = timeRemaining <= 30  && timeRemaining > 0   && !overtime;
+    document.body.classList.toggle('pulse-warn',        isWarn5);
+    document.body.classList.toggle('pulse-danger-slow', isWarn1);
+    document.body.classList.toggle('pulse-danger-fast', isWarn30);
+    document.body.classList.toggle('bg-overtime',       !!overtime);
+  }
+
+  // ── Render agenda ─────────────────────────────────────────────────────────
+  function renderAgenda() {
+    agendaEmpty.style.display = agenda.length ? 'none' : 'flex';
+    agendaCount.textContent = `${agenda.length} item${agenda.length !== 1 ? 's' : ''}`;
+    saveAgenda();
+
+    // Remove old items, keep empty state
+    agendaList.querySelectorAll('.agenda-item').forEach(el => el.remove());
+
+    agenda.forEach((item, idx) => {
+      const el = document.createElement('div');
+      el.className = 'agenda-item' + (item.status === 'active' ? ' active' : item.status === 'done' ? ' done' : '');
+      el.dataset.id = item.id;
+
+      const statusIcon = item.status === 'active' ? '▶' : item.status === 'done' ? '✓' : '';
+      const mins = Math.round(item.duration / 60);
+
+      el.innerHTML = `
+        <div class="item-status ${item.status}">${statusIcon}</div>
+        <div class="item-body">
+          <div class="item-name">${escHtml(item.name)}</div>
+          <div class="item-meta">${mins} min</div>
+        </div>
+        <div class="item-actions">
+          <button class="btn-load ${item.status === 'active' ? 'loaded' : ''}"
+                  data-idx="${idx}">
+            ${item.status === 'active' ? 'Active' : 'Load'}
+          </button>
+          <button class="btn-item-del" data-idx="${idx}" title="Remove">×</button>
+        </div>
+      `;
+      agendaList.appendChild(el);
+    });
+
+    // Wire up Load buttons
+    agendaList.querySelectorAll('.btn-load').forEach(btn => {
+      btn.addEventListener('click', () => loadItem(parseInt(btn.dataset.idx)));
+    });
+    agendaList.querySelectorAll('.btn-item-del').forEach(btn => {
+      btn.addEventListener('click', () => removeItem(parseInt(btn.dataset.idx)));
+    });
+  }
+
+  function escHtml(s) {
+    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Agenda actions ────────────────────────────────────────────────────────
+  function addItem(name, durationMins) {
+    name = name.trim();
+    if (!name || !durationMins) return false;
+    agenda.push({ id: genItemId(), name, duration: durationMins * 60, status: 'pending' });
+    renderAgenda();
+    return true;
+  }
+
+  function removeItem(idx) {
+    agenda.splice(idx, 1);
+    renderAgenda();
+    renderTimer();
+  }
+
+  function loadItem(idx) {
+    // Mark previous active as done, new one as active
+    agenda.forEach((item, i) => {
+      if (item.status === 'active') item.status = (i < idx) ? 'done' : 'pending';
+    });
+    agenda[idx].status = 'active';
+
+    const item = agenda[idx];
+    send({ type: 'reset',        sessionId });
+    send({ type: 'set_duration', sessionId, seconds: item.duration });
+    send({ type: 'set_room',     sessionId, name: item.name });
+
+    renderAgenda();
+
+    // Scroll active item into view
+    setTimeout(() => {
+      const activeEl = agendaList.querySelector('.agenda-item.active');
+      if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
+  }
+
+  function loadNextItem() {
+    const nextIdx = agenda.findIndex(i => i.status === 'pending');
+    if (nextIdx === -1) return;
+    loadItem(nextIdx);
+  }
+
+  // ── Add form ──────────────────────────────────────────────────────────────
+  addItemBtn.addEventListener('click', () => {
+    const name = addNameInput.value.trim();
+    const dur  = parseInt(addDurInput.value);
+    if (!name || !dur || dur < 1) {
+      addNameInput.focus();
+      return;
+    }
+    addItem(name, dur);
+    addNameInput.value = '';
+    addDurInput.value  = '';
+    addNameInput.focus();
+  });
+
+  addNameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      if (!addDurInput.value) { addDurInput.focus(); return; }
+      addItemBtn.click();
+    }
+  });
+  addDurInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') addItemBtn.click();
+  });
+
+  // ── Timer controls ────────────────────────────────────────────────────────
+  startBtn.addEventListener('click', () =>
+    send({ type: state.running ? 'pause' : 'start', sessionId }));
+
+  resetBtn.addEventListener('click', () =>
+    send({ type: 'reset', sessionId }));
+
+  nextBtn.addEventListener('click', () => loadNextItem());
+
+  document.querySelectorAll('[data-nudge]').forEach(btn =>
+    btn.addEventListener('click', () =>
+      send({ type: 'nudge', sessionId, delta: parseInt(btn.dataset.nudge) })));
+
+  // ── Hold-to-type on timer ─────────────────────────────────────────────────
+  let holdTimer = null;
+
+  function showHoldInput() {
+    holdField.value = Math.max(1, Math.round(state.totalTime / 60));
+    holdOverlay.classList.add('visible');
+    holdField.focus();
+    holdField.select();
+  }
+  function hideHoldInput() { holdOverlay.classList.remove('visible'); }
+
+  timeDisplay.addEventListener('mousedown', () => {
+    holdTimer = setTimeout(() => { holdTimer = null; showHoldInput(); }, 500);
+  });
+  timeDisplay.addEventListener('mouseup',    () => clearTimeout(holdTimer));
+  timeDisplay.addEventListener('mouseleave', () => clearTimeout(holdTimer));
+  timeDisplay.addEventListener('touchstart', () => {
+    holdTimer = setTimeout(() => { holdTimer = null; showHoldInput(); }, 500);
+  }, { passive: true });
+  timeDisplay.addEventListener('touchend', () => clearTimeout(holdTimer));
+
+  holdField.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const mins = parseInt(holdField.value);
+      if (mins >= 1 && mins <= 300) send({ type: 'set_duration', sessionId, seconds: mins * 60 });
+      hideHoldInput();
+    } else if (e.key === 'Escape') {
+      hideHoldInput();
+    }
+  });
+  holdField.addEventListener('blur', () => setTimeout(hideHoldInput, 150));
+  holdOverlay.addEventListener('click', e => { if (e.target === holdOverlay) hideHoldInput(); });
+
+  // ── WebSocket ─────────────────────────────────────────────────────────────
+  let ws, reconnectTimer;
+
+  function send(msg) {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+  }
+
+  function scheduleReconnect() {
+    connDot.classList.remove('live');
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connect, 3000);
+  }
+
+  function connect() {
+    try {
+      ws = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control`);
+    } catch(e) { scheduleReconnect(); return; }
+
+    ws.onopen = () => connDot.classList.add('live');
+
+    ws.onmessage = e => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'state') {
+          state = { ...state, ...msg.payload };
+          renderTimer();
+        } else if (msg.type === 'control_granted') {
+          hasControl = true;
+          renderTimer();
+        } else if (msg.type === 'control_denied') {
+          hasControl = false;
+        }
+      } catch {}
+    };
+
+    ws.onclose = scheduleReconnect;
+    ws.onerror = scheduleReconnect;
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  renderAgenda();
+  renderTimer();
+  connect();
+
+  // Render timer every 500ms (keeps time display smooth)
+  setInterval(renderTimer, 500);
+</script>
+</body>
+</html>

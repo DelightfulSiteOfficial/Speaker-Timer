@@ -210,13 +210,13 @@
     <div class="card-action">Get started →</div>
   </div>
 
-  <!-- Event (placeholder) -->
-  <div class="card disabled">
-    <div class="card-badge">Coming Soon</div>
+  <!-- Event -->
+  <div class="card" id="eventCard">
+    <div class="card-active-border"></div>
     <div class="card-icon">📋</div>
     <div class="card-title">Event</div>
-    <div class="card-desc">Manage a full day of speakers across multiple rooms with an agenda.</div>
-    <div class="card-action">Not available yet</div>
+    <div class="card-desc">Build an agenda, queue up speakers, and run your full event from one screen.</div>
+    <div class="card-action">Build agenda →</div>
   </div>
 
 </div>
@@ -231,6 +231,11 @@
   document.getElementById('quickMeetingCard').addEventListener('click', () => {
     const sessionId = generateId();
     window.location.href = `/display/?session=${sessionId}`;
+  });
+
+  document.getElementById('eventCard').addEventListener('click', () => {
+    const sessionId = generateId();
+    window.location.href = `/event/?session=${sessionId}`;
   });
 </script>
 </body>
