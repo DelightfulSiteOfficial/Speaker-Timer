@@ -308,38 +308,12 @@
   }
 
   /* ── Duration dial ── */
-  .dial-container {
-    position: relative;
-    width: min(68%, 240px);
-    margin: 0 0 6px;
-  }
-
   .dial-wrapper {
     position: relative;
-    width: 100%;
+    width: min(68%, 240px);
     aspect-ratio: 1;
+    margin: 0 0 6px;
   }
-
-  .vibrate-toggle {
-    position: absolute;
-    right: -42px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    flex-shrink: 0;
-  }
-  .vibrate-toggle:active { transform: translateY(-50%) scale(0.92); }
-  .vibrate-toggle.active { border-color: var(--accent); color: var(--accent); background: rgba(232,255,71,0.06); }
 
   .dial-svg {
     width: 100%; height: 100%;
@@ -852,27 +826,19 @@
 
   <!-- Dial -->
   <div class="dial-area">
-    <div class="dial-container">
-      <div class="dial-wrapper">
-        <svg class="dial-svg" id="durationDial" viewBox="0 0 240 240">
-          <path id="dialBgArc" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round"
-                d="M 72.00 203.08 A 96 96 0 1 1 168.00 203.08"/>
-          <path id="dialArc" fill="none" stroke="#e8ff47" stroke-width="10" stroke-linecap="round"/>
-          <circle id="dialThumb" r="14" fill="#e8ff47"/>
-        </svg>
-        <div class="dial-center-overlay" id="dialCenterOverlay">
-          <div class="dial-value" id="dialValue">10</div>
-          <div class="dial-unit">min</div>
-          <div class="dial-hint">tap to type</div>
-        </div>
-        <input class="dial-direct-input" id="dialDirectInput" type="number" min="1" max="300">
+    <div class="dial-wrapper">
+      <svg class="dial-svg" id="durationDial" viewBox="0 0 240 240">
+        <path id="dialBgArc" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round"
+              d="M 72.00 203.08 A 96 96 0 1 1 168.00 203.08"/>
+        <path id="dialArc" fill="none" stroke="#e8ff47" stroke-width="10" stroke-linecap="round"/>
+        <circle id="dialThumb" r="14" fill="#e8ff47"/>
+      </svg>
+      <div class="dial-center-overlay" id="dialCenterOverlay">
+        <div class="dial-value" id="dialValue">10</div>
+        <div class="dial-unit">min</div>
+        <div class="dial-hint">tap to type</div>
       </div>
-      <button class="vibrate-toggle" id="vibrateToggle" title="Haptic alerts">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <path d="M5 9v6"/><path d="M19 9v6"/>
-          <rect x="8" y="4" width="8" height="16" rx="2"/>
-        </svg>
-      </button>
+      <input class="dial-direct-input" id="dialDirectInput" type="number" min="1" max="300">
     </div>
     <div class="dial-presets">
       <button class="dial-preset" data-mins="15">15m</button>
@@ -970,8 +936,6 @@
   };
   let hasControl       = false;
   let initialStateReceived = false;
-  let prevTimeRemaining = null;
-  let vibrateEnabled = localStorage.getItem('speakerTimerVibrate') === 'true';
   let controlAvailable = false;
   let waitingId        = null;
 
@@ -1042,16 +1006,6 @@
 
   namePromptSkip.addEventListener('click', () => dismissNamePrompt(''));
 
-  // ── Vibrate toggle ────────────────────────────────────────────────────────
-  const vibrateToggle = document.getElementById('vibrateToggle');
-  vibrateToggle.classList.toggle('active', vibrateEnabled);
-
-  vibrateToggle.addEventListener('click', () => {
-    vibrateEnabled = !vibrateEnabled;
-    localStorage.setItem('speakerTimerVibrate', vibrateEnabled);
-    vibrateToggle.classList.toggle('active', vibrateEnabled);
-    if (vibrateEnabled && 'vibrate' in navigator) navigator.vibrate(60);
-  });
 
   // ── All Rooms ──────────────────────────────────────────────────────────────
   document.getElementById('roomsBtn').addEventListener('click', () => {
@@ -1149,15 +1103,6 @@
         send({ type: 'pass_control_to', sessionId, targetId: btn.dataset.id })
       );
     });
-
-    // Haptic alerts at threshold crossings
-    if (vibrateEnabled && 'vibrate' in navigator && prevTimeRemaining !== null && running) {
-      if (prevTimeRemaining > 60 && timeRemaining <= 60 && timeRemaining > 0 && !overtime)
-        navigator.vibrate([150, 80, 150]);
-      else if (prevTimeRemaining > 30 && timeRemaining <= 30 && timeRemaining > 0 && !overtime)
-        navigator.vibrate([200, 80, 200, 80, 200]);
-    }
-    prevTimeRemaining = timeRemaining;
 
     // Background pulse states
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
