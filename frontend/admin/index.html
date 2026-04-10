@@ -6,6 +6,7 @@
 <title>Speaker Timer — Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -216,6 +217,93 @@
 
   .card-open-btn:hover { border-color: var(--muted); color: var(--text); }
 
+  .card-qr-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .card-qr-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── QR modal ── */
+  .qr-modal {
+    position: fixed; inset: 0;
+    background: rgba(10,10,10,0.92);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 210;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .qr-modal.visible { opacity: 1; pointer-events: auto; }
+
+  .qr-modal-box {
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 24px;
+    padding: 32px 28px 24px;
+    width: calc(100% - 48px);
+    max-width: 340px;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+
+  .qr-modal-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    align-self: flex-start;
+  }
+
+  .qr-code-wrap {
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    width: 220px; height: 220px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .qr-session-id {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    text-align: center;
+  }
+
+  .qr-session-url {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-align: center;
+    word-break: break-all;
+  }
+
+  .qr-modal-close {
+    width: 100%;
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid #2a2a2a;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 4px;
+  }
+  .qr-modal-close:hover { background: #1e1e1e; color: var(--text); }
+
   /* ── Release control button ── */
   .card-release-btn {
     font-family: 'DM Mono', monospace;
@@ -401,6 +489,17 @@
   <div class="empty-state">No active sessions</div>
 </div>
 
+<!-- ── QR code modal ── -->
+<div class="qr-modal" id="qrModal">
+  <div class="qr-modal-box">
+    <div class="qr-modal-eyebrow">Scan to Control</div>
+    <div class="qr-code-wrap" id="qrCodeWrap"></div>
+    <div class="qr-session-id" id="qrSessionId"></div>
+    <div class="qr-session-url" id="qrSessionUrl"></div>
+    <button class="qr-modal-close" id="qrModalClose">Close</button>
+  </div>
+</div>
+
 <!-- ── Release control modal ── -->
 <div class="release-modal" id="releaseModal">
   <div class="release-modal-box">
@@ -481,7 +580,7 @@
 
           <div class="card-footer">
             <span class="card-clients">${clientCount} client${clientCount !== 1 ? 's' : ''}</span>
-            <span class="card-waiting ${waitingList.length > 0 ? 'has-waiting' : ''}">${waitingList.length > 0 ? `${waitingList.length} waiting` : ''}</span>
+            <button class="card-qr-btn" data-session="${id}">QR Code</button>
             <a class="card-open-btn" href="${displayUrl}" target="_blank">Open Display ↗</a>
           </div>
         </div>
@@ -572,14 +671,48 @@
   btnReleaseCancel.addEventListener('click', closeReleaseModal);
   releaseModal.addEventListener('click', (e) => { if (e.target === releaseModal) closeReleaseModal(); });
 
-  // Open modal via event delegation on the grid
+  // Open release modal via event delegation
   grid.addEventListener('click', (e) => {
-    const btn = e.target.closest('.card-release-btn');
-    if (!btn) return;
-    const sessionId = btn.dataset.session;
-    const waitingList = JSON.parse(btn.dataset.waiting || '[]');
-    openReleaseModal(sessionId, waitingList);
+    const releaseBtn = e.target.closest('.card-release-btn');
+    if (releaseBtn) {
+      openReleaseModal(releaseBtn.dataset.session, JSON.parse(releaseBtn.dataset.waiting || '[]'));
+      return;
+    }
+    const qrBtn = e.target.closest('.card-qr-btn');
+    if (qrBtn) openQrModal(qrBtn.dataset.session);
   });
+
+  // ── QR modal ─────────────────────────────────────────────────────────────
+  const qrModal      = document.getElementById('qrModal');
+  const qrCodeWrap   = document.getElementById('qrCodeWrap');
+  const qrSessionId  = document.getElementById('qrSessionId');
+  const qrSessionUrl = document.getElementById('qrSessionUrl');
+  let qrInstance     = null;
+
+  function openQrModal(sessionId) {
+    const controlUrl = `${window.location.origin}/control/?session=${sessionId}`;
+
+    qrSessionId.textContent = sessionId;
+    qrSessionUrl.textContent = controlUrl;
+
+    // Clear and regenerate QR code
+    qrCodeWrap.innerHTML = '';
+    qrInstance = new QRCode(qrCodeWrap, {
+      text: controlUrl,
+      width: 188,
+      height: 188,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+
+    qrModal.classList.add('visible');
+  }
+
+  function closeQrModal() { qrModal.classList.remove('visible'); }
+
+  document.getElementById('qrModalClose').addEventListener('click', closeQrModal);
+  qrModal.addEventListener('click', e => { if (e.target === qrModal) closeQrModal(); });
 
   poll();
   setInterval(poll, 2000);
