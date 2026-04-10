@@ -465,6 +465,19 @@
     message: '', messageSeq: 0,
   };
 
+  // ── Client-side fallback tick ───────────────────────────────────────────────
+  // Records when the last authoritative state arrived from the server.
+  // getDisplayTime() interpolates locally so the display never freezes during
+  // a WiFi hiccup — it resyncs automatically the moment the server reconnects.
+  let lastStateTime = Date.now();
+
+  function getDisplayTime() {
+    if (!state.running) return state.timeRemaining;
+    const elapsed = Math.floor((Date.now() - lastStateTime) / 1000);
+    // Cap so a very long disconnect (tab backgrounded, etc.) doesn't go wild
+    return Math.max(-1800, state.timeRemaining - elapsed);
+  }
+
   // ── DOM ────────────────────────────────────────────────────────────────────
   const timeDisplay      = document.getElementById('timeDisplay');
   const progressFill     = document.getElementById('progressFill');
@@ -503,7 +516,9 @@
 
   // ── Render ─────────────────────────────────────────────────────────────────
   function render() {
-    const { running, timeRemaining, totalTime, roomName, overtime, runCount } = state;
+    const { running, totalTime, roomName, runCount } = state;
+    const timeRemaining = getDisplayTime();   // locally interpolated
+    const overtime      = timeRemaining < 0;  // derived locally too
     const pct        = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) : 1;
     const isWarning  = timeRemaining <= 60 && timeRemaining > 0 && !overtime;
     const isDanger   = timeRemaining <= 30 && timeRemaining > 0 && !overtime;
@@ -541,6 +556,10 @@
 
   // ── WebSocket ──────────────────────────────────────────────────────────────
   let ws, reconnectTimer;
+  let everConnected = false;
+
+  const overlayTitle = document.querySelector('.overlay-title');
+  const overlaySub   = document.querySelector('.overlay-sub');
 
   function connect() {
     try {
@@ -549,6 +568,8 @@
 
     ws.onopen = () => {
       overlay.classList.add('hidden');
+      lastStateTime = Date.now(); // reset interpolation clock on (re)connect
+      everConnected = true;
       ws.send(JSON.stringify({ type: 'join', role: 'display', sessionId }));
     };
 
@@ -558,6 +579,7 @@
         if (msg.type === 'state') {
           const prevMessage    = state.message;
           const prevMessageSeq = state.messageSeq;
+          lastStateTime = Date.now(); // authoritative update — reset clock
           state = { ...state, ...msg.payload };
           render();
           updatePiP();
@@ -570,7 +592,14 @@
       } catch {}
     };
 
-    ws.onclose = () => { overlay.classList.remove('hidden'); scheduleReconnect(); };
+    ws.onclose = () => {
+      overlay.classList.remove('hidden');
+      if (everConnected) {
+        overlayTitle.textContent = 'Reconnecting…';
+        overlaySub.textContent   = state.running ? 'Timer continuing locally' : 'Connection lost';
+      }
+      scheduleReconnect();
+    };
     ws.onerror = () => ws.close();
   }
 
@@ -633,7 +662,9 @@
 
   function updatePiP() {
     if (!pipWindow) return;
-    const { running, timeRemaining, overtime, speakerName: name } = state;
+    const { speakerName: name } = state;
+    const timeRemaining = getDisplayTime();   // locally interpolated
+    const overtime      = timeRemaining < 0;
     const isWarning = timeRemaining <= 60 && timeRemaining > 0 && !overtime;
     const isDanger  = timeRemaining <= 30 && timeRemaining > 0 && !overtime;
     const tc = overtime ? 'overtime' : isDanger ? 'danger' : isWarning ? 'warning' : '';
