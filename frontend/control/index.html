@@ -309,6 +309,77 @@
 
   .overtime-banner.visible { display: block; }
 
+  /* ── Control lock ── */
+  .lock-banner {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 32px 24px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    text-align: center;
+    flex: 1;
+  }
+
+  .lock-banner.visible { display: flex; }
+
+  .lock-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .lock-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    line-height: 1.6;
+  }
+
+  .btn-take-control {
+    display: none;
+    width: 100%;
+    padding: 20px;
+    border-radius: 14px;
+    border: 2px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-take-control.visible { display: block; }
+  .btn-take-control:active { background: rgba(232,255,71,0.08); transform: scale(0.97); }
+
+  .btn-release {
+    display: none;
+    width: 100%;
+    padding: 8px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .btn-release.visible { display: block; }
+  .btn-release:active { color: var(--text); }
+
   /* ── Disconnected overlay ── */
   .overlay {
     position: fixed;
@@ -381,10 +452,19 @@
 
 <div class="overtime-banner" id="overtimeBanner">⚠ Speaker is over time</div>
 
+<div class="lock-banner" id="lockBanner">
+  <div class="lock-title">Control Active</div>
+  <div class="lock-sub">Another device is controlling<br>this session</div>
+</div>
+
+<button class="btn-take-control" id="takeControlBtn">Take Control</button>
+
 <div class="controls">
   <button class="btn-main btn-start" id="mainBtn">Start</button>
   <button class="btn-reset" id="resetBtn">Reset</button>
 </div>
+
+<button class="btn-release" id="releaseBtn">Release Control</button>
 
 <div class="overlay" id="overlay">
   <div class="overlay-text">Connecting…</div>
@@ -397,17 +477,22 @@
 
   let state = { running: false, timeRemaining: 0, totalTime: 0, speakerName: '', overtime: false };
   let selectedMins = null;
+  let hasControl = false;
+  let controlAvailable = false;
 
   // DOM
-  const timeBig        = document.getElementById('timeBig');
-  const timeStatus     = document.getElementById('timeStatus');
-  const mainBtn        = document.getElementById('mainBtn');
-  const resetBtn       = document.getElementById('resetBtn');
-  const speakerInput   = document.getElementById('speakerInput');
-  const connDot        = document.getElementById('connDot');
-  const overlay        = document.getElementById('overlay');
-  const overtimeBanner = document.getElementById('overtimeBanner');
-  const sessionTag     = document.getElementById('sessionTag');
+  const timeBig         = document.getElementById('timeBig');
+  const timeStatus      = document.getElementById('timeStatus');
+  const mainBtn         = document.getElementById('mainBtn');
+  const resetBtn        = document.getElementById('resetBtn');
+  const speakerInput    = document.getElementById('speakerInput');
+  const connDot         = document.getElementById('connDot');
+  const overlay         = document.getElementById('overlay');
+  const overtimeBanner  = document.getElementById('overtimeBanner');
+  const sessionTag      = document.getElementById('sessionTag');
+  const lockBanner      = document.getElementById('lockBanner');
+  const takeControlBtn  = document.getElementById('takeControlBtn');
+  const releaseBtn      = document.getElementById('releaseBtn');
 
   sessionTag.textContent = `Session ${sessionId}`;
 
@@ -432,7 +517,17 @@
     mainBtn.textContent = running ? 'Pause' : 'Start';
     mainBtn.className = 'btn-main ' + (running ? 'btn-pause' : 'btn-start');
 
-    overtimeBanner.className = 'overtime-banner' + (overtime ? ' visible' : '');
+    overtimeBanner.className = 'overtime-banner' + (overtime && hasControl ? ' visible' : '');
+
+    // Lock state UI
+    const showControls = hasControl;
+    document.querySelector('.speaker-row').style.display  = showControls ? '' : 'none';
+    document.querySelector('.duration-row').style.display = showControls ? '' : 'none';
+    document.querySelector('.nudge-row').style.display    = showControls ? '' : 'none';
+    document.querySelector('.controls').style.display     = showControls ? '' : 'none';
+    releaseBtn.className   = 'btn-release'      + (hasControl ? ' visible' : '');
+    lockBanner.className   = 'lock-banner'      + (!hasControl ? ' visible' : '');
+    takeControlBtn.className = 'btn-take-control' + (!hasControl && controlAvailable ? ' visible' : '');
   }
 
   // Duration buttons
@@ -485,6 +580,18 @@
     });
   });
 
+  // Take control
+  takeControlBtn.addEventListener('click', () => {
+    controlAvailable = false;
+    send({ type: 'claim_control', sessionId });
+    render();
+  });
+
+  // Release control
+  releaseBtn.addEventListener('click', () => {
+    send({ type: 'release_control', sessionId });
+  });
+
   // ── WebSocket ──
   let ws, reconnectTimer;
 
@@ -514,6 +621,16 @@
             speakerInput.value = msg.payload.speakerName || '';
           }
           render();
+        } else if (msg.type === 'control_granted') {
+          hasControl = true;
+          controlAvailable = false;
+          render();
+        } else if (msg.type === 'control_denied') {
+          hasControl = false;
+          render();
+        } else if (msg.type === 'control_available') {
+          controlAvailable = true;
+          render();
         }
       } catch {}
     };
@@ -521,6 +638,8 @@
     ws.onclose = () => {
       overlay.classList.remove('hidden');
       connDot.classList.remove('live');
+      hasControl = false;
+      controlAvailable = false;
       scheduleReconnect();
     };
 
