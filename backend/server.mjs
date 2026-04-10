@@ -16,9 +16,11 @@ function createSession(id) {
       totalTime: 600,
       speakerName: '',
       overtime: false,
+      controllerConnected: false,
     },
     clients: new Set(),
     tickInterval: null,
+    controller: null, // WebSocket of the current controller
   };
 }
 
@@ -32,6 +34,14 @@ function broadcast(session) {
   const msg = JSON.stringify({ type: 'state', payload: session.state });
   for (const client of session.clients) {
     if (client.readyState === WebSocket.OPEN) client.send(msg);
+  }
+}
+
+// ── Broadcast a non-state message to all clients ──────────────────────────────
+function broadcastMsg(session, msg) {
+  const str = JSON.stringify(msg);
+  for (const client of session.clients) {
+    if (client.readyState === WebSocket.OPEN) client.send(str);
   }
 }
 
@@ -93,11 +103,23 @@ wss.on('connection', (ws, req) => {
   // Send current state immediately on join
   ws.send(JSON.stringify({ type: 'state', payload: session.state }));
 
+  // Grant or deny control
+  if (role === 'control') {
+    if (!session.controller) {
+      session.controller = ws;
+      session.state.controllerConnected = true;
+      ws.send(JSON.stringify({ type: 'control_granted' }));
+      broadcast(session);
+    } else {
+      ws.send(JSON.stringify({ type: 'control_denied' }));
+    }
+  }
+
   console.log(`[${sessionId}] ${role} connected. Clients: ${session.clients.size}`);
 
   ws.on('message', (raw) => {
-    // Only control role can send commands
-    if (role !== 'control') return;
+    // Only the active controller can send commands
+    if (ws !== session.controller) return;
 
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
@@ -154,12 +176,36 @@ wss.on('connection', (ws, req) => {
         broadcast(session);
         break;
       }
+
+      case 'claim_control':
+        if (!session.controller) {
+          session.controller = ws;
+          session.state.controllerConnected = true;
+          ws.send(JSON.stringify({ type: 'control_granted' }));
+          broadcast(session);
+        }
+        break;
+
+      case 'release_control':
+        session.controller = null;
+        session.state.controllerConnected = false;
+        broadcast(session);
+        broadcastMsg(session, { type: 'control_available' });
+        break;
     }
   });
 
   ws.on('close', () => {
     session.clients.delete(ws);
     console.log(`[${sessionId}] ${role} disconnected. Clients: ${session.clients.size}`);
+
+    // Release control if the controller disconnected
+    if (session.controller === ws) {
+      session.controller = null;
+      session.state.controllerConnected = false;
+      broadcast(session);
+      broadcastMsg(session, { type: 'control_available' });
+    }
 
     // Clean up idle sessions (no clients for 10 minutes)
     if (session.clients.size === 0) {
