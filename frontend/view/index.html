@@ -150,7 +150,7 @@
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get('session') || 'NOSESSION';
 
-  let state = { running: false, timeRemaining: 0, totalTime: 0, speakerName: '', overtime: false };
+  let state = { running: false, timeRemaining: 0, totalTime: 0, roomName: '', overtime: false, runCount: 0 };
 
   const timeDisplay  = document.getElementById('timeDisplay');
   const progressFill = document.getElementById('progressFill');
@@ -168,7 +168,7 @@
   }
 
   function render() {
-    const { running, timeRemaining, totalTime, speakerName, overtime } = state;
+    const { running, timeRemaining, totalTime, roomName, overtime } = state;
     const pct = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) : 1;
     const isWarning = timeRemaining <= 60 && timeRemaining > 0 && !overtime;
     const isDanger  = timeRemaining <= 30 && timeRemaining > 0 && !overtime;
@@ -181,7 +181,7 @@
     progressFill.className = 'progress-fill' +
       (overtime ? ' danger' : isDanger ? ' danger' : isWarning ? ' warning' : '');
 
-    speakerLabel.textContent = speakerName || '—';
+    speakerLabel.textContent = roomName || '—';
     statusEl.textContent = running ? 'Live' : 'Paused';
     statusEl.className = 'status' + (running ? ' running' : '');
     overtimeText.className = 'overtime-text' + (overtime ? ' visible' : '');

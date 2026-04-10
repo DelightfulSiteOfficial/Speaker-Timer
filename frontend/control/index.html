@@ -732,8 +732,8 @@
 <div class="tab-panel hidden" id="tabSetup">
 
   <div class="setup-field">
-    <div class="field-label">Speaker name</div>
-    <input class="text-input" id="speakerInput" type="text" placeholder="Enter speaker name…" maxlength="60">
+    <div class="field-label">Room name</div>
+    <input class="text-input" id="speakerInput" type="text" placeholder="e.g. Ballroom A, Room 101…" maxlength="60">
   </div>
 
   <div class="setup-field">
@@ -926,12 +926,12 @@
     }
   });
 
-  // ── Speaker name (debounced) ───────────────────────────────────────────────
+  // ── Room name (debounced) ──────────────────────────────────────────────────
   let nameTimer;
   speakerInput.addEventListener('input', () => {
     clearTimeout(nameTimer);
     nameTimer = setTimeout(() => {
-      send({ type: 'set_speaker', sessionId, name: speakerInput.value.trim() });
+      send({ type: 'set_room', sessionId, name: speakerInput.value.trim() });
     }, 500);
   });
 
@@ -1088,8 +1088,8 @@
         if (msg.type === 'state') {
           const prevMessage = state.message;
           state = { ...state, ...msg.payload };
-          if (msg.payload.speakerName !== undefined && document.activeElement !== speakerInput) {
-            speakerInput.value = msg.payload.speakerName || '';
+          if (msg.payload.roomName !== undefined && document.activeElement !== speakerInput) {
+            speakerInput.value = msg.payload.roomName || '';
           }
           if (msg.payload.message !== undefined && document.activeElement !== messageInput) {
             messageInput.value = msg.payload.message || '';
@@ -1106,12 +1106,12 @@
           hasControl = true;
           waitingId = null;
           controlAvailable = false;
-          // Auto-fill speaker name from operator name if session has no speaker
-          if (!state.speakerName) {
+          // Auto-fill room name from operator name if session has no room set
+          if (!state.roomName) {
             const myName = operatorInput.value.trim() || localStorage.getItem(MY_NAME_KEY) || '';
             if (myName) {
               speakerInput.value = myName;
-              send({ type: 'set_speaker', sessionId, name: myName });
+              send({ type: 'set_room', sessionId, name: myName });
             }
           }
           render();

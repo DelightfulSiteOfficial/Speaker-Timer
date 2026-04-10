@@ -518,7 +518,7 @@
 
     const entry = roomData[sessionId] || {};
     entry.status = 'connecting';
-    entry.state  = entry.state || { running: false, timeRemaining: 0, totalTime: 0, speakerName: '', overtime: false, waitingList: [] };
+    entry.state  = entry.state || { running: false, timeRemaining: 0, totalTime: 0, roomName: '', overtime: false, waitingList: [], runCount: 0 };
     roomData[sessionId] = entry;
 
     try {
@@ -582,7 +582,7 @@
     if (!el) return;
 
     const { state, status } = roomData[sessionId] || {};
-    const { running, timeRemaining, totalTime, speakerName, overtime, waitingList = [] } = state || {};
+    const { running, timeRemaining, totalTime, roomName, overtime, waitingList = [], runCount = 0 } = state || {};
     const offline = status === 'offline' || status === 'connecting';
     const tc = offline ? '' : timeClass(timeRemaining, overtime);
     const pct = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) * 100 : 100;
@@ -592,6 +592,7 @@
 
     const waitingCount = waitingList?.length || 0;
     const metaParts = [];
+    if (!offline && runCount > 0) metaParts.push(`Timer ${runCount + 1}`);
     if (!offline && waitingCount > 0) metaParts.push(`<span class="waiting">${waitingCount} waiting</span>`);
 
     el.className = `room-card ${running && !offline ? 'running' : ''} ${offline ? 'offline' : ''}`;
@@ -610,7 +611,7 @@
       <div class="card-body">
         <div class="card-time ${tc}">${offline ? '--:--' : formatTime(timeRemaining)}</div>
         <div class="card-info">
-          <div class="card-speaker ${speakerName ? '' : 'empty'}">${speakerName || 'No speaker set'}</div>
+          <div class="card-speaker ${roomName ? '' : 'empty'}">${roomName || 'No room name'}</div>
           ${metaParts.length ? `<div class="card-meta">${metaParts.join(' · ')}</div>` : ''}
         </div>
       </div>
