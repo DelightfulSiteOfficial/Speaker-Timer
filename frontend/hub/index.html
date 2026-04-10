@@ -513,6 +513,20 @@
   }
   .btn-fresh:active { background: var(--border); color: var(--text); }
 
+  /* ── Timer controls link ── */
+  .btn-timer-controls {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    padding: 6px 0;
+    transition: opacity 0.15s;
+  }
+  .btn-timer-controls:active { opacity: 0.6; }
+
   /* ── Co-host card actions ── */
   .card-actions {
     display: flex;
@@ -1244,6 +1258,7 @@
       <span class="pill-dot"></span>
       <span id="agendaStatusPillLabel">Offline</span>
     </span>
+    <a class="btn-timer-controls" id="agendaControlsLink" href="#">Timer Controls →</a>
   </div>
   <div class="agenda-items-scroll" id="agendaItemsList"></div>
 </div>
@@ -1564,6 +1579,10 @@
       <div class="card-progress">
         <div class="card-progress-fill ${tc}" style="width:${offline ? '100' : pct}%"></div>
       </div>
+      <div class="card-actions">
+        <a class="btn-timer-controls" href="/control/?session=${sessionId}"
+           onclick="event.stopPropagation()">Timer Controls →</a>
+      </div>
     `;
 
     el.querySelector('.card-remove').addEventListener('click', (e) => {
@@ -1849,6 +1868,7 @@
     agendaViewSessionId = sessionId;
     const agenda = agendas[sessionId];
     document.getElementById('agendaViewTitle').textContent = agenda?.title || 'Agenda';
+    document.getElementById('agendaControlsLink').href = `/control/?session=${sessionId}`;
     renderAgendaStatusBar(sessionId);
     renderAgendaItems(sessionId);
     agendaView.classList.add('visible');
