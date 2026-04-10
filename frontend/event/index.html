@@ -647,6 +647,126 @@
   body.pulse-danger-slow  { animation: bgDangerSlow  2.8s ease-in-out infinite; }
   body.pulse-danger-fast  { animation: bgDangerFast  1.6s ease-in-out infinite; }
   body.bg-overtime        { background: #200404 !important; animation: none; }
+
+  /* ── Share modal ── */
+  .share-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,10,0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .share-modal-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .share-modal {
+    background: #141414;
+    border: 1px solid #262626;
+    border-radius: 20px;
+    padding: 28px 28px 24px;
+    width: min(380px, calc(100vw - 32px));
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .share-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .share-modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+  .share-modal-close {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: none;
+    border: 1px solid #1e1e1e;
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .share-modal-close:hover { color: var(--text); border-color: #333; }
+  .share-session-id {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-align: center;
+    background: rgba(232,255,71,0.05);
+    border: 1px solid rgba(232,255,71,0.15);
+    border-radius: 10px;
+    padding: 10px 0;
+  }
+  .share-qr {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0;
+  }
+  .share-qr canvas, .share-qr img { border-radius: 6px; }
+  .share-url-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .share-url-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .share-url-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #0a0a0a;
+    border: 1px solid #1e1e1e;
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+  .share-url-text {
+    flex: 1;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .share-url-btn {
+    flex-shrink: 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: none;
+    border: 1px solid #262626;
+    border-radius: 6px;
+    color: var(--muted);
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .share-url-btn:hover { color: var(--text); border-color: #444; }
+  .share-url-btn.accent-btn {
+    color: var(--accent);
+    border-color: rgba(232,255,71,0.25);
+  }
+  .share-url-btn.accent-btn:hover { background: rgba(232,255,71,0.06); }
 </style>
 </head>
 <body>
@@ -662,6 +782,7 @@
     <div class="conn-dot" id="connDot"></div>
   </div>
   <div class="header-right">
+    <button class="btn-header" id="shareBtn">Share</button>
     <button class="btn-header" id="pipBtn">Pop Out Timer</button>
     <button class="btn-header" id="openDisplayBtn">Open Display →</button>
     <button class="btn-header accent" id="copyLinkBtn">Copy Display Link</button>
@@ -728,6 +849,32 @@
 
 </div>
 
+<!-- Share modal -->
+<div class="share-modal-backdrop" id="shareModalBackdrop">
+  <div class="share-modal">
+    <div class="share-modal-header">
+      <div class="share-modal-title">Share Session</div>
+      <button class="share-modal-close" id="shareModalClose">Close</button>
+    </div>
+    <div class="share-session-id" id="shareSessionId"></div>
+    <div class="share-qr" id="shareQr"></div>
+    <div class="share-url-row">
+      <div class="share-url-label">Control (phone / operator)</div>
+      <div class="share-url-line">
+        <div class="share-url-text" id="shareControlUrl"></div>
+        <button class="share-url-btn" id="copyControlBtn">Copy</button>
+      </div>
+    </div>
+    <div class="share-url-row">
+      <div class="share-url-label">Display (big screen)</div>
+      <div class="share-url-line">
+        <div class="share-url-text" id="shareDisplayUrl"></div>
+        <button class="share-url-btn accent-btn" id="openDisplayShareBtn">Open</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Welcome / connecting overlay -->
 <div class="overlay" id="overlay">
   <div class="overlay-title" id="overlayTitle">Connecting…</div>
@@ -747,6 +894,35 @@
   if (!params.get('session')) {
     history.replaceState(null, '', `?session=${sessionId}`);
   }
+
+  // ── localStorage session helpers ──────────────────────────────────────────
+  const SESSION_STORE_KEY = 'speakerTimerSessions';
+
+  function saveSession(id, type) {
+    try {
+      const sessions = getRecentSessions();
+      const idx = sessions.findIndex(s => s.id === id);
+      const entry = { id, type, lastUsed: Date.now() };
+      if (idx >= 0) sessions[idx] = entry;
+      else sessions.unshift(entry);
+      localStorage.setItem(SESSION_STORE_KEY, JSON.stringify(sessions.slice(0, 10)));
+    } catch {}
+  }
+
+  function getRecentSessions() {
+    try { return JSON.parse(localStorage.getItem(SESSION_STORE_KEY)) || []; }
+    catch { return []; }
+  }
+
+  function timeAgo(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60)  return 'just now';
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    if (s < 86400) return Math.floor(s/3600) + 'h ago';
+    return Math.floor(s/86400) + 'd ago';
+  }
+
+  saveSession(sessionId, 'event');
 
   // ── Agenda (localStorage) ──────────────────────────────────────────────────
   const AGENDA_KEY = 'speakerTimerAgendas';
@@ -1277,6 +1453,57 @@
     overlay.classList.remove('pip-prompt');
     overlay.classList.add('hidden');
     openPiP();
+  });
+
+  // ── Share modal ───────────────────────────────────────────────────────────
+  const shareModalBackdrop = document.getElementById('shareModalBackdrop');
+  const shareModalClose    = document.getElementById('shareModalClose');
+  const shareSessionIdEl   = document.getElementById('shareSessionId');
+  const shareQrEl          = document.getElementById('shareQr');
+  const shareControlUrlEl  = document.getElementById('shareControlUrl');
+  const shareDisplayUrlEl  = document.getElementById('shareDisplayUrl');
+  const copyControlBtn     = document.getElementById('copyControlBtn');
+  const openDisplayShareBtn = document.getElementById('openDisplayShareBtn');
+  const shareBtnEl         = document.getElementById('shareBtn');
+
+  let shareQrBuilt = false;
+
+  function openShareModal() {
+    const origin     = window.location.origin;
+    const controlUrl = `${origin}/control/?session=${sessionId}`;
+    const dispUrl    = `${origin}/display/?session=${sessionId}`;
+    shareSessionIdEl.textContent = sessionId;
+    shareControlUrlEl.textContent = controlUrl;
+    shareDisplayUrlEl.textContent = dispUrl;
+    if (!shareQrBuilt) {
+      new QRCode(shareQrEl, {
+        text: controlUrl, width: 128, height: 128,
+        colorDark: '#f0ede8', colorLight: '#111111',
+      });
+      shareQrBuilt = true;
+    }
+    openDisplayShareBtn.onclick = () => window.open(dispUrl, '_blank');
+    shareModalBackdrop.classList.add('visible');
+  }
+
+  function closeShareModal() {
+    shareModalBackdrop.classList.remove('visible');
+  }
+
+  shareBtnEl.addEventListener('click', openShareModal);
+  shareModalClose.addEventListener('click', closeShareModal);
+  shareModalBackdrop.addEventListener('click', e => {
+    if (e.target === shareModalBackdrop) closeShareModal();
+  });
+
+  copyControlBtn.addEventListener('click', () => {
+    const url = `${window.location.origin}/control/?session=${sessionId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      copyControlBtn.textContent = 'Copied!';
+      setTimeout(() => { copyControlBtn.textContent = 'Copy'; }, 2000);
+    }).catch(() => {
+      copyControlBtn.textContent = 'Copy';
+    });
   });
 
   // ── Init ──────────────────────────────────────────────────────────────────
