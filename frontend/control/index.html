@@ -33,7 +33,7 @@
     min-height: 100dvh;
     padding: env(safe-area-inset-top, 16px) 16px 0;
     /* bottom padding added dynamically once sticky height is known */
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 140px);
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -419,13 +419,8 @@
   /* ── Operator message ── */
   .message-row { flex-shrink: 0; }
 
-  .message-input-wrap {
-    display: flex;
-    gap: 8px;
-  }
-
   .message-input {
-    flex: 1;
+    width: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -442,24 +437,46 @@
   .message-input::placeholder { color: var(--muted); font-size: 13px; }
   .message-input:focus { border-color: var(--accent); }
 
+  .message-btns {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .btn-send-msg {
+    flex: 2;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 0 16px;
+    height: 48px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-send-msg:active { background: rgba(232,255,71,0.08); transform: scale(0.97); }
+
   .btn-clear-msg {
+    flex: 1;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 0 16px;
+    height: 48px;
     color: var(--muted);
     font-family: 'DM Mono', monospace;
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     cursor: pointer;
-    white-space: nowrap;
-    min-height: 48px;
     transition: all 0.15s;
-    display: none;
   }
 
-  .btn-clear-msg.visible { display: flex; align-items: center; }
   .btn-clear-msg:active { background: var(--border); }
 
   /* ── Sticky controls ── */
@@ -623,8 +640,9 @@
 
 <div class="message-row">
   <div class="field-label">Message on display</div>
-  <div class="message-input-wrap">
-    <input class="message-input" id="messageInput" type="text" placeholder="Type a message for the presenter…" maxlength="200">
+  <input class="message-input" id="messageInput" type="text" placeholder="Type a message for the presenter…" maxlength="200">
+  <div class="message-btns">
+    <button class="btn-send-msg" id="sendMsgBtn">Send to Display</button>
     <button class="btn-clear-msg" id="clearMsgBtn">Clear</button>
   </div>
 </div>
@@ -787,22 +805,22 @@
     }, 500);
   });
 
-  // Operator message (debounced)
+  // Operator message
   const messageInput = document.getElementById('messageInput');
+  const sendMsgBtn   = document.getElementById('sendMsgBtn');
   const clearMsgBtn  = document.getElementById('clearMsgBtn');
-  let msgTimer;
 
-  messageInput.addEventListener('input', () => {
-    clearTimeout(msgTimer);
-    clearMsgBtn.className = 'btn-clear-msg' + (messageInput.value ? ' visible' : '');
-    msgTimer = setTimeout(() => {
-      send({ type: 'set_message', sessionId, text: messageInput.value });
-    }, 400);
+  sendMsgBtn.addEventListener('click', () => {
+    send({ type: 'set_message', sessionId, text: messageInput.value.trim() });
+    messageInput.blur();
+  });
+
+  messageInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendMsgBtn.click();
   });
 
   clearMsgBtn.addEventListener('click', () => {
     messageInput.value = '';
-    clearMsgBtn.className = 'btn-clear-msg';
     send({ type: 'set_message', sessionId, text: '' });
   });
 
@@ -845,7 +863,6 @@
           }
           if (msg.payload.message !== undefined && document.activeElement !== messageInput) {
             messageInput.value = msg.payload.message || '';
-            clearMsgBtn.className = 'btn-clear-msg' + (messageInput.value ? ' visible' : '');
           }
           render();
         } else if (msg.type === 'control_granted') {
