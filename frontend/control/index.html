@@ -693,6 +693,29 @@
   .overlay { position: fixed; inset: 0; background: rgba(10,10,10,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 100; transition: opacity 0.3s; }
   .overlay.hidden { opacity: 0; pointer-events: none; }
   .overlay-text { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); letter-spacing: 0.2em; text-transform: uppercase; }
+
+  /* ── Co-host banner ── */
+  .cohost-banner {
+    display: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-align: center;
+    padding: 6px 12px;
+    background: rgba(232,255,71,0.05);
+    border: 1px solid rgba(232,255,71,0.15);
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .cohost-banner.visible { display: block; }
+
+  /* ── Lock screen co-host state ── */
+  .lock-screen.cohost-mode .waiting-name-input,
+  .lock-screen.cohost-mode .btn-request-control,
+  .lock-screen.cohost-mode .request-feedback,
+  .lock-screen.cohost-mode .btn-cancel-request { display: none !important; }
 </style>
 </head>
 <body>
@@ -718,6 +741,9 @@
     <div class="conn-dot" id="connDot"></div>
   </div>
 </div>
+
+<!-- ── Co-host banner ── -->
+<div class="cohost-banner" id="cohostBanner">⬡ Co-hosting — Timer controls assigned by event organizer</div>
 
 <!-- ── Timer ── -->
 <div class="time-preview">
@@ -805,8 +831,8 @@
 
 <!-- ── Lock screen (when someone else has control) ── -->
 <div class="lock-screen" id="lockScreen">
-  <div class="lock-title">Control Active</div>
-  <div class="lock-sub">Another device is controlling<br>this session</div>
+  <div class="lock-title" id="lockTitle">Control Active</div>
+  <div class="lock-sub" id="lockSub">Another device is controlling<br>this session</div>
   <input class="waiting-name-input" id="waitingNameInput" type="text" placeholder="Your name…" maxlength="40">
   <button class="btn-request-control" id="requestControlBtn">Request Permission to Control</button>
   <div class="request-feedback" id="requestFeedback"></div>
@@ -870,6 +896,9 @@
   const ctrlRequestName     = document.getElementById('ctrlRequestName');
   const approveRequestBtn   = document.getElementById('approveRequestBtn');
   const denyRequestBtn      = document.getElementById('denyRequestBtn');
+  const cohostBanner = document.getElementById('cohostBanner');
+  const lockTitle    = document.getElementById('lockTitle');
+  const lockSub      = document.getElementById('lockSub');
 
   let requestState     = 'idle'; // 'idle' | 'pending' | 'denied'
   let pendingRequestId = null;   // requestId shown to controller
@@ -980,9 +1009,22 @@
     lockScreen.classList.toggle('visible', !hasControl);
     takeControlBtn.classList.toggle('visible', !hasControl && controlAvailable);
 
+    // Co-host states
+    cohostBanner.classList.toggle('visible', hasControl && !!state.coHost);
+    lockScreen.classList.toggle('cohost-mode', !hasControl && !!state.coHost);
+    if (!hasControl) {
+      if (state.coHost) {
+        lockTitle.textContent = 'Co-host Active';
+        lockSub.innerHTML = 'A co-host is managing this room.<br>Contact the event organizer for access.';
+      } else {
+        lockTitle.textContent = 'Control Active';
+        lockSub.innerHTML = 'Another device is controlling<br>this session';
+      }
+    }
+
     // Waiting list
     const wl = state.waitingList || [];
-    waitingSection.classList.toggle('visible', hasControl && wl.length > 0);
+    waitingSection.classList.toggle('visible', hasControl && !state.coHost && wl.length > 0);
     waitingListEl.innerHTML = wl.map(p => `
       <div class="waiting-item">
         <span class="waiting-item-name ${p.name ? '' : 'unnamed'}">${escHtml(p.name) || 'Unknown device'}</span>
@@ -1348,7 +1390,8 @@
           setRequestState('idle');
 
         } else if (msg.type === 'control_request') {
-          // Someone is requesting control — show approval modal to the current controller
+          // Co-hosts cannot approve requests — server shouldn't send this but guard anyway
+          if (state.coHost) return;
           pendingRequestId = msg.requestId;
           ctrlRequestName.textContent = msg.fromName || 'Someone';
           ctrlRequestModal.classList.add('visible');
