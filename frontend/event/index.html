@@ -540,26 +540,6 @@
   .btn-secondary.next-btn:hover { background: rgba(232,255,71,0.1); }
   .btn-secondary.next-btn:disabled { opacity: 0.25; cursor: not-allowed; transform: none; }
 
-  .nudge-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    width: 100%;
-  }
-  .nudge-btn {
-    height: 38px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .nudge-btn:active { transform: scale(0.95); background: var(--border); }
-  .nudge-btn.add { color: var(--accent); border-color: rgba(232,255,71,0.2); background: rgba(232,255,71,0.04); }
-  .nudge-btn.sub { color: var(--warn); border-color: rgba(255,153,0,0.2); background: rgba(255,153,0,0.04); }
 
   /* Overtime */
   .overtime-badge {
@@ -597,51 +577,6 @@
     text-align: center;
   }
 
-  /* ── Hold-to-type overlay ── */
-  .hold-overlay {
-    position: fixed;
-    inset: 0;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(10,10,10,0.94);
-    z-index: 200;
-  }
-  .hold-overlay.visible { display: flex; }
-  .hold-field {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(100px, 16vw, 220px);
-    background: none;
-    border: none;
-    border-bottom: 3px solid var(--accent);
-    color: var(--accent);
-    text-align: center;
-    width: 50%;
-    min-width: 280px;
-    outline: none;
-    line-height: 1;
-    -moz-appearance: textfield;
-  }
-  .hold-field::-webkit-outer-spin-button,
-  .hold-field::-webkit-inner-spin-button { -webkit-appearance: none; }
-  .hold-unit {
-    font-family: 'DM Mono', monospace;
-    font-size: 16px;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: var(--accent);
-    opacity: 0.5;
-    margin-top: 10px;
-  }
-  .hold-hint {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-top: 28px;
-  }
 
   /* ── Welcome / connecting overlay ── */
   .overlay {
@@ -782,12 +717,6 @@
         <button class="btn-secondary" id="resetBtn">Reset</button>
         <button class="btn-secondary next-btn" id="nextBtn">Next →</button>
       </div>
-      <div class="nudge-row">
-        <button class="nudge-btn sub" data-nudge="-60">−1m</button>
-        <button class="nudge-btn sub" data-nudge="-30">−30s</button>
-        <button class="nudge-btn add" data-nudge="30">+30s</button>
-        <button class="nudge-btn add" data-nudge="60">+1m</button>
-      </div>
     </div>
 
     <!-- QR for display page -->
@@ -797,13 +726,6 @@
     </div>
   </div>
 
-</div>
-
-<!-- Hold-to-type duration overlay -->
-<div class="hold-overlay" id="holdOverlay">
-  <input class="hold-field" id="holdField" type="number" min="1" max="300" placeholder="—">
-  <div class="hold-unit">minutes</div>
-  <div class="hold-hint">enter to set · esc to cancel</div>
 </div>
 
 <!-- Welcome / connecting overlay -->
@@ -867,8 +789,6 @@
   const startBtn      = document.getElementById('startBtn');
   const resetBtn      = document.getElementById('resetBtn');
   const nextBtn       = document.getElementById('nextBtn');
-  const holdOverlay   = document.getElementById('holdOverlay');
-  const holdField     = document.getElementById('holdField');
   const toast         = document.getElementById('toast');
   const overlay       = document.getElementById('overlay');
   const overlayTitle  = document.getElementById('overlayTitle');
@@ -1066,42 +986,6 @@
 
   nextBtn.addEventListener('click', () => loadNextItem());
 
-  document.querySelectorAll('[data-nudge]').forEach(btn =>
-    btn.addEventListener('click', () =>
-      send({ type: 'nudge', sessionId, delta: parseInt(btn.dataset.nudge) })));
-
-  // ── Hold-to-type on timer ─────────────────────────────────────────────────
-  let holdTimer = null;
-
-  function showHoldInput() {
-    holdField.value = Math.max(1, Math.round(state.totalTime / 60));
-    holdOverlay.classList.add('visible');
-    holdField.focus();
-    holdField.select();
-  }
-  function hideHoldInput() { holdOverlay.classList.remove('visible'); }
-
-  timeDisplay.addEventListener('mousedown', () => {
-    holdTimer = setTimeout(() => { holdTimer = null; showHoldInput(); }, 500);
-  });
-  timeDisplay.addEventListener('mouseup',    () => clearTimeout(holdTimer));
-  timeDisplay.addEventListener('mouseleave', () => clearTimeout(holdTimer));
-  timeDisplay.addEventListener('touchstart', () => {
-    holdTimer = setTimeout(() => { holdTimer = null; showHoldInput(); }, 500);
-  }, { passive: true });
-  timeDisplay.addEventListener('touchend', () => clearTimeout(holdTimer));
-
-  holdField.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      const mins = parseInt(holdField.value);
-      if (mins >= 1 && mins <= 300) send({ type: 'set_duration', sessionId, seconds: mins * 60 });
-      hideHoldInput();
-    } else if (e.key === 'Escape') {
-      hideHoldInput();
-    }
-  });
-  holdField.addEventListener('blur', () => setTimeout(hideHoldInput, 150));
-  holdOverlay.addEventListener('click', e => { if (e.target === holdOverlay) hideHoldInput(); });
 
   // ── WebSocket ─────────────────────────────────────────────────────────────
   let ws, reconnectTimer;
