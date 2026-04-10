@@ -774,6 +774,73 @@
   body.pulse-danger-slow { animation: bgPulseDangerSlow 2.8s ease-in-out infinite; }
   body.pulse-danger-fast { animation: bgPulseDangerFast 1.6s ease-in-out infinite; }
   body.bg-overtime       { background-color: #200404 !important; animation: none; }
+
+  /* ── Presenter access toggle ── */
+  .access-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+
+  .access-label-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .access-status {
+    display: block;
+    font-size: 9px;
+    margin-top: 3px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: 'DM Mono', monospace;
+  }
+  .access-status.allowed { color: var(--accent); }
+  .access-status.locked  { color: var(--danger); }
+
+  .toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 26px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .toggle-switch input {
+    opacity: 0; width: 0; height: 0;
+    position: absolute;
+  }
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    border-radius: 13px;
+    background: #2a2a2a;
+    transition: background 0.2s;
+  }
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: #444;
+    top: 3px; left: 3px;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle-switch input:checked + .toggle-track {
+    background: rgba(232,255,71,0.15);
+    border: 1px solid rgba(232,255,71,0.3);
+  }
+  .toggle-switch input:checked + .toggle-track::after {
+    transform: translateX(18px);
+    background: var(--accent);
+  }
 </style>
 </head>
 <body>
@@ -884,6 +951,17 @@
     <div id="waitingList"></div>
   </div>
 
+  <!-- Presenter access toggle -->
+  <div class="access-row">
+    <div>
+      <div class="access-label-text">Presenter Control</div>
+      <span class="access-status allowed" id="accessStatus">Presenter can control timer</span>
+    </div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="presenterToggle" checked>
+      <span class="toggle-track"></span>
+    </label>
+  </div>
 
 </div>
 
@@ -1103,6 +1181,14 @@
         send({ type: 'pass_control_to', sessionId, targetId: btn.dataset.id })
       );
     });
+
+    // Presenter access toggle
+    const locked = !!state.presenterLocked;
+    presenterToggle.checked = !locked;
+    accessStatus.textContent = locked
+      ? 'Desktop controls locked — admin only'
+      : 'Presenter can control timer';
+    accessStatus.className = 'access-status ' + (locked ? 'locked' : 'allowed');
 
     // Background pulse states
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
@@ -1408,6 +1494,14 @@
     setRequestState('idle');
     send({ type: 'claim_control', sessionId });
     render();
+  });
+
+  // ── Presenter access toggle ────────────────────────────────────────────────
+  const presenterToggle = document.getElementById('presenterToggle');
+  const accessStatus    = document.getElementById('accessStatus');
+
+  presenterToggle.addEventListener('change', () => {
+    send({ type: 'set_presenter_lock', sessionId, locked: !presenterToggle.checked });
   });
 
 
