@@ -355,23 +355,6 @@
     text-transform: uppercase;
   }
 
-  .overlay-skip {
-    display: none;
-    background: none;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 8px 24px;
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    cursor: pointer;
-    margin-top: 4px;
-    transition: all 0.15s;
-  }
-  .overlay-skip:hover { border-color: #555; color: var(--text); }
-  .overlay.pip-prompt .overlay-skip { display: block; }
 
   /* ── Message flash overlay ── */
   .message-flash {
@@ -623,7 +606,6 @@
 <div class="overlay" id="overlay">
   <div class="overlay-title" id="overlayTitle">Connecting…</div>
   <div class="overlay-sub" id="overlaySub">Reaching server</div>
-  <button class="overlay-skip" id="pipSkip">Skip</button>
 </div>
 
 <script>
@@ -750,8 +732,7 @@
 
   const overlayTitle = document.getElementById('overlayTitle');
   const overlaySub   = document.getElementById('overlaySub');
-  const pipSkip      = document.getElementById('pipSkip');
-  let pipPrompted    = false;
+  let pipPrompted = false;
 
   function connect() {
     try {
@@ -766,8 +747,8 @@
       // First connect + PiP supported + not already open → show tap-to-open prompt
       if (!pipPrompted && window.documentPictureInPicture && !pipWindow) {
         pipPrompted = true;
-        overlayTitle.textContent = 'Tap to Open Pop-Out';
-        overlaySub.textContent   = 'Opens the floating timer window';
+        overlayTitle.textContent = 'Welcome to Speaker Timer';
+        overlaySub.textContent   = 'Tap anywhere to continue';
         overlay.classList.add('pip-prompt');
       } else {
         overlay.classList.add('hidden');
@@ -1193,12 +1174,6 @@
     openPiP();
   });
 
-  // Skip button — dismiss without opening PiP
-  pipSkip.addEventListener('click', (e) => {
-    e.stopPropagation();
-    overlay.classList.remove('pip-prompt');
-    overlay.classList.add('hidden');
-  });
 
   connect();
 
