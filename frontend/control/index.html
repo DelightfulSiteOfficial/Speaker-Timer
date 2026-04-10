@@ -430,10 +430,8 @@
   .nudge-btn.sub { color: var(--warn);   border-color: rgba(255,153,0,0.2);  background: rgba(255,153,0,0.04); }
 
   /* ── Message section ── */
-  .message-input-wrap { display: flex; gap: 8px; align-items: stretch; }
-
   .message-input {
-    flex: 1;
+    width: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -449,11 +447,17 @@
   .message-input::placeholder { color: var(--muted); font-size: 13px; }
   .message-input:focus { border-color: var(--accent); }
 
+  .msg-btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
   .btn-send-msg {
     background: var(--surface);
     border: 1px solid var(--accent);
     border-radius: 12px;
-    padding: 0 18px;
     height: 44px;
     color: var(--accent);
     font-family: 'DM Mono', monospace;
@@ -462,21 +466,18 @@
     text-transform: uppercase;
     cursor: pointer;
     transition: all 0.15s;
-    white-space: nowrap;
-    flex-shrink: 0;
   }
   .btn-send-msg:active { background: rgba(232,255,71,0.08); transform: scale(0.97); }
-
-  .msg-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
 
   .btn-clear-msg {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 12px;
+    height: 44px;
     color: var(--muted);
     font-family: 'DM Mono', monospace;
     font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
-    cursor: pointer; padding: 7px 14px;
+    cursor: pointer;
     transition: all 0.15s;
   }
   .btn-clear-msg:active { background: var(--border); color: var(--text); transform: scale(0.96); }
@@ -665,12 +666,10 @@
   <!-- Message flash -->
   <div>
     <div class="section-label">Message on display</div>
-    <div class="message-input-wrap">
-      <input class="message-input" id="messageInput" type="text" placeholder="Flash a message to the presenter…" maxlength="200">
+    <input class="message-input" id="messageInput" type="text" placeholder="Flash a message to the presenter…" maxlength="200">
+    <div class="msg-btn-row">
       <button class="btn-send-msg" id="sendMsgBtn">Send</button>
-    </div>
-    <div class="msg-actions">
-      <button class="btn-clear-msg" id="clearMsgBtn">Clear message</button>
+      <button class="btn-clear-msg" id="clearMsgBtn">Clear</button>
     </div>
     <div class="msg-status" id="msgStatus">
       <div class="msg-status-text" id="msgStatusText"></div>
