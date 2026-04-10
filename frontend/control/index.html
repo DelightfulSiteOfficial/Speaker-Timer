@@ -340,43 +340,109 @@
   .text-input::placeholder { color: var(--muted); }
   .text-input:focus { border-color: var(--accent); }
 
-  /* ── Duration picker (Setup tab) ── */
-  .duration-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+  /* ── Duration dial (Setup tab) ── */
+  .dial-wrapper {
+    position: relative;
+    width: 230px;
+    height: 230px;
+    margin: 0 auto 14px;
+  }
 
-  .dur-btn {
+  .dial-svg {
+    width: 100%; height: 100%;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: pointer;
+    overflow: visible;
+  }
+
+  .dial-center-overlay {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .dial-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 68px;
+    line-height: 1;
+    color: var(--text);
+    letter-spacing: 0.02em;
+    transition: color 0.2s;
+  }
+
+  .dial-unit {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: -8px;
+  }
+
+  .dial-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+    opacity: 0.6;
+  }
+
+  .dial-direct-input {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 130px;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+    border-radius: 14px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    text-align: center;
+    outline: none;
+    display: none;
+    z-index: 10;
+    -moz-appearance: textfield;
+  }
+  .dial-direct-input::-webkit-outer-spin-button,
+  .dial-direct-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  .dial-presets {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .dial-preset {
+    height: 44px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
-    height: 48px;
     color: var(--muted);
     font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    letter-spacing: 0.04em;
+    font-size: 12px;
+    letter-spacing: 0.08em;
     cursor: pointer;
     transition: all 0.15s;
     display: flex; align-items: center; justify-content: center;
   }
-  .dur-btn:active { transform: scale(0.95); }
-  .dur-btn.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 500; }
+  .dial-preset:active { transform: scale(0.95); }
+  .dial-preset.active { background: rgba(232,255,71,0.1); border-color: rgba(232,255,71,0.35); color: var(--accent); }
 
+  /* agenda tab still needs these */
   .custom-row { display: flex; gap: 8px; }
-
-  .custom-input {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 0 14px;
-    height: 48px;
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    font-size: 15px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
+  .custom-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0 14px; height: 48px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 15px; outline: none; transition: border-color 0.2s; }
   .custom-input::placeholder { color: var(--muted); font-size: 12px; }
   .custom-input:focus { border-color: var(--accent); }
-
   .custom-set { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0 18px; height: 48px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
   .custom-set:active { transform: scale(0.95); background: var(--border); }
 
@@ -695,19 +761,25 @@
 
   <div class="setup-field">
     <div class="field-label">Duration</div>
-    <div class="duration-grid">
-      <button class="dur-btn" data-mins="5">5 min</button>
-      <button class="dur-btn" data-mins="10">10 min</button>
-      <button class="dur-btn" data-mins="15">15 min</button>
-      <button class="dur-btn" data-mins="20">20 min</button>
-      <button class="dur-btn" data-mins="30">30 min</button>
-      <button class="dur-btn" data-mins="45">45 min</button>
-      <button class="dur-btn" data-mins="60">60 min</button>
-      <button class="dur-btn" data-mins="90">90 min</button>
+    <div class="dial-wrapper">
+      <svg class="dial-svg" id="durationDial" viewBox="0 0 240 240">
+        <path id="dialBgArc" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round"
+              d="M 72.00 203.08 A 96 96 0 1 1 168.00 203.08"/>
+        <path id="dialArc" fill="none" stroke="#e8ff47" stroke-width="10" stroke-linecap="round"/>
+        <circle id="dialThumb" r="14" fill="#e8ff47"/>
+      </svg>
+      <div class="dial-center-overlay" id="dialCenterOverlay">
+        <div class="dial-value" id="dialValue">10</div>
+        <div class="dial-unit">min</div>
+        <div class="dial-hint">tap to type</div>
+      </div>
+      <input class="dial-direct-input" id="dialDirectInput" type="number" min="1" max="300">
     </div>
-    <div class="custom-row">
-      <input class="custom-input" id="customMins" type="number" placeholder="Custom minutes…" min="1" max="300">
-      <button class="custom-set" id="customSetBtn">Set</button>
+    <div class="dial-presets">
+      <button class="dial-preset" data-mins="15">15m</button>
+      <button class="dial-preset" data-mins="20">20m</button>
+      <button class="dial-preset" data-mins="30">30m</button>
+      <button class="dial-preset" data-mins="45">45m</button>
     </div>
   </div>
 
@@ -785,7 +857,6 @@
     overtime: false, waitingList: [], message: '', runCount: 0,
     agenda: [], currentSlotId: null,
   };
-  let selectedMins   = null;
   let hasControl     = false;
   let controlAvailable = false;
   let waitingId      = null;
@@ -1057,23 +1128,134 @@
   document.getElementById('controlNextBtn').addEventListener('click', sendNext);
   agendaNextBtn.addEventListener('click', sendNext);
 
-  // ── Setup: Duration buttons ────────────────────────────────────────────────
-  document.querySelectorAll('.dur-btn').forEach(btn => {
+  // ── Setup: Duration dial ───────────────────────────────────────────────────
+  const DIAL_MAX    = 90;
+  const DIAL_START  = 210;   // degrees CW from top where arc begins
+  const DIAL_SWEEP  = 300;   // total arc sweep in degrees
+  const DIAL_R      = 96;    // arc radius in SVG units (viewBox 240×240, center 120,120)
+
+  const durationDial      = document.getElementById('durationDial');
+  const dialArcEl         = document.getElementById('dialArc');
+  const dialThumb         = document.getElementById('dialThumb');
+  const dialValue         = document.getElementById('dialValue');
+  const dialCenterOverlay = document.getElementById('dialCenterOverlay');
+  const dialDirectInput   = document.getElementById('dialDirectInput');
+
+  let dialMins    = 10;
+  let dialDragging = false;
+
+  function dialPolarToXY(angleDeg, r) {
+    const rad = angleDeg * Math.PI / 180;
+    return [120 + r * Math.sin(rad), 120 - r * Math.cos(rad)];
+  }
+
+  function dialDescribeArc(fromAngle, toAngle, r) {
+    const [sx, sy] = dialPolarToXY(fromAngle, r);
+    const [ex, ey] = dialPolarToXY(toAngle, r);
+    const sweep = ((toAngle - fromAngle) + 360) % 360 || 360;
+    const largeArc = sweep > 180 ? 1 : 0;
+    return `M ${sx.toFixed(2)} ${sy.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
+  }
+
+  function updateDial(mins, sendUpdate) {
+    mins = Math.max(1, Math.min(300, Math.round(mins)));
+    dialMins = mins;
+
+    const displayMins = Math.min(mins, DIAL_MAX);
+    const endAngle = (DIAL_START + (displayMins / DIAL_MAX) * DIAL_SWEEP) % 360;
+
+    dialArcEl.setAttribute('d', dialDescribeArc(DIAL_START, endAngle, DIAL_R));
+
+    const [tx, ty] = dialPolarToXY(endAngle, DIAL_R);
+    dialThumb.setAttribute('cx', tx.toFixed(2));
+    dialThumb.setAttribute('cy', ty.toFixed(2));
+
+    dialValue.textContent = mins;
+
+    document.querySelectorAll('.dial-preset').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.mins) === mins);
+    });
+
+    if (sendUpdate) send({ type: 'set_duration', sessionId, seconds: mins * 60 });
+  }
+
+  function clientToDialCoords(e) {
+    const rect = durationDial.getBoundingClientRect();
+    return [
+      (e.clientX - rect.left) * (240 / rect.width),
+      (e.clientY - rect.top)  * (240 / rect.height),
+    ];
+  }
+
+  function coordsToMins(cx, cy) {
+    const dx = cx - 120, dy = cy - 120;
+    let angle = Math.atan2(dx, -dy) * 180 / Math.PI;
+    angle = ((angle % 360) + 360) % 360;
+    let offset = ((angle - DIAL_START) + 360) % 360;
+    // clamp to arc: if beyond the end, snap to nearest endpoint
+    if (offset > DIAL_SWEEP) {
+      offset = offset < (DIAL_SWEEP + (360 - DIAL_SWEEP) / 2) ? DIAL_SWEEP : 0;
+    }
+    return Math.max(1, (offset / DIAL_SWEEP) * DIAL_MAX);
+  }
+
+  durationDial.addEventListener('pointerdown', e => {
+    if (!hasControl) return;
+    dialDragging = true;
+    durationDial.setPointerCapture(e.pointerId);
+    const [cx, cy] = clientToDialCoords(e);
+    const raw = coordsToMins(cx, cy);
+    updateDial(Math.round(raw / 5) * 5 || 5, false);
+    e.preventDefault();
+  });
+
+  durationDial.addEventListener('pointermove', e => {
+    if (!dialDragging) return;
+    const [cx, cy] = clientToDialCoords(e);
+    const raw = coordsToMins(cx, cy);
+    updateDial(Math.round(raw / 5) * 5 || 5, false);
+    e.preventDefault();
+  });
+
+  durationDial.addEventListener('pointerup', e => {
+    if (!dialDragging) return;
+    dialDragging = false;
+    durationDial.releasePointerCapture(e.pointerId);
+    send({ type: 'set_duration', sessionId, seconds: dialMins * 60 });
+  });
+
+  durationDial.addEventListener('pointercancel', e => {
+    if (dialDragging) { dialDragging = false; durationDial.releasePointerCapture(e.pointerId); }
+  });
+
+  dialCenterOverlay.addEventListener('click', () => {
+    if (!hasControl) return;
+    dialDirectInput.value = dialMins;
+    dialDirectInput.style.display = 'block';
+    dialDirectInput.focus();
+    dialDirectInput.select();
+  });
+
+  dialDirectInput.addEventListener('blur', () => {
+    const val = parseInt(dialDirectInput.value);
+    dialDirectInput.style.display = 'none';
+    if (val >= 1 && val <= 300) updateDial(val, true);
+  });
+
+  dialDirectInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  dialDirectInput.blur();
+    if (e.key === 'Escape') dialDirectInput.style.display = 'none';
+  });
+
+  document.querySelectorAll('.dial-preset').forEach(btn => {
     btn.addEventListener('click', () => {
-      selectedMins = parseInt(btn.dataset.mins);
-      document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      send({ type: 'set_duration', sessionId, seconds: selectedMins * 60 });
+      if (!hasControl) return;
+      updateDial(parseInt(btn.dataset.mins), true);
     });
   });
 
-  document.getElementById('customSetBtn').addEventListener('click', () => {
-    const val = parseInt(document.getElementById('customMins').value);
-    if (val > 0 && val <= 300) {
-      document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
-      send({ type: 'set_duration', sessionId, seconds: val * 60 });
-    }
-  });
+  // Initialise to default 10 min
+  updateDial(10, false);
 
   // ── Room name ──────────────────────────────────────────────────────────────
   let nameTimer;
@@ -1219,6 +1401,9 @@
         if (msg.type === 'state') {
           const prevMessage = state.message;
           state = { ...state, ...msg.payload };
+
+          if (msg.payload.totalTime !== undefined && !dialDragging)
+            updateDial(Math.max(1, Math.round(state.totalTime / 60)), false);
 
           if (msg.payload.roomName !== undefined && document.activeElement !== speakerInput)
             speakerInput.value = msg.payload.roomName || '';
