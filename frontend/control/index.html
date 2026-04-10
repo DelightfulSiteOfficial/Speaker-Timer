@@ -470,14 +470,16 @@
   .msg-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
 
   .btn-clear-msg {
-    background: none; border: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
     color: var(--muted);
     font-family: 'DM Mono', monospace;
     font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
-    cursor: pointer; padding: 4px 2px;
-    transition: color 0.15s;
+    cursor: pointer; padding: 7px 14px;
+    transition: all 0.15s;
   }
-  .btn-clear-msg:active { color: var(--text); }
+  .btn-clear-msg:active { background: var(--border); color: var(--text); transform: scale(0.96); }
 
   .msg-status { display: none; flex-direction: column; gap: 6px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-top: 6px; }
   .msg-status.visible { display: flex; }
