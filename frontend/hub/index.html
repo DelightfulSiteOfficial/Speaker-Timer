@@ -1126,60 +1126,93 @@
   });
 
   // ── QR scanner ───────────────────────────────────────────────────────────────
-  let scanStream = null;
+  let scanStream    = null;
   let scanAnimFrame = null;
+  let scanActive    = false;
+
+  function handleScanResult(raw) {
+    let sessionId = raw.trim();
+    try {
+      const url   = new URL(raw);
+      const param = new URLSearchParams(url.search).get('session');
+      if (param) sessionId = param.toUpperCase().trim();
+    } catch {}
+    stopScan();
+    const err = addRoom(sessionId);
+    if (err) { sheetError.textContent = err; return; }
+    closeSheet();
+  }
 
   async function startScan() {
     qrScanner.classList.add('visible');
     sheetError.textContent = '';
+    scanActive = true;
 
+    let stream;
     try {
-      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      const video = document.getElementById('qrVideo');
-      video.srcObject = scanStream;
-      video.play();
-      scanFrame();
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
     } catch {
       sheetError.textContent = 'Camera access denied';
       qrScanner.classList.remove('visible');
+      scanActive = false;
+      return;
     }
-  }
 
-  function scanFrame() {
-    const video  = document.getElementById('qrVideo');
-    const canvas = document.getElementById('qrCanvas');
+    scanStream = stream;
+    const video = document.getElementById('qrVideo');
+    video.srcObject = stream;
 
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.width  = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
+    // Wait for video dimensions to be available before scanning
+    await new Promise(resolve => {
+      video.onloadedmetadata = resolve;
+      video.load();
+    });
+    try { await video.play(); } catch {}
 
-      if (code) {
-        // Extract session ID from URL or use raw value
-        let sessionId = code.data;
-        try {
-          const url = new URL(code.data);
-          const param = new URLSearchParams(url.search).get('session');
-          if (param) sessionId = param;
-        } catch {}
-
-        stopScan();
-        const err = addRoom(sessionId);
-        if (err) { sheetError.textContent = err; return; }
-        closeSheet();
+    // Use native BarcodeDetector if available (Chrome/Android — much faster)
+    if ('BarcodeDetector' in window) {
+      let detector;
+      try { detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch {}
+      if (detector) {
+        const nativeScan = async () => {
+          if (!scanActive) return;
+          try {
+            const codes = await detector.detect(video);
+            if (codes.length > 0) { handleScanResult(codes[0].rawValue); return; }
+          } catch {}
+          scanAnimFrame = requestAnimationFrame(nativeScan);
+        };
+        nativeScan();
         return;
       }
     }
 
-    scanAnimFrame = requestAnimationFrame(scanFrame);
+    // Fallback: jsQR canvas decode (Safari / iOS)
+    const canvas = document.getElementById('qrCanvas');
+    const ctx    = canvas.getContext('2d');
+    const jsqrScan = () => {
+      if (!scanActive) return;
+      if (video.readyState >= 2 && video.videoWidth > 0) {
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        if (code) { handleScanResult(code.data); return; }
+      }
+      scanAnimFrame = requestAnimationFrame(jsqrScan);
+    };
+    jsqrScan();
   }
 
   function stopScan() {
+    scanActive = false;
     if (scanAnimFrame) { cancelAnimationFrame(scanAnimFrame); scanAnimFrame = null; }
-    if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    if (scanStream)    { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    const video = document.getElementById('qrVideo');
+    video.srcObject = null;
     qrScanner.classList.remove('visible');
   }
 
