@@ -899,7 +899,7 @@
 
   function updatePiP() {
     if (!pipWindow) return;
-    const { speakerName: name } = state;
+    const { speakerName: name, running } = state;
     const timeRemaining = getDisplayTime();   // locally interpolated
     const overtime      = timeRemaining < 0;
     const isWarning = timeRemaining <= 60 && timeRemaining > 0 && !overtime;
@@ -911,7 +911,7 @@
     const h = pipWindow.document.getElementById('pip-hint');
     if (t) { t.textContent = formatTime(timeRemaining); t.className = 'time ' + tc; }
     if (s) { s.textContent = name || ''; }
-    if (h) { h.textContent = overtime ? 'tap to pause' : running ? 'tap to pause' : 'tap to start'; }
+    if (h) { h.textContent = running ? 'tap to pause' : 'tap to start'; }
 
     const pb = pipWindow.document.body;
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
