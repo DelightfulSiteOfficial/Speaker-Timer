@@ -36,16 +36,27 @@
     align-items: center;
     justify-content: center;
     height: 100vh;
-    padding: 48px 60px;
+    padding: 0 60px 0;
+    gap: 0;
   }
 
-  /* ── Timer block — always centered ── */
+  /* ── Timer + QR row ── */
+  .timer-area {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 48px;
+    width: 100%;
+    flex: 1;
+  }
+
+  /* ── Timer block ── */
   .timer-block {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 12px;
-    width: 100%;
   }
 
   /* ── Timer numeral ── */
@@ -118,9 +129,6 @@
 
   /* ── QR panel — fixed bottom-right corner ── */
   .qr-panel {
-    position: fixed;
-    bottom: 36px;
-    right: 40px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -130,13 +138,13 @@
     align-items: center;
     gap: 10px;
     transition: opacity 0.35s, transform 0.35s;
-    z-index: 10;
+    flex-shrink: 0;
   }
 
   .qr-panel.hidden {
     opacity: 0;
     pointer-events: none;
-    transform: translateY(10px);
+    visibility: hidden;
   }
 
   .qr-frame {
@@ -560,17 +568,30 @@
 </head>
 <body>
 
-<!-- Timer -->
-<div class="timer-block">
-  <div class="time-display" id="timeDisplay">--:--</div>
+<!-- Timer + QR row -->
+<div class="timer-area">
 
-  <div class="progress-bar">
-    <div class="progress-fill" id="progressFill" style="width:100%"></div>
+  <div class="timer-block">
+    <div class="time-display" id="timeDisplay">--:--</div>
+
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:100%"></div>
+    </div>
+
+    <div class="speaker-name" id="speakerName"></div>
+
+    <div class="overtime-badge" id="overtimeBadge">Overtime</div>
   </div>
 
-  <div class="speaker-name" id="speakerName"></div>
+  <!-- QR panel — vertically centered to the right of timer -->
+  <div class="qr-panel" id="qrPanel">
+    <div class="qr-frame" id="qrFrame">
+      <div style="width:132px;height:132px;background:#eee;border-radius:3px;"></div>
+    </div>
+    <div class="qr-label">Scan to control</div>
+    <div class="session-id" id="sessionIdDisplay">—</div>
+  </div>
 
-  <div class="overtime-badge" id="overtimeBadge">Overtime</div>
 </div>
 
 <!-- Hold-to-set duration overlay -->
@@ -578,15 +599,6 @@
   <input class="timer-hold-field" id="timerHoldField" type="number" min="1" max="300" placeholder="—">
   <div class="timer-hold-unit">minutes</div>
   <div class="timer-hold-hint">enter to set &nbsp;·&nbsp; esc to cancel</div>
-</div>
-
-<!-- QR panel — bottom-right corner -->
-<div class="qr-panel" id="qrPanel">
-  <div class="qr-frame" id="qrFrame">
-    <div style="width:132px;height:132px;background:#eee;border-radius:3px;"></div>
-  </div>
-  <div class="qr-label">Scan to control</div>
-  <div class="session-id" id="sessionIdDisplay">—</div>
 </div>
 
 <!-- Top bar: utility buttons -->
