@@ -789,24 +789,6 @@
     justify-content: flex-end;
   }
 
-  /* ── Operator mode toggle ── */
-  .operator-toggle {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 0;
-  }
-  .op-toggle-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 8px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--muted);
-    transition: color 0.2s;
-  }
-  .op-toggle-label.active { color: var(--accent); }
-
   .pill-toggle {
     position: relative;
     width: 34px;
@@ -875,15 +857,7 @@
     <div class="time-big" id="timeBig">--:--</div>
     <span class="time-status" id="timeStatus">Stopped</span>
   </div>
-  <div class="timer-row-side">
-    <div class="operator-toggle" id="operatorToggleWrap">
-      <span class="op-toggle-label" id="opToggleLabel">Operator</span>
-      <label class="pill-toggle">
-        <input type="checkbox" id="operatorModeToggle">
-        <span class="pill-track"></span>
-      </label>
-    </div>
-  </div>
+  <div class="timer-row-side"></div>
 </div>
 
 <!-- ── Room name modal ── -->
@@ -1035,19 +1009,6 @@
   saveSession(sessionId, 'control', controlKey);
   const MY_NAME_KEY        = 'speakerTimerMyName';
   const NAME_PROMPTED_KEY  = 'speakerTimerNamePromptSeen';
-  const DEVICE_TOKENS_KEY  = 'speakerTimerDeviceTokens';
-
-  function getDeviceToken() {
-    try { return (JSON.parse(localStorage.getItem(DEVICE_TOKENS_KEY)) || {})[sessionId] || null; }
-    catch { return null; }
-  }
-  function saveDeviceToken(token) {
-    try {
-      const tokens = JSON.parse(localStorage.getItem(DEVICE_TOKENS_KEY)) || {};
-      tokens[sessionId] = token.toUpperCase().trim();
-      localStorage.setItem(DEVICE_TOKENS_KEY, JSON.stringify(tokens));
-    } catch {}
-  }
 
   let state = {
     running: false, timeRemaining: 0, totalTime: 0, roomName: '',
@@ -1222,11 +1183,6 @@
         send({ type: 'pass_control_to', sessionId, targetId: btn.dataset.id })
       );
     });
-
-    // Operator mode toggle — follow hasControl unless an action is in-flight
-    const toggleOn = operatorToggleIntent !== null ? operatorToggleIntent : hasControl;
-    operatorModeToggle.checked = toggleOn;
-    opToggleLabel.className = 'op-toggle-label' + (toggleOn ? ' active' : '');
 
     // Background pulse states
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
@@ -1534,47 +1490,6 @@
     render();
   });
 
-
-
-  // ── Operator mode toggle ──────────────────────────────────────────────────
-  const operatorModeToggle = document.getElementById('operatorModeToggle');
-  const opToggleLabel      = document.getElementById('opToggleLabel');
-
-  // Tracks user intent while waiting for server confirmation so render()
-  // doesn't snap the toggle back during an in-flight request.
-  let operatorToggleIntent = null; // null = follow hasControl
-
-  operatorModeToggle.addEventListener('change', () => {
-    if (operatorModeToggle.checked && !hasControl) {
-      operatorToggleIntent = true;
-      const deviceToken = getDeviceToken();
-      if (deviceToken && waitingId) {
-        // This device has been approved before — instant force-reclaim
-        send({ type: 'trusted_reclaim', key: controlKey, deviceToken, waitingId, sessionId });
-      } else if (waitingId) {
-        // No device token yet — go through the normal approval popup on the desktop
-        const name = waitingNameInput.value.trim() || localStorage.getItem(MY_NAME_KEY) || '';
-        if (name) send({ type: 'set_waiting_name', waitingId, name, sessionId });
-        send({ type: 'request_control', waitingId, sessionId });
-        setRequestState('pending');
-      } else {
-        // No controller at all — just claim it
-        send({ type: 'claim_control', sessionId });
-      }
-    } else if (!operatorModeToggle.checked && hasControl) {
-      operatorToggleIntent = false;
-      // Release control back to the presenter display
-      const waiting = state.waitingList || [];
-      const presenter = waiting.find(w => w.name.includes('Presenter') || w.name.includes('Display'))
-                     || waiting[0];
-      if (presenter) {
-        send({ type: 'pass_control_to', targetId: presenter.id, sessionId });
-      } else {
-        send({ type: 'release_control', sessionId });
-      }
-    }
-  });
-
   // ── WebSocket ──────────────────────────────────────────────────────────────
   let ws, reconnectTimer;
 
@@ -1631,9 +1546,6 @@
           hasControl = true;
           waitingId = null;
           controlAvailable = false;
-          operatorToggleIntent = null; // server confirmed — follow hasControl
-          // Persist the device token issued at approval time
-          if (msg.deviceToken) saveDeviceToken(msg.deviceToken);
           setRequestState('idle');
           ctrlRequestModal.classList.remove('visible');
           render();
@@ -1641,7 +1553,6 @@
         } else if (msg.type === 'control_denied') {
           hasControl = false;
           waitingId = msg.waitingId;
-          operatorToggleIntent = null; // server confirmed — follow hasControl
           setRequestState('idle');
           const myName = localStorage.getItem(MY_NAME_KEY) || '';
           waitingNameInput.value = myName;
@@ -1661,7 +1572,6 @@
           setRequestState('pending');
 
         } else if (msg.type === 'request_denied') {
-          operatorToggleIntent = null; // snap toggle back — request was denied
           setRequestState('denied');
 
         } else if (msg.type === 'request_cancelled') {
