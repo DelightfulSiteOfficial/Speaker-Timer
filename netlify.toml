@@ -1,3 +1,11 @@
+[build]
+  publish = "frontend"
+
+[[redirects]]
+  from = "/event/*"
+  to = "/event/index.html"
+  status = 200
+
 [[redirects]]
   from = "/hub/*"
   to = "/hub/index.html"
