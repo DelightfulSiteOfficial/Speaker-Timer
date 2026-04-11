@@ -189,47 +189,90 @@
     color: #2a2a2a;
   }
 
-  /* ── Recent Sessions ── */
-  .recent-section {
-    width: 100%;
-    max-width: 680px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  /* ── "..." menu button ── */
+  .menu-wrap {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 200;
   }
 
-  .recent-heading {
+  .btn-more {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 34px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 16px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1;
+    padding-bottom: 3px;
+  }
+  .btn-more:hover, .btn-more.open { border-color: #333; color: var(--text); }
+
+  /* ── Dropdown panel ── */
+  .overflow-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid #262626;
+    border-radius: 16px;
+    padding: 16px;
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-6px);
+    transition: opacity 0.15s, transform 0.15s;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+  }
+  .overflow-menu.open {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+  }
+
+  .menu-section-label {
     font-family: 'DM Mono', monospace;
-    font-size: 10px;
+    font-size: 9px;
     letter-spacing: 0.25em;
     text-transform: uppercase;
     color: var(--muted);
+    margin-bottom: 6px;
   }
 
+  /* Recent sessions inside menu */
   .recent-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
   }
 
   .recent-item {
     display: flex;
     align-items: center;
     gap: 10px;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    background: #161616;
+    border: 1px solid #1e1e1e;
     border-radius: 10px;
-    padding: 10px 14px;
+    padding: 9px 12px;
   }
 
-  .recent-icon {
-    font-size: 14px;
-    flex-shrink: 0;
-  }
+  .recent-icon { font-size: 13px; flex-shrink: 0; }
 
   .recent-id {
     font-family: 'DM Mono', monospace;
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text);
     flex: 1;
     letter-spacing: 0.08em;
@@ -237,7 +280,7 @@
 
   .recent-time {
     font-family: 'DM Mono', monospace;
-    font-size: 10px;
+    font-size: 9px;
     color: var(--muted);
     flex-shrink: 0;
   }
@@ -245,7 +288,7 @@
   .recent-resume {
     flex-shrink: 0;
     font-family: 'DM Mono', monospace;
-    font-size: 10px;
+    font-size: 9px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--accent);
@@ -253,92 +296,83 @@
     background: rgba(232,255,71,0.07);
     border: 1px solid rgba(232,255,71,0.2);
     border-radius: 6px;
-    padding: 4px 10px;
+    padding: 3px 8px;
     transition: background 0.15s;
   }
-
   .recent-resume:hover { background: rgba(232,255,71,0.14); }
 
-  /* ── Join by ID ── */
-  .join-row {
-    display: flex;
-    gap: 8px;
-    width: 100%;
-    max-width: 680px;
-  }
-
-  .join-label {
+  .menu-empty {
     font-family: 'DM Mono', monospace;
     font-size: 10px;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 8px;
+    text-align: center;
+    padding: 8px 0;
   }
 
-  .join-section {
-    width: 100%;
-    max-width: 680px;
+  .menu-divider {
+    height: 1px;
+    background: #1e1e1e;
+  }
+
+  /* Join by ID inside menu */
+  .join-row {
     display: flex;
-    flex-direction: column;
     gap: 8px;
   }
 
   .join-input {
     flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    background: #161616;
+    border: 1px solid #1e1e1e;
     border-radius: 10px;
     color: var(--text);
     font-family: 'DM Mono', monospace;
-    font-size: 14px;
+    font-size: 13px;
     letter-spacing: 0.1em;
-    padding: 10px 14px;
+    padding: 9px 12px;
     outline: none;
     text-transform: uppercase;
     transition: border-color 0.2s;
   }
-
-  .join-input::placeholder { color: var(--muted); text-transform: none; }
+  .join-input::placeholder { color: var(--muted); text-transform: none; font-size: 11px; }
   .join-input:focus { border-color: #333; }
 
   .join-btn {
     flex-shrink: 0;
     font-family: 'DM Mono', monospace;
     font-size: 10px;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    background: #161616;
+    border: 1px solid #1e1e1e;
     border-radius: 10px;
     color: var(--text);
-    padding: 10px 18px;
+    padding: 9px 16px;
     cursor: pointer;
     transition: border-color 0.2s, color 0.2s;
   }
-
   .join-btn:hover { border-color: #333; color: var(--accent); }
 
   .join-links {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
+    margin-top: 4px;
   }
 
   .join-link {
     font-family: 'DM Mono', monospace;
-    font-size: 10px;
+    font-size: 9px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--muted);
     text-decoration: none;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    background: #161616;
+    border: 1px solid #1e1e1e;
     border-radius: 6px;
-    padding: 5px 12px;
+    padding: 4px 10px;
     transition: color 0.15s, border-color 0.15s;
   }
-
   .join-link:hover { color: var(--text); border-color: #333; }
 </style>
 </head>
@@ -373,23 +407,35 @@
 
 </div>
 
-<!-- Recent Sessions -->
-<div class="recent-section" id="recentSection" style="display:none">
-  <div class="recent-heading">Recent Sessions</div>
-  <div class="recent-list" id="recentList"></div>
-</div>
-
-<!-- Join by ID -->
-<div class="join-section">
-  <div class="join-label">Join by Session ID</div>
-  <div class="join-row">
-    <input class="join-input" id="joinInput" type="text" maxlength="12" placeholder="e.g. AB12CD" autocomplete="off" spellcheck="false">
-    <button class="join-btn" id="joinBtn">Join</button>
-  </div>
-  <div class="join-links" id="joinLinks" style="display:none"></div>
-</div>
-
 <div class="footer">Speaker Timer &nbsp;·&nbsp; Built for AV &amp; event production</div>
+
+<!-- "..." menu -->
+<div class="menu-wrap" id="menuWrap">
+  <button class="btn-more" id="moreBtn">···</button>
+  <div class="overflow-menu" id="overflowMenu">
+
+    <!-- Recent Sessions -->
+    <div>
+      <div class="menu-section-label">Recent Sessions</div>
+      <div class="recent-list" id="recentList">
+        <div class="menu-empty" id="recentEmpty">No recent sessions</div>
+      </div>
+    </div>
+
+    <div class="menu-divider"></div>
+
+    <!-- Join by ID -->
+    <div>
+      <div class="menu-section-label">Join by Session ID</div>
+      <div class="join-row">
+        <input class="join-input" id="joinInput" type="text" maxlength="12" placeholder="e.g. AB12CD" autocomplete="off" spellcheck="false">
+        <button class="join-btn" id="joinBtn">Join</button>
+      </div>
+      <div class="join-links" id="joinLinks" style="display:none"></div>
+    </div>
+
+  </div>
+</div>
 
 <script>
   // ── localStorage session helpers ──────────────────────────────────────────
@@ -422,11 +468,11 @@
   // ── Render recent sessions ────────────────────────────────────────────────
   function renderRecentSessions() {
     const sessions = getRecentSessions().slice(0, 5);
-    const section = document.getElementById('recentSection');
-    const list    = document.getElementById('recentList');
-    if (!sessions.length) { section.style.display = 'none'; return; }
-    section.style.display = '';
-    list.innerHTML = sessions.map(s => {
+    const list     = document.getElementById('recentList');
+    const empty    = document.getElementById('recentEmpty');
+    if (!sessions.length) { empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    const items = sessions.map(s => {
       const icon = s.type === 'event' ? '📋' : '⚡';
       const href = s.type === 'event' ? `/event/?session=${s.id}` : `/display/?session=${s.id}`;
       return `<div class="recent-item">
@@ -436,6 +482,7 @@
         <a class="recent-resume" href="${href}">Resume</a>
       </div>`;
     }).join('');
+    list.innerHTML = items + `<div class="menu-empty" id="recentEmpty" style="display:none"></div>`;
   }
 
   // ── Join by ID ────────────────────────────────────────────────────────────
@@ -463,6 +510,23 @@
       <a class="join-link" href="${origin}/view/?session=${id}">👁 View</a>
     `;
     joinLinks.style.display = 'flex';
+  });
+
+  // ── "..." menu toggle ─────────────────────────────────────────────────────
+  const moreBtn      = document.getElementById('moreBtn');
+  const overflowMenu = document.getElementById('overflowMenu');
+
+  moreBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = overflowMenu.classList.toggle('open');
+    moreBtn.classList.toggle('open', open);
+  });
+
+  document.addEventListener('click', e => {
+    if (!document.getElementById('menuWrap').contains(e.target)) {
+      overflowMenu.classList.remove('open');
+      moreBtn.classList.remove('open');
+    }
   });
 
   // ── Card clicks ───────────────────────────────────────────────────────────
