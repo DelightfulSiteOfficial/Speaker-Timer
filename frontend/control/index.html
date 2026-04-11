@@ -1014,11 +1014,11 @@
   // ── localStorage session helpers ──────────────────────────────────────────
   const SESSION_STORE_KEY = 'speakerTimerSessions';
 
-  function saveSession(id, type) {
+  function saveSession(id, type, key) {
     try {
       const sessions = getRecentSessions();
       const idx = sessions.findIndex(s => s.id === id);
-      const entry = { id, type, lastUsed: Date.now() };
+      const entry = { id, type, lastUsed: Date.now(), ...(key ? { key } : {}) };
       if (idx >= 0) sessions[idx] = entry;
       else sessions.unshift(entry);
       localStorage.setItem(SESSION_STORE_KEY, JSON.stringify(sessions.slice(0, 10)));
@@ -1041,7 +1041,7 @@
   const params = new URLSearchParams(window.location.search);
   const sessionId  = params.get('session') || 'NOSESSION';
   const controlKey = params.get('key') || '';
-  saveSession(sessionId, 'quick');
+  saveSession(sessionId, 'control', controlKey);
   const MY_NAME_KEY      = 'speakerTimerMyName';
   const NAME_PROMPTED_KEY = 'speakerTimerNamePromptSeen';
 
