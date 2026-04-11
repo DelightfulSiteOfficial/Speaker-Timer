@@ -45,6 +45,8 @@ function createSession(id) {
     waitingControllers: new Map(), // waitingId → { ws, name }
     everStarted: false,           // internal flag — tracks if current timer was ever started
     coHostWs: null,
+    controlKey: Math.random().toString(36).slice(2,8).toUpperCase() + Math.random().toString(36).slice(2,8).toUpperCase(),
+    keyVerified: false,
   };
 }
 
@@ -435,8 +437,21 @@ wss.on('connection', (ws, req) => {
   // Send current state immediately on join
   sendMsg(ws, { type: 'state', payload: session.state });
 
-  // Grant or deny control
+  // Key validation for control role
+  let effectiveRole = role;
   if (role === 'control') {
+    const providedKey = (query.key || '').toUpperCase().trim();
+    const keyValid = !session.keyVerified || providedKey === session.controlKey;
+    if (!keyValid) {
+      effectiveRole = 'view';
+      sendMsg(ws, { type: 'key_required' });
+    }
+  }
+
+  // Grant or deny control
+  if (effectiveRole === 'control') {
+    session.keyVerified = true;
+    sendMsg(ws, { type: 'session_info', controlKey: session.controlKey });
     if (!session.controller) {
       session.controller = ws;
       session.state.controllerConnected = true;
@@ -449,6 +464,11 @@ wss.on('connection', (ws, req) => {
       sendMsg(ws, { type: 'control_denied', waitingId });
       broadcast(session);
     }
+  }
+
+  // Send controlKey to display clients so they can build the QR URL
+  if (role === 'display') {
+    sendMsg(ws, { type: 'session_info', controlKey: session.controlKey });
   }
 
   console.log(`[${sessionId}] ${role} connected. Clients: ${session.clients.size}`);

@@ -800,11 +800,15 @@
   const sessionIdDisplay = document.getElementById('sessionIdDisplay');
 
   // ── QR Code ────────────────────────────────────────────────────────────────
+  let controlKey = '';
+
   function buildQR() {
-    const controlUrl = `${window.location.origin}/control/?session=${sessionId}`;
+    const url = controlKey
+      ? `${window.location.origin}/control/?session=${sessionId}&key=${controlKey}`
+      : `${window.location.origin}/control/?session=${sessionId}`;
     document.getElementById('qrFrame').innerHTML = '';
     new QRCode(document.getElementById('qrFrame'), {
-      text: controlUrl,
+      text: url,
       width: 132, height: 132,
       colorDark: '#000000', colorLight: '#ffffff',
       correctLevel: QRCode.CorrectLevel.M
@@ -924,6 +928,9 @@
           } else if (!state.message && prevMessage) {
             dismissFlash();
           }
+        } else if (msg.type === 'session_info' && msg.controlKey) {
+          controlKey = msg.controlKey;
+          buildQR();
         }
       } catch {}
     };
