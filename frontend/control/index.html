@@ -789,31 +789,23 @@
     justify-content: flex-end;
   }
 
-  /* ── Presenter pill toggle ── */
-  .presenter-pill {
-    display: none;
+  /* ── Operator mode toggle ── */
+  .operator-toggle {
+    display: flex;
     flex-direction: column;
     align-items: center;
     gap: 5px;
+    padding: 4px 0;
   }
-  .presenter-pill.visible { display: flex; }
-
-  .presenter-pill-word {
+  .op-toggle-label {
     font-family: 'DM Mono', monospace;
     font-size: 8px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
+    transition: color 0.2s;
   }
-
-  .presenter-pill-status {
-    font-family: 'DM Mono', monospace;
-    font-size: 8px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-  }
-  .presenter-pill-status.allowed { color: var(--accent); }
-  .presenter-pill-status.locked  { color: var(--danger); }
+  .op-toggle-label.active { color: var(--accent); }
 
   .pill-toggle {
     position: relative;
@@ -883,7 +875,15 @@
     <div class="time-big" id="timeBig">--:--</div>
     <span class="time-status" id="timeStatus">Stopped</span>
   </div>
-  <div class="timer-row-side"></div>
+  <div class="timer-row-side">
+    <div class="operator-toggle" id="operatorToggleWrap">
+      <span class="op-toggle-label" id="opToggleLabel">Operator</span>
+      <label class="pill-toggle">
+        <input type="checkbox" id="operatorModeToggle">
+        <span class="pill-track"></span>
+      </label>
+    </div>
+  </div>
 </div>
 
 <!-- ── Room name modal ── -->
@@ -1210,6 +1210,10 @@
       );
     });
 
+    // Operator mode toggle — reflects who has control
+    operatorModeToggle.checked = hasControl;
+    opToggleLabel.className = 'op-toggle-label' + (hasControl ? ' active' : '');
+
     // Background pulse states
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
     const isWarn1  = timeRemaining <= 60  && timeRemaining > 30 && !overtime;
@@ -1517,6 +1521,34 @@
   });
 
 
+
+  // ── Operator mode toggle ──────────────────────────────────────────────────
+  const operatorModeToggle = document.getElementById('operatorModeToggle');
+  const opToggleLabel      = document.getElementById('opToggleLabel');
+
+  operatorModeToggle.addEventListener('change', () => {
+    if (operatorModeToggle.checked && !hasControl) {
+      // User wants operator control — force-reclaim from presenter
+      if (waitingId) {
+        send({ type: 'trusted_reclaim', key: controlKey, waitingId, sessionId });
+      } else {
+        // No current controller — just claim it
+        send({ type: 'claim_control', sessionId });
+      }
+    } else if (!operatorModeToggle.checked && hasControl) {
+      // User is releasing control back to the presenter display
+      const waiting = state.waitingList || [];
+      // Find the presenter display in the waiting list (named 'Presenter Display' or 'Presenter')
+      const presenter = waiting.find(w => w.name.includes('Presenter') || w.name.includes('Display'))
+                     || waiting[0];
+      if (presenter) {
+        send({ type: 'pass_control_to', targetId: presenter.id, sessionId });
+      } else {
+        // Nobody waiting — release and let display auto-reclaim via control_available
+        send({ type: 'release_control', sessionId });
+      }
+    }
+  });
 
   // ── WebSocket ──────────────────────────────────────────────────────────────
   let ws, reconnectTimer;
