@@ -48,39 +48,6 @@
     width: 100%;
   }
 
-  /* ── Live/Standby label ── */
-  .label {
-    font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    transition: opacity 0.4s;
-  }
-
-  .label .dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--muted);
-    transition: background 0.4s;
-    flex-shrink: 0;
-  }
-
-  .label .dot.live {
-    background: var(--accent);
-    box-shadow: 0 0 8px var(--accent);
-    animation: dotPulse 2s ease-in-out infinite;
-  }
-
-  @keyframes dotPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.35; }
-  }
-
   /* ── Timer numeral ── */
   .time-display {
     font-family: 'Bebas Neue', sans-serif;
@@ -130,33 +97,6 @@
 
   .speaker-name.has-name { color: rgba(240, 237, 232, 0.6); }
 
-  /* ── Status row (pill + overtime + run counter) ── */
-  .status-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-top: 4px;
-    transition: opacity 0.4s;
-  }
-
-  .status-pill {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 14px;
-    border: 1px solid var(--border);
-    border-radius: 100px;
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--muted);
-    transition: all 0.3s;
-  }
-
-  .status-pill.running { border-color: var(--accent); color: var(--accent); }
-  .status-pill.paused  { border-color: var(--warn);   color: var(--warn);   }
-
   .overtime-badge {
     display: none;
     padding: 5px 14px;
@@ -175,24 +115,6 @@
 
   .overtime-badge.visible { display: block; }
 
-  .run-counter {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--muted);
-    opacity: 0;
-    transition: opacity 0.4s;
-  }
-
-  .run-counter.visible { opacity: 1; }
-
-  /* ── Info hidden state ── */
-  body.hide-info .label,
-  body.hide-info .status-row {
-    opacity: 0;
-    pointer-events: none;
-  }
 
   /* ── QR panel — fixed bottom-right corner ── */
   .qr-panel {
@@ -639,11 +561,6 @@
 
 <!-- Timer -->
 <div class="timer-block">
-  <div class="label">
-    <span class="dot" id="liveDot"></span>
-    <span id="labelText">Waiting for session</span>
-  </div>
-
   <div class="time-display" id="timeDisplay">--:--</div>
 
   <div class="progress-bar">
@@ -652,11 +569,7 @@
 
   <div class="speaker-name" id="speakerName"></div>
 
-  <div class="status-row">
-    <div class="status-pill" id="statusPill">Stopped</div>
-    <div class="overtime-badge" id="overtimeBadge">Overtime</div>
-    <div class="run-counter" id="runCounter"></div>
-  </div>
+  <div class="overtime-badge" id="overtimeBadge">Overtime</div>
 </div>
 
 <!-- Hold-to-set duration overlay -->
@@ -683,7 +596,6 @@
   </div>
   <div class="toolbar">
     <button class="toolbar-btn" id="pipBtn">Pop Out</button>
-    <button class="toolbar-btn" id="infoToggle">Hide Info</button>
     <button class="toolbar-btn" id="qrToggle">Hide QR</button>
   </div>
 </div>
@@ -791,11 +703,7 @@
   const timeDisplay      = document.getElementById('timeDisplay');
   const progressFill     = document.getElementById('progressFill');
   const speakerName      = document.getElementById('speakerName');
-  const runCounter       = document.getElementById('runCounter');
-  const statusPill       = document.getElementById('statusPill');
   const overtimeBadge    = document.getElementById('overtimeBadge');
-  const liveDot          = document.getElementById('liveDot');
-  const labelText        = document.getElementById('labelText');
   const overlay          = document.getElementById('overlay');
   const sessionIdDisplay = document.getElementById('sessionIdDisplay');
 
@@ -847,15 +755,7 @@
     speakerName.textContent = roomName || '';
     speakerName.className = 'speaker-name' + (roomName ? ' has-name' : '');
 
-    runCounter.textContent = `Timer ${runCount + 1}`;
-    runCounter.className = 'run-counter' + ((runCount > 0 || running) ? ' visible' : '');
-
-    statusPill.textContent = running ? 'Running' : 'Paused';
-    statusPill.className = 'status-pill' + (running ? ' running' : ' paused');
-
     overtimeBadge.className = 'overtime-badge' + (overtime ? ' visible' : '');
-    liveDot.className = 'dot' + (running ? ' live' : '');
-    labelText.textContent = running ? 'Live' : 'Standby';
 
     // Keep presenter panel in sync
     if (presenterStart) {
@@ -953,28 +853,15 @@
   }
 
   // ── Toolbar toggles ────────────────────────────────────────────────────────
-  const qrPanel    = document.getElementById('qrPanel');
-  const qrToggle   = document.getElementById('qrToggle');
-  const infoToggle = document.getElementById('infoToggle');
-
-  let qrVisible   = true;
-  let infoVisible = false;
-  document.body.classList.add('hide-info');
-  infoToggle.textContent = 'Show Info';
-  infoToggle.classList.add('active');
+  const qrPanel  = document.getElementById('qrPanel');
+  const qrToggle = document.getElementById('qrToggle');
+  let qrVisible  = true;
 
   qrToggle.addEventListener('click', () => {
     qrVisible = !qrVisible;
     qrPanel.classList.toggle('hidden', !qrVisible);
     qrToggle.textContent = qrVisible ? 'Hide QR' : 'Show QR';
     qrToggle.classList.toggle('active', !qrVisible);
-  });
-
-  infoToggle.addEventListener('click', () => {
-    infoVisible = !infoVisible;
-    document.body.classList.toggle('hide-info', !infoVisible);
-    infoToggle.textContent = infoVisible ? 'Hide Info' : 'Show Info';
-    infoToggle.classList.toggle('active', !infoVisible);
   });
 
   // ── Mode switching (Presenter / Admin) ───────────────────────────────────
