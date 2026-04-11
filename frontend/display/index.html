@@ -184,38 +184,6 @@
     pointer-events: none;
   }
 
-  /* ── Mode tabs ── */
-  .mode-tabs {
-    display: flex;
-    background: rgba(14,14,14,0.9);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 4px;
-    gap: 2px;
-    pointer-events: auto;
-    backdrop-filter: blur(12px);
-  }
-
-  .mode-tab {
-    background: none;
-    border: none;
-    border-radius: 8px;
-    padding: 9px 22px;
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-
-  .mode-tab:hover { color: var(--text); }
-  .mode-tab.tab-active-presenter { background: #22c55e; color: #000; font-weight: 500; }
-  .mode-tab.tab-active-admin     { background: var(--surface); color: var(--text); border: 1px solid #333; }
-  .mode-tab.tab-locked           { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
-
   /* ── Utility buttons (top-right) ── */
   .toolbar {
     display: flex;
@@ -365,17 +333,50 @@
     flex-direction: column;
     gap: 14px;
     z-index: 60;
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(12px);
-    transition: opacity 0.3s, transform 0.3s;
-  }
-
-  .presenter-panel.visible {
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0);
   }
+
+  /* ctrl-status bar */
+  .ctrl-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .ctrl-status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .ctrl-status-dot.desktop { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+  .ctrl-status-dot.phone   { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .ctrl-status-dot.locked  { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+
+  .ctrl-status-label { color: var(--muted); flex: 1; }
+
+  .ctrl-reclaim-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ctrl-reclaim-btn:hover { border-color: #444; color: var(--text); }
 
   .presenter-row {
     display: flex;
@@ -588,12 +589,9 @@
   <div class="session-id" id="sessionIdDisplay">—</div>
 </div>
 
-<!-- Top bar: mode tabs + utility buttons -->
+<!-- Top bar: utility buttons -->
 <div class="top-bar">
-  <div class="mode-tabs">
-    <button class="mode-tab tab-active-presenter" id="tabPresenter">Presenter Mode</button>
-    <button class="mode-tab" id="tabAdmin">Admin Mode</button>
-  </div>
+  <div></div>
   <div class="toolbar">
     <button class="toolbar-btn" id="pipBtn">Pop Out</button>
     <button class="toolbar-btn" id="qrToggle">Hide QR</button>
@@ -602,6 +600,11 @@
 
 <!-- Presenter controls panel -->
 <div class="presenter-panel" id="presenterPanel">
+  <div class="ctrl-status" id="ctrlStatus">
+    <span class="ctrl-status-dot desktop" id="ctrlStatusDot"></span>
+    <span class="ctrl-status-label" id="ctrlStatusLabel">Desktop in control</span>
+    <button class="ctrl-reclaim-btn" id="ctrlReclaimBtn" style="display:none">Request Control Back</button>
+  </div>
   <div class="presenter-row">
     <div class="presenter-slider-block">
       <div class="presenter-dur-display">
@@ -768,11 +771,8 @@
       presenterDurVal.textContent  = mins;
     }
 
-    // Enforce presenter lock — boot off presenter mode if admin has locked it
-    const locked = !!state.presenterLocked;
-    tabPresenter.classList.toggle('tab-locked', locked);
-    tabPresenter.textContent = locked ? 'Presenter Mode 🔒' : 'Presenter Mode';
-    if (locked && presenterMode) setMode('admin');
+    // Update control status (handles presenterLocked state)
+    updateControlStatus();
 
     // Background pulse states
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
@@ -864,15 +864,14 @@
     qrToggle.classList.toggle('active', !qrVisible);
   });
 
-  // ── Mode switching (Presenter / Admin) ───────────────────────────────────
-  const tabPresenter  = document.getElementById('tabPresenter');
-  const tabAdmin      = document.getElementById('tabAdmin');
+  // ── Presenter panel ───────────────────────────────────────────────────────
   const presenterPanel = document.getElementById('presenterPanel');
   const presenterStart = document.getElementById('presenterStart');
   const presenterReset = document.getElementById('presenterReset');
 
-  let presenterMode = true;
-  let ctrlWs        = null;
+  let ctrlWs           = null;
+  let desktopHasControl = true;
+  let ctrlWaitingId     = null;
 
   function sendCtrl(msg) {
     if (ctrlWs?.readyState === WebSocket.OPEN) {
@@ -880,51 +879,78 @@
     }
   }
 
+  function updateControlStatus() {
+    const dot   = document.getElementById('ctrlStatusDot');
+    const label = document.getElementById('ctrlStatusLabel');
+    const btn   = document.getElementById('ctrlReclaimBtn');
+    if (!dot) return;
+
+    if (state.presenterLocked) {
+      dot.className = 'ctrl-status-dot locked';
+      label.textContent = 'Locked by operator';
+      btn.style.display = 'none';
+    } else if (desktopHasControl) {
+      dot.className = 'ctrl-status-dot desktop';
+      label.textContent = 'Desktop in control';
+      btn.style.display = 'none';
+    } else {
+      dot.className = 'ctrl-status-dot phone';
+      label.textContent = 'Phone in control';
+      btn.style.display = '';
+    }
+
+    // Disable/enable controls based on who has control
+    const disabled = !desktopHasControl || !!state.presenterLocked;
+    presenterSlider.disabled = disabled;
+    presenterStart.disabled  = disabled;
+    presenterReset.disabled  = disabled;
+    presenterSlider.style.opacity = disabled ? '0.35' : '';
+    presenterStart.style.opacity  = disabled ? '0.35' : '';
+    presenterReset.style.opacity  = disabled ? '0.35' : '';
+  }
+
   function openCtrlWs() {
     if (ctrlWs?.readyState === WebSocket.OPEN) return;
     const keyParam = controlKey ? `&key=${controlKey}` : '';
     ctrlWs = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control${keyParam}`);
     ctrlWs.onopen  = () => {};
+    ctrlWs.onmessage = e => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'control_granted') {
+          desktopHasControl = true;
+          ctrlWaitingId = null;
+          updateControlStatus();
+        } else if (msg.type === 'control_denied') {
+          desktopHasControl = false;
+          ctrlWaitingId = msg.waitingId || null;
+          updateControlStatus();
+        } else if (msg.type === 'control_available') {
+          // Phone disconnected — reclaim automatically
+          if (ctrlWaitingId) {
+            ctrlWs.send(JSON.stringify({ type: 'claim_control', sessionId }));
+          }
+        }
+      } catch {}
+    };
     ctrlWs.onclose = () => {
       ctrlWs = null;
-      // Auto-reconnect if still in presenter mode
-      if (presenterMode) setTimeout(openCtrlWs, 2000);
+      // Always auto-reconnect
+      setTimeout(openCtrlWs, 2000);
     };
     ctrlWs.onerror = () => ctrlWs?.close();
   }
 
-  function closeCtrlWs() {
-    if (ctrlWs) { ctrlWs.onclose = null; ctrlWs.close(); ctrlWs = null; }
-  }
+  document.getElementById('ctrlReclaimBtn').addEventListener('click', () => {
+    if (ctrlWaitingId && ctrlWs?.readyState === WebSocket.OPEN) {
+      ctrlWs.send(JSON.stringify({ type: 'request_control', waitingId: ctrlWaitingId, sessionId }));
+    }
+  });
 
   // Reconnect ctrlWs immediately when tab becomes visible again
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && presenterMode) openCtrlWs();
+    if (!document.hidden) openCtrlWs();
   });
-
-  function setMode(mode) {
-    presenterMode = (mode === 'presenter');
-
-    // Tab styles
-    tabPresenter.className = 'mode-tab' + (presenterMode ? ' tab-active-presenter' : '');
-    tabAdmin.className     = 'mode-tab' + (!presenterMode ? ' tab-active-admin' : '');
-    document.body.classList.toggle('presenter-mode', presenterMode);
-
-    // Show/hide presenter panel
-    presenterPanel.classList.toggle('visible', presenterMode);
-
-    // Show/hide QR (admin shows it, presenter hides it)
-    qrVisible = !presenterMode;
-    qrPanel.classList.toggle('hidden', !qrVisible);
-    qrToggle.textContent = qrVisible ? 'Hide QR' : 'Show QR';
-    qrToggle.classList.toggle('active', !qrVisible);
-
-    // Control WS
-    if (presenterMode) openCtrlWs(); else closeCtrlWs();
-  }
-
-  tabPresenter.addEventListener('click', () => setMode('presenter'));
-  tabAdmin.addEventListener('click',     () => setMode('admin'));
 
   // Duration slider
   const presenterSlider  = document.getElementById('presenterSlider');
@@ -949,7 +975,7 @@
   let   timerHoldTimer   = null;
 
   function showTimerInput() {
-    if (!presenterMode || state.presenterLocked) return;
+    if (!desktopHasControl || state.presenterLocked) return;
     timerHoldField.value = Math.max(1, Math.round(state.totalTime / 60));
     timerHoldOverlay.classList.add('visible');
     timerHoldField.focus();
@@ -1208,7 +1234,7 @@
         if (e.key === 'Enter') {
           const mins = parseInt(pipMinInput.value);
           if (mins >= 1 && mins <= 300) {
-            if (!presenterMode) { if (state.presenterLocked) return; setMode('presenter'); }
+            if (state.presenterLocked) return;
             sendCtrl({ type: 'set_duration', seconds: mins * 60 });
           }
           hidePipInput();
@@ -1238,7 +1264,7 @@
         if (pipClickTimer) return;
         pipClickTimer = setTimeout(() => {
           pipClickTimer = null;
-          if (!presenterMode) { if (state.presenterLocked) return; setMode('presenter'); }
+          if (state.presenterLocked) return;
           sendCtrl({ type: state.running ? 'pause' : 'start' });
         }, 220);
       });
@@ -1247,7 +1273,7 @@
       pipTimerEl.addEventListener('dblclick', () => {
         clearTimeout(pipClickTimer);
         pipClickTimer = null;
-        if (!presenterMode) { if (state.presenterLocked) return; setMode('presenter'); }
+        if (state.presenterLocked) return;
         sendCtrl({ type: 'reset' });
       });
 
@@ -1285,8 +1311,9 @@
   });
 
 
-  setMode('presenter');
+  document.body.classList.add('presenter-mode');
   connect();
+  openCtrlWs();
 
   setInterval(() => { render(); updatePiP(); }, 500);
 </script>
