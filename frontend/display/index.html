@@ -981,7 +981,8 @@
   });
 
   function sendCtrl(msg) {
-    if (ctrlWs?.readyState === WebSocket.OPEN) {
+    // Only send if we actually have control confirmed by the server
+    if (desktopHasControl && ctrlWs?.readyState === WebSocket.OPEN) {
       ctrlWs.send(JSON.stringify({ ...msg, sessionId }));
     }
   }
@@ -1017,23 +1018,30 @@
   }
 
   function reclaimControl() {
-    // Close the current ctrlWs and open a fresh one.
-    // A new connection to a session with no controller gets control_granted instantly.
+    // Disown the current ctrlWs first so its onclose won't trigger a retry,
+    // then close it and schedule a fresh connection.
     if (ctrlWs) {
-      ctrlWs.onclose = null; // prevent the 2s retry from firing
-      ctrlWs.close();
-      ctrlWs = null;
+      const old = ctrlWs;
+      ctrlWs = null;        // disown before closing
+      old.onclose = null;   // belt-and-suspenders: suppress 2s retry
+      old.close();
     }
     ctrlWaitingId = null;
     setTimeout(openCtrlWs, 150);
   }
 
   function openCtrlWs() {
-    if (ctrlWs?.readyState === WebSocket.OPEN) return;
+    // Guard against CONNECTING *and* OPEN — creating a second WS while the
+    // first is still connecting causes a race where the stale one's
+    // control_granted/control_denied messages corrupt desktopHasControl.
+    if (ctrlWs) return;
     const keyParam = controlKey ? `&key=${controlKey}` : '';
-    ctrlWs = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control${keyParam}`);
-    ctrlWs.onopen  = () => {};
-    ctrlWs.onmessage = e => {
+    const localWs = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control${keyParam}`);
+    ctrlWs = localWs;
+    localWs.onopen = () => {};
+    localWs.onmessage = e => {
+      // Ignore messages from a stale connection that was replaced
+      if (localWs !== ctrlWs) return;
       try {
         const msg = JSON.parse(e.data);
         if (msg.type === 'control_granted') {
@@ -1060,12 +1068,14 @@
         }
       } catch {}
     };
-    ctrlWs.onclose = () => {
-      ctrlWs = null;
-      // Always auto-reconnect
-      setTimeout(openCtrlWs, 2000);
+    localWs.onclose = () => {
+      // Only trigger reconnect if this is still the active connection
+      if (localWs === ctrlWs) {
+        ctrlWs = null;
+        setTimeout(openCtrlWs, 2000);
+      }
     };
-    ctrlWs.onerror = () => ctrlWs?.close();
+    localWs.onerror = () => localWs.close();
   }
 
   document.getElementById('ctrlReclaimBtn').addEventListener('click', () => {
