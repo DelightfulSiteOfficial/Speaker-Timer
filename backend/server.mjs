@@ -444,6 +444,8 @@ wss.on('connection', (ws, req) => {
     const keyValid = !session.keyVerified || providedKey === session.controlKey;
     if (!keyValid) {
       effectiveRole = 'view';
+      session.keyDenied = session.keyDenied || new Set();
+      session.keyDenied.add(ws);
       sendMsg(ws, { type: 'key_required' });
     }
   }
@@ -474,6 +476,9 @@ wss.on('connection', (ws, req) => {
   console.log(`[${sessionId}] ${role} connected. Clients: ${session.clients.size}`);
 
   ws.on('message', (raw) => {
+    // Silently ignore all messages from key-denied connections
+    if (session.keyDenied && session.keyDenied.has(ws)) return;
+
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
 
@@ -670,6 +675,7 @@ wss.on('connection', (ws, req) => {
 
   ws.on('close', () => {
     session.clients.delete(ws);
+    if (session.keyDenied) session.keyDenied.delete(ws);
     console.log(`[${sessionId}] ${role} disconnected. Clients: ${session.clients.size}`);
 
     // Release control if the controller disconnected
