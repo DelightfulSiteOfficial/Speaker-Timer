@@ -254,95 +254,7 @@
   .mobile-tab.active { color: var(--accent); }
   .mobile-tab-icon { font-size: 19px; line-height: 1; }
 
-  /* ══════════════════════════════════════════
-     TABLET  ≤ 900px — stack vertically
-  ══════════════════════════════════════════ */
-  @media (max-width: 900px) {
-    html, body { overflow: hidden; }
-
-    .main {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto 1fr;
-      overflow: hidden;
-    }
-
-    /* Put timer on top when stacked */
-    .timer-panel       { order: -1; }
-    .col-resize-handle { display: none; }
-
-    .timer-panel {
-      border-bottom: 1px solid var(--border);
-      padding: 12px 20px 10px;
-      gap: 4px;
-    }
-
-    .time-display { font-size: clamp(52px, 14vw, 96px); }
-    .progress-bar { margin: 6px 0 8px; }
-    .btn-start    { height: 40px; font-size: 22px; }
-    .btn-secondary { height: 34px; font-size: 15px; }
-    .now-label    { margin-bottom: 2px; }
-    .qr-corner    { display: none; }
-  }
-
-  /* ══════════════════════════════════════════
-     PHONE  ≤ 640px — tab-based layout
-  ══════════════════════════════════════════ */
-  @media (max-width: 640px) {
-    .mobile-tab-bar { display: flex; }
-
-    .main {
-      position: fixed;
-      top: 56px;   /* header height */
-      left: 0; right: 0;
-      bottom: 58px; /* tab bar height */
-      display: block;
-      overflow: hidden;
-    }
-
-    /* Each panel fills the full tab area; only active one shows */
-    .agenda-panel,
-    .timer-panel {
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-      display: none;
-    }
-    .agenda-panel { flex-direction: column; }
-    .agenda-panel.tab-active  { display: flex; }
-    .timer-panel.tab-active   { display: flex; }
-
-    /* Timer tab — big and touch-friendly */
-    .timer-panel.tab-active {
-      justify-content: center;
-      align-items: center;
-      padding: 24px 20px 20px;
-      border-bottom: none;
-      gap: 8px;
-      order: 0; /* reset order override from tablet */
-    }
-    .time-display { font-size: clamp(80px, 26vw, 160px); }
-    .controls     { width: 100%; max-width: 320px; }
-    .btn-start    { height: 56px; font-size: 28px; border-radius: 14px; }
-    .btn-secondary { height: 46px; font-size: 18px; border-radius: 12px; }
-    .progress-bar { margin: 8px 0 10px; width: 100%; max-width: 320px; }
-    .overtime-badge { margin-bottom: 4px; }
-
-    /* Agenda tab */
-    .agenda-panel-header { padding: 14px 16px 12px; }
-    .agenda-list  { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-    .agenda-item  { padding: 14px 16px; }
-    .item-name    { font-size: 16px; }
-    .item-actions { opacity: 1; } /* always visible on touch */
-    .add-form     { padding: 12px 16px 16px; }
-    .add-form-row { gap: 6px; }
-    .add-name-input { font-size: 16px; } /* prevent iOS zoom */
-    .add-dur-input  { width: 64px; font-size: 18px; }
-
-    /* Toast sits above tab bar on mobile */
-    .toast { bottom: 72px; }
-  }
-
-  /* ── Column resize handle ── */
+  /* ── Column resize handle (desktop only — must come before media queries) ── */
   .col-resize-handle {
     cursor: col-resize;
     display: flex;
@@ -360,6 +272,132 @@
   .col-resize-handle.dragging::after {
     background: #3a3a3a;
     width: 2px;
+  }
+
+  /* ══════════════════════════════════════════
+     TABLET  ≤ 900px — stacked layout
+  ══════════════════════════════════════════ */
+  @media (max-width: 900px) {
+    html, body { overflow: hidden; }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Hide the column drag handle */
+    .col-resize-handle { display: none; }
+
+    /* Timer panel: compact strip at top */
+    .timer-panel {
+      flex-shrink: 0;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px 28px;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    /* Left cluster: label + speaker + time */
+    .now-label    { width: 100%; text-align: center; margin-bottom: 0; }
+    .now-speaker  { width: 100%; text-align: center; }
+    .time-display { font-size: clamp(56px, 12vw, 100px); }
+    .progress-bar { width: 100%; order: 10; margin: 2px 0 0; }
+    .overtime-badge { order: 11; }
+
+    /* Right cluster: controls */
+    .controls {
+      flex-shrink: 0;
+      width: auto;
+      min-width: 160px;
+      gap: 8px;
+    }
+    .btn-start     { height: 42px; font-size: 22px; }
+    .btn-secondary { height: 34px; font-size: 14px; }
+
+    /* QR lives inside timer-panel — always hide on ≤900px */
+    .qr-corner { display: none; }
+
+    /* Agenda panel: fill remaining height */
+    .agenda-panel {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+  }
+
+  /* ══════════════════════════════════════════
+     PHONE  ≤ 640px — tab-based layout
+  ══════════════════════════════════════════ */
+  @media (max-width: 640px) {
+    .mobile-tab-bar { display: flex; }
+
+    /* Main fills the space between header and tab bar */
+    .main {
+      position: fixed;
+      top: 56px;
+      left: 0; right: 0;
+      bottom: 58px;
+      display: block;
+      overflow: hidden;
+    }
+
+    /* Both panels fill the full area; JS toggles which is visible */
+    .agenda-panel,
+    .timer-panel {
+      position: absolute;
+      inset: 0;
+      display: none;
+      overflow: hidden;
+    }
+    .agenda-panel.tab-active { display: flex; flex-direction: column; }
+    .timer-panel.tab-active  { display: flex; }
+
+    /* ── Timer tab ── */
+    .timer-panel.tab-active {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 24px 24px;
+      gap: 10px;
+    }
+    .timer-panel.tab-active .now-label    { width: auto; text-align: center; }
+    .timer-panel.tab-active .now-speaker  { width: auto; font-size: 14px; }
+    .timer-panel.tab-active .time-display { font-size: clamp(88px, 28vw, 160px); }
+    .timer-panel.tab-active .progress-bar {
+      width: 100%; max-width: 340px;
+      order: 0; margin: 0;
+    }
+    .timer-panel.tab-active .overtime-badge { order: 0; }
+    .timer-panel.tab-active .controls {
+      width: 100%; max-width: 340px;
+    }
+    .timer-panel.tab-active .btn-start     { height: 54px; font-size: 26px; border-radius: 14px; }
+    .timer-panel.tab-active .btn-secondary { height: 44px; font-size: 17px; border-radius: 12px; }
+    .timer-panel.tab-active .qr-corner     { display: none; }
+
+    /* ── Agenda tab ── */
+    .agenda-panel-header { padding: 14px 16px 12px; }
+    .agenda-list {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .agenda-item  { padding: 14px 16px; }
+    .item-name    { font-size: 16px; }
+    .item-actions { opacity: 1; }
+    .add-form     { padding: 12px 16px 16px; flex-shrink: 0; }
+    .add-form-row { gap: 6px; }
+    .add-name-input { font-size: 16px; }
+    .add-dur-input  { width: 64px; font-size: 18px; }
+
+    /* Toast above tab bar */
+    .toast { bottom: 72px; }
   }
 
   /* ══════════════════════════════════════════
