@@ -989,6 +989,23 @@
     history.replaceState(null, '', `?session=${sessionId}`);
   }
 
+  // ── Control key (persisted per session) ──────────────────────────────────
+  const CONTROL_KEY_STORE = 'speakerTimerKeys'; // { sessionId: controlKey }
+
+  function getSavedKey(id) {
+    try { return JSON.parse(localStorage.getItem(CONTROL_KEY_STORE) || '{}')[id] || ''; }
+    catch { return ''; }
+  }
+  function saveKey(id, key) {
+    try {
+      const keys = JSON.parse(localStorage.getItem(CONTROL_KEY_STORE) || '{}');
+      keys[id] = key;
+      localStorage.setItem(CONTROL_KEY_STORE, JSON.stringify(keys));
+    } catch {}
+  }
+
+  let controlKey = params.get('key') || getSavedKey(sessionId);
+
   // ── localStorage session helpers ──────────────────────────────────────────
   const SESSION_STORE_KEY = 'speakerTimerSessions';
 
@@ -1301,7 +1318,7 @@
 
   function connect() {
     try {
-      ws = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control`);
+      ws = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control${controlKey ? '&key=' + controlKey : ''}`);
     } catch(e) { scheduleReconnect(); return; }
 
     ws.onopen = () => {
@@ -1329,6 +1346,12 @@
           renderTimer();
         } else if (msg.type === 'control_denied') {
           hasControl = false;
+        } else if (msg.type === 'session_info' && msg.controlKey) {
+          controlKey = msg.controlKey;
+          saveKey(sessionId, controlKey);
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('key', controlKey);
+          history.replaceState(null, '', newUrl.toString());
         }
       } catch {}
     };
@@ -1576,21 +1599,22 @@
   const openDisplayShareBtn = document.getElementById('openDisplayShareBtn');
   const shareBtnEl         = document.getElementById('shareBtn');
 
-  let shareQrBuilt = false;
+  let shareQrKey = null; // tracks which key the QR was built for
 
   function openShareModal() {
     const origin     = window.location.origin;
-    const controlUrl = `${origin}/control/?session=${sessionId}`;
+    const controlUrl = `${origin}/control/?session=${sessionId}${controlKey ? '&key=' + controlKey : ''}`;
     const dispUrl    = `${origin}/display/?session=${sessionId}`;
     shareSessionIdEl.textContent = sessionId;
     shareControlUrlEl.textContent = controlUrl;
     shareDisplayUrlEl.textContent = dispUrl;
-    if (!shareQrBuilt) {
+    if (shareQrKey !== controlKey) {
+      shareQrEl.innerHTML = '';
       new QRCode(shareQrEl, {
         text: controlUrl, width: 128, height: 128,
         colorDark: '#f0ede8', colorLight: '#111111',
       });
-      shareQrBuilt = true;
+      shareQrKey = controlKey;
     }
     openDisplayShareBtn.onclick = () => window.open(dispUrl, '_blank');
     shareModalBackdrop.classList.add('visible');
@@ -1607,7 +1631,7 @@
   });
 
   copyControlBtn.addEventListener('click', () => {
-    const url = `${window.location.origin}/control/?session=${sessionId}`;
+    const url = `${window.location.origin}/control/?session=${sessionId}${controlKey ? '&key=' + controlKey : ''}`;
     navigator.clipboard.writeText(url).then(() => {
       copyControlBtn.textContent = 'Copied!';
       setTimeout(() => { copyControlBtn.textContent = 'Copy'; }, 2000);

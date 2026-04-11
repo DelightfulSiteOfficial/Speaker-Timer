@@ -1039,7 +1039,8 @@
   }
 
   const params = new URLSearchParams(window.location.search);
-  const sessionId = params.get('session') || 'NOSESSION';
+  const sessionId  = params.get('session') || 'NOSESSION';
+  const controlKey = params.get('key') || '';
   saveSession(sessionId, 'quick');
   const MY_NAME_KEY      = 'speakerTimerMyName';
   const NAME_PROMPTED_KEY = 'speakerTimerNamePromptSeen';
@@ -1557,7 +1558,7 @@
   function connect() {
     initialStateReceived = false;
     try {
-      ws = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control`);
+      ws = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control${controlKey ? '&key=' + controlKey : ''}`);
     } catch(e) { scheduleReconnect(); return; }
 
     ws.onopen = () => {
@@ -1640,6 +1641,12 @@
             ctrlRequestModal.classList.remove('visible');
             pendingRequestId = null;
           }
+        } else if (msg.type === 'key_required') {
+          hasControl = false;
+          lockTitle.textContent = 'Access Denied';
+          lockSub.innerHTML = 'Scan the QR code on the display screen<br>to get the correct control link';
+          lockScreen.classList.add('visible');
+          controlPanel.classList.remove('visible');
         }
       } catch {}
     };
