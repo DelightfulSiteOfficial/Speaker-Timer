@@ -742,6 +742,7 @@
   <div class="toolbar">
     <button class="overflow-btn" id="overflowBtn">···</button>
     <div class="overflow-menu" id="overflowMenu">
+      <button class="overflow-item" id="fullscreenToggle">Fullscreen</button>
       <button class="overflow-item" id="pipBtn">Pop Out</button>
       <button class="overflow-item" id="qrToggle">Hide QR</button>
       <button class="overflow-item" id="controlsToggle">Hide Controls</button>
@@ -1047,6 +1048,25 @@
 
   // Double-click the ghost area to bring it back
   qrGhost.addEventListener('dblclick', () => setQrVisible(true));
+
+  // ── Fullscreen toggle ──────────────────────────────────────────────────────
+  const fullscreenToggle = document.getElementById('fullscreenToggle');
+
+  function updateFullscreenLabel() {
+    const inFs = !!document.fullscreenElement;
+    fullscreenToggle.textContent = inFs ? 'Exit Fullscreen' : 'Fullscreen';
+    fullscreenToggle.classList.toggle('active', inFs);
+  }
+
+  fullscreenToggle.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  });
+
+  document.addEventListener('fullscreenchange', updateFullscreenLabel);
 
   // ── Controls toggle ────────────────────────────────────────────────────────
   const controlsToggle = document.getElementById('controlsToggle');
