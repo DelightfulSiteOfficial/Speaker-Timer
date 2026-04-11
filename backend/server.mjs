@@ -454,11 +454,12 @@ wss.on('connection', (ws, req) => {
 
   // Grant or deny control
   if (effectiveRole === 'control') {
-    // Admin force-reclaim: presenter display kicks current operator back to waiting list.
-    // Requires a valid key AND prior approval so only a vetted display can do this.
-    if (query.force === 'true' && session.controller && session.keyVerified && session.state.operatorApproved) {
+    // Admin force-reclaim: presenter display kicks the current operator back to the
+    // waiting list. Requires only the session key — NOT operatorApproved — so the
+    // display can always recover even when a bad actor grabbed control first.
+    if (query.force === 'true' && session.controller) {
       const providedKey = (query.key || '').toUpperCase().trim();
-      if (providedKey === session.controlKey) {
+      if (session.controlKey && providedKey === session.controlKey) {
         const kicked = session.controller;
         const newWaitingId = generateId();
         session.waitingControllers.set(newWaitingId, { ws: kicked, name: 'Operator' });
