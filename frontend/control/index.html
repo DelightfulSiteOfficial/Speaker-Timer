@@ -1210,9 +1210,10 @@
       );
     });
 
-    // Operator mode toggle — reflects who has control
-    operatorModeToggle.checked = hasControl;
-    opToggleLabel.className = 'op-toggle-label' + (hasControl ? ' active' : '');
+    // Operator mode toggle — follow hasControl unless an action is in-flight
+    const toggleOn = operatorToggleIntent !== null ? operatorToggleIntent : hasControl;
+    operatorModeToggle.checked = toggleOn;
+    opToggleLabel.className = 'op-toggle-label' + (toggleOn ? ' active' : '');
 
     // Background pulse states
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
@@ -1526,25 +1527,35 @@
   const operatorModeToggle = document.getElementById('operatorModeToggle');
   const opToggleLabel      = document.getElementById('opToggleLabel');
 
+  // Tracks user intent while waiting for server confirmation so render()
+  // doesn't snap the toggle back during an in-flight request.
+  let operatorToggleIntent = null; // null = follow hasControl
+
   operatorModeToggle.addEventListener('change', () => {
     if (operatorModeToggle.checked && !hasControl) {
-      // User wants operator control — force-reclaim from presenter
-      if (waitingId) {
+      operatorToggleIntent = true;
+      if (state.operatorApproved && waitingId) {
+        // Already approved before — instant force-reclaim, no popup needed
         send({ type: 'trusted_reclaim', key: controlKey, waitingId, sessionId });
+      } else if (waitingId) {
+        // First time — go through the normal approval popup on the desktop
+        const name = waitingNameInput.value.trim() || localStorage.getItem(MY_NAME_KEY) || '';
+        if (name) send({ type: 'set_waiting_name', waitingId, name, sessionId });
+        send({ type: 'request_control', waitingId, sessionId });
+        setRequestState('pending');
       } else {
-        // No current controller — just claim it
+        // No controller at all — just claim it
         send({ type: 'claim_control', sessionId });
       }
     } else if (!operatorModeToggle.checked && hasControl) {
-      // User is releasing control back to the presenter display
+      operatorToggleIntent = false;
+      // Release control back to the presenter display
       const waiting = state.waitingList || [];
-      // Find the presenter display in the waiting list (named 'Presenter Display' or 'Presenter')
       const presenter = waiting.find(w => w.name.includes('Presenter') || w.name.includes('Display'))
                      || waiting[0];
       if (presenter) {
         send({ type: 'pass_control_to', targetId: presenter.id, sessionId });
       } else {
-        // Nobody waiting — release and let display auto-reclaim via control_available
         send({ type: 'release_control', sessionId });
       }
     }
@@ -1606,6 +1617,7 @@
           hasControl = true;
           waitingId = null;
           controlAvailable = false;
+          operatorToggleIntent = null; // server confirmed — follow hasControl
           setRequestState('idle');
           ctrlRequestModal.classList.remove('visible');
           render();
@@ -1613,6 +1625,7 @@
         } else if (msg.type === 'control_denied') {
           hasControl = false;
           waitingId = msg.waitingId;
+          operatorToggleIntent = null; // server confirmed — follow hasControl
           setRequestState('idle');
           const myName = localStorage.getItem(MY_NAME_KEY) || '';
           waitingNameInput.value = myName;
@@ -1632,6 +1645,7 @@
           setRequestState('pending');
 
         } else if (msg.type === 'request_denied') {
+          operatorToggleIntent = null; // snap toggle back — request was denied
           setRequestState('denied');
 
         } else if (msg.type === 'request_cancelled') {

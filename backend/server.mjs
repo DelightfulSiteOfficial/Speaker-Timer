@@ -38,6 +38,7 @@ function createSession(id) {
       coHost: false,
       coHostName: '',
       presenterLocked: false,  // true = desktop presenter controls disabled
+      operatorApproved: false, // true after first operator is approved — unlocks trusted_reclaim
     },
     clients: new Set(),
     tickInterval: null,
@@ -453,8 +454,8 @@ wss.on('connection', (ws, req) => {
   // Grant or deny control
   if (effectiveRole === 'control') {
     // Admin force-reclaim: presenter display kicks current operator back to waiting list.
-    // Requires a valid key so only the display page (which holds the key) can do this.
-    if (query.force === 'true' && session.controller && session.keyVerified) {
+    // Requires a valid key AND prior approval so only a vetted display can do this.
+    if (query.force === 'true' && session.controller && session.keyVerified && session.state.operatorApproved) {
       const providedKey = (query.key || '').toUpperCase().trim();
       if (providedKey === session.controlKey) {
         const kicked = session.controller;
@@ -547,8 +548,10 @@ wss.on('connection', (ws, req) => {
     }
 
     if (msg.type === 'trusted_reclaim') {
-      // Key-authenticated force-reclaim from the waiting list.
-      // Lets the operator (phone) take control from the presenter without approval.
+      // Key-authenticated force-reclaim — only works after a first manual approval.
+      // This prevents a bad actor with a stolen QR from instantly hijacking control;
+      // they still have to go through the normal approval popup once first.
+      if (!session.state.operatorApproved) return;
       if (!session.keyVerified || !session.controlKey) return;
       const providedKey = (msg.key || '').toUpperCase().trim();
       if (providedKey !== session.controlKey) return;
@@ -666,11 +669,12 @@ wss.on('connection', (ws, req) => {
         if (!target) break;
         const prevWs = ws;
         const newWaitingId = generateId();
-        session.waitingControllers.set(newWaitingId, { ws: prevWs, name: '' });
+        session.waitingControllers.set(newWaitingId, { ws: prevWs, name: 'Presenter Display' });
         sendMsg(prevWs, { type: 'control_denied', waitingId: newWaitingId });
         session.waitingControllers.delete(msg.targetId);
         session.controller = target.ws;
         session.state.controllerConnected = true;
+        session.state.operatorApproved = true; // first approval unlocks trusted_reclaim
         syncWaitingList(session);
         sendMsg(target.ws, { type: 'control_granted' });
         broadcast(session);
