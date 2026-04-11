@@ -438,6 +438,12 @@
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+  .presenter-panel.hidden {
+    transform: translateY(110%);
+    opacity: 0;
+    pointer-events: none;
   }
 
   /* ctrl-status bar */
@@ -717,6 +723,7 @@
     <div class="overflow-menu" id="overflowMenu">
       <button class="overflow-item" id="pipBtn">Pop Out</button>
       <button class="overflow-item" id="qrToggle">Hide QR</button>
+      <button class="overflow-item" id="controlsToggle">Hide Controls</button>
     </div>
   </div>
 </div>
@@ -1008,6 +1015,17 @@
     qrPanel.classList.toggle('hidden', !qrVisible);
     qrToggle.textContent = qrVisible ? 'Hide QR' : 'Show QR';
     qrToggle.classList.toggle('active', !qrVisible);
+  });
+
+  // ── Controls toggle ────────────────────────────────────────────────────────
+  const controlsToggle = document.getElementById('controlsToggle');
+  let controlsVisible  = true;
+
+  controlsToggle.addEventListener('click', () => {
+    controlsVisible = !controlsVisible;
+    presenterPanel.classList.toggle('hidden', !controlsVisible);
+    controlsToggle.textContent = controlsVisible ? 'Hide Controls' : 'Show Controls';
+    controlsToggle.classList.toggle('active', !controlsVisible);
   });
 
   // ── Presenter panel ───────────────────────────────────────────────────────
