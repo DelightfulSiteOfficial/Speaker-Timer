@@ -1016,6 +1016,18 @@
     presenterReset.style.opacity  = disabled ? '0.35' : '';
   }
 
+  function reclaimControl() {
+    // Close the current ctrlWs and open a fresh one.
+    // A new connection to a session with no controller gets control_granted instantly.
+    if (ctrlWs) {
+      ctrlWs.onclose = null; // prevent the 2s retry from firing
+      ctrlWs.close();
+      ctrlWs = null;
+    }
+    ctrlWaitingId = null;
+    setTimeout(openCtrlWs, 150);
+  }
+
   function openCtrlWs() {
     if (ctrlWs?.readyState === WebSocket.OPEN) return;
     const keyParam = controlKey ? `&key=${controlKey}` : '';
@@ -1033,10 +1045,9 @@
           ctrlWaitingId = msg.waitingId || null;
           updateControlStatus();
         } else if (msg.type === 'control_available') {
-          // Phone disconnected — reclaim automatically
-          if (ctrlWaitingId) {
-            ctrlWs.send(JSON.stringify({ type: 'claim_control', sessionId }));
-          }
+          // Controller disconnected — force a fresh connection which gets
+          // control_granted immediately since there is no active controller
+          reclaimControl();
         } else if (msg.type === 'control_request') {
           pendingRequestId = msg.requestId;
           ctrlRequestName.textContent = msg.fromName || 'Someone';
@@ -1058,8 +1069,12 @@
   }
 
   document.getElementById('ctrlReclaimBtn').addEventListener('click', () => {
-    if (ctrlWaitingId && ctrlWs?.readyState === WebSocket.OPEN) {
+    // If phone is still connected, send a polite request that requires their approval.
+    // If phone has already disconnected, force-reconnect to claim immediately.
+    if (state.controllerConnected && ctrlWaitingId && ctrlWs?.readyState === WebSocket.OPEN) {
       ctrlWs.send(JSON.stringify({ type: 'request_control', waitingId: ctrlWaitingId, sessionId }));
+    } else {
+      reclaimControl();
     }
   });
 
