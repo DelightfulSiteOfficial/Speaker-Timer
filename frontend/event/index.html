@@ -215,7 +215,7 @@
   ══════════════════════════════════════════ */
   .main {
     display: grid;
-    grid-template-columns: 1fr 260px;
+    grid-template-columns: 1fr 8px 260px;
     flex: 1;
     overflow: hidden;
   }
@@ -226,11 +226,30 @@
     body { overflow: auto; }
   }
 
+  /* ── Column resize handle ── */
+  .col-resize-handle {
+    cursor: col-resize;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    z-index: 10;
+  }
+  .col-resize-handle::after {
+    content: '';
+    width: 1px;
+    background: var(--border);
+    transition: background 0.15s, width 0.15s;
+  }
+  .col-resize-handle:hover::after,
+  .col-resize-handle.dragging::after {
+    background: #3a3a3a;
+    width: 2px;
+  }
+
   /* ══════════════════════════════════════════
      AGENDA PANEL (LEFT)
   ══════════════════════════════════════════ */
   .agenda-panel {
-    border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -975,6 +994,9 @@
     </div>
   </div>
 
+  <!-- ── Column resize handle ── -->
+  <div class="col-resize-handle" id="colResizeHandle"></div>
+
   <!-- ── Timer panel ── -->
   <div class="timer-panel">
     <div class="now-label">Now Presenting</div>
@@ -1155,6 +1177,59 @@
   const ctrlRequestName   = document.getElementById('ctrlRequestName');
   const approveRequestBtn = document.getElementById('approveRequestBtn');
   const denyRequestBtn    = document.getElementById('denyRequestBtn');
+
+  // ── Column resize ─────────────────────────────────────────────────────────
+  const colResizeHandle = document.getElementById('colResizeHandle');
+  const mainGrid        = document.querySelector('.main');
+
+  const COL_W_KEY     = 'eventTimerPanelW';
+  const COL_W_DEFAULT = 260;
+  const COL_W_MIN     = 160;
+  const colWMax       = () => Math.floor(window.innerWidth * 0.6);
+
+  let timerPanelW = Math.min(colWMax(), Math.max(COL_W_MIN,
+    parseInt(localStorage.getItem(COL_W_KEY) || COL_W_DEFAULT)));
+
+  function applyColW(w, save = false) {
+    timerPanelW = Math.min(colWMax(), Math.max(COL_W_MIN, Math.round(w)));
+    mainGrid.style.gridTemplateColumns = `1fr 8px ${timerPanelW}px`;
+    if (save) localStorage.setItem(COL_W_KEY, timerPanelW);
+  }
+
+  applyColW(timerPanelW);
+  window.addEventListener('resize', () => applyColW(timerPanelW));
+
+  colResizeHandle.addEventListener('mousedown', startColResize);
+  colResizeHandle.addEventListener('touchstart', e => {
+    e.preventDefault(); startColResize(e.touches[0]);
+  }, { passive: false });
+
+  function startColResize(e) {
+    const startX = e.clientX;
+    const startW = timerPanelW;
+    colResizeHandle.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+
+    function onMove(ev) {
+      const x = ev.clientX !== undefined ? ev.clientX : ev.touches[0].clientX;
+      applyColW(startW - (x - startX)); // drag right → smaller timer panel
+    }
+    function onUp() {
+      colResizeHandle.classList.remove('dragging');
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      applyColW(timerPanelW, true);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend',  onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend',  onUp);
+  }
 
   approveRequestBtn.addEventListener('click', () => {
     if (!pendingRequestId) return;

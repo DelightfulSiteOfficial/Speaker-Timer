@@ -442,29 +442,6 @@
   body.pulse-danger-fast  { animation: bgPulseDangerFast  1.6s ease-in-out infinite; }
   body.bg-overtime        { background-color: #200404 !important; animation: none; }
 
-  /* ── Resize handle — sits at the top edge of the presenter panel ── */
-  .resize-handle {
-    position: fixed;
-    left: 0; right: 0;
-    height: 16px;
-    cursor: ns-resize;
-    z-index: 62;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.25s ease;
-  }
-  .resize-handle::after {
-    content: '';
-    width: 36px; height: 3px;
-    background: #2a2a2a;
-    border-radius: 2px;
-    transition: background 0.2s;
-  }
-  .resize-handle:hover::after { background: #555; }
-  .resize-handle.dragging::after { background: var(--accent); }
-  .resize-handle.panel-hidden { opacity: 0; pointer-events: none; }
-
   /* ── Presenter controls panel ── */
   .presenter-panel {
     position: fixed;
@@ -476,7 +453,6 @@
     flex-direction: column;
     gap: 14px;
     z-index: 60;
-    overflow: hidden;
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0);
@@ -725,7 +701,7 @@
 <body>
 
 <!-- Timer + QR row -->
-<div class="timer-area" id="timerArea">
+<div class="timer-area">
 
   <div class="timer-block">
     <div class="time-display" id="timeDisplay">--:--</div>
@@ -773,9 +749,6 @@
     </div>
   </div>
 </div>
-
-<!-- Drag handle — repositioned by JS to sit at top edge of presenter panel -->
-<div class="resize-handle" id="resizeHandle"></div>
 
 <!-- Presenter controls panel -->
 <div class="presenter-panel" id="presenterPanel">
@@ -1099,74 +1072,17 @@
   const controlsToggle = document.getElementById('controlsToggle');
   let controlsVisible  = true;
 
-  function setControlsVisible(visible) {
-    controlsVisible = visible;
-    presenterPanel.classList.toggle('hidden', !visible);
-    resizeHandle.classList.toggle('panel-hidden', !visible);
-    if (!visible) timerArea.style.paddingBottom = '0';
-    else          applyPanelH(panelH);
-    controlsToggle.textContent = visible ? 'Hide Controls' : 'Show Controls';
-    controlsToggle.classList.toggle('active', !visible);
-  }
-
-  controlsToggle.addEventListener('click', () => setControlsVisible(!controlsVisible));
+  controlsToggle.addEventListener('click', () => {
+    controlsVisible = !controlsVisible;
+    presenterPanel.classList.toggle('hidden', !controlsVisible);
+    controlsToggle.textContent = controlsVisible ? 'Hide Controls' : 'Show Controls';
+    controlsToggle.classList.toggle('active', !controlsVisible);
+  });
 
   // ── Presenter panel ───────────────────────────────────────────────────────
   const presenterPanel = document.getElementById('presenterPanel');
   const presenterStart = document.getElementById('presenterStart');
   const presenterReset = document.getElementById('presenterReset');
-  const timerArea      = document.getElementById('timerArea');
-  const resizeHandle   = document.getElementById('resizeHandle');
-
-  // ── Panel resize ───────────────────────────────────────────────────────────
-  const PANEL_H_KEY     = 'presenterPanelH';
-  const PANEL_H_DEFAULT = 160;
-  const PANEL_H_MIN     = 88;
-  const panelHMax       = () => Math.floor(window.innerHeight * 0.65);
-
-  let panelH = Math.min(panelHMax(), Math.max(PANEL_H_MIN,
-    parseInt(localStorage.getItem(PANEL_H_KEY) || PANEL_H_DEFAULT)));
-
-  function applyPanelH(h, save = false) {
-    panelH = Math.min(panelHMax(), Math.max(PANEL_H_MIN, Math.round(h)));
-    presenterPanel.style.height      = panelH + 'px';
-    resizeHandle.style.bottom        = (panelH - 8) + 'px'; // center on top border
-    timerArea.style.paddingBottom    = panelH + 'px';        // keep timer visible
-    if (save) localStorage.setItem(PANEL_H_KEY, panelH);
-  }
-
-  applyPanelH(panelH);
-  window.addEventListener('resize', () => applyPanelH(panelH));
-
-  resizeHandle.addEventListener('mousedown', startPanelResize);
-  resizeHandle.addEventListener('touchstart', e => {
-    e.preventDefault(); startPanelResize(e.touches[0]);
-  }, { passive: false });
-
-  function startPanelResize(e) {
-    const startY = e.clientY;
-    const startH = panelH;
-    resizeHandle.classList.add('dragging');
-    document.body.style.userSelect = 'none';
-
-    function onMove(ev) {
-      const y = ev.clientY !== undefined ? ev.clientY : ev.touches[0].clientY;
-      applyPanelH(startH + (startY - y));
-    }
-    function onUp() {
-      resizeHandle.classList.remove('dragging');
-      document.body.style.userSelect = '';
-      applyPanelH(panelH, true);
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup',   onUp);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend',  onUp);
-    }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup',   onUp);
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('touchend',  onUp);
-  }
 
   let ctrlWs           = null;
   let desktopHasControl = true;
