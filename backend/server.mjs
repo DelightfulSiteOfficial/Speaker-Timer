@@ -546,6 +546,35 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
+    if (msg.type === 'trusted_reclaim') {
+      // Key-authenticated force-reclaim from the waiting list.
+      // Lets the operator (phone) take control from the presenter without approval.
+      if (!session.keyVerified || !session.controlKey) return;
+      const providedKey = (msg.key || '').toUpperCase().trim();
+      if (providedKey !== session.controlKey) return;
+      // Must be in the waiting list
+      let myWaitingId = null;
+      for (const [wid, entry] of session.waitingControllers.entries()) {
+        if (entry.ws === ws) { myWaitingId = wid; break; }
+      }
+      if (!myWaitingId) return;
+      // Kick current controller back to waiting list
+      if (session.controller) {
+        const kicked = session.controller;
+        const newWaitingId = generateId();
+        session.waitingControllers.set(newWaitingId, { ws: kicked, name: 'Presenter' });
+        sendMsg(kicked, { type: 'control_denied', waitingId: newWaitingId });
+      }
+      // Promote this ws
+      session.waitingControllers.delete(myWaitingId);
+      session.controller = ws;
+      session.state.controllerConnected = true;
+      syncWaitingList(session);
+      sendMsg(ws, { type: 'control_granted' });
+      broadcast(session);
+      return;
+    }
+
     if (msg.type === 'set_waiting_name') {
       const entry = session.waitingControllers.get(msg.waitingId);
       if (entry && entry.ws === ws) {

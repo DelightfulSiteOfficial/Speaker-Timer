@@ -1010,15 +1010,7 @@
     if (desktopHasControl) {
       dot.className = 'ctrl-status-dot desktop';
       label.textContent = 'Presenter in control';
-      // Show "Lock to Operator" only when a phone is waiting
-      const phoneWaiting = (state.waitingList || []).length > 0;
-      if (phoneWaiting) {
-        btn.textContent = 'Lock to Operator';
-        btn.className = 'ctrl-toggle-btn operator-mode';
-        btn.style.display = '';
-      } else {
-        btn.style.display = 'none';
-      }
+      btn.style.display = 'none';
     } else {
       dot.className = 'ctrl-status-dot phone';
       label.textContent = 'Operator in control';
@@ -1072,6 +1064,10 @@
         } else if (msg.type === 'control_denied') {
           desktopHasControl = false;
           ctrlWaitingId = msg.waitingId || null;
+          // Announce ourselves in the waiting list so the phone can identify us
+          if (ctrlWaitingId && localWs.readyState === WebSocket.OPEN) {
+            localWs.send(JSON.stringify({ type: 'set_waiting_name', waitingId: ctrlWaitingId, sessionId, name: 'Presenter Display' }));
+          }
           updateControlStatus();
         } else if (msg.type === 'control_available') {
           // Controller disconnected — force a fresh connection which gets
@@ -1100,16 +1096,10 @@
   }
 
   document.getElementById('ctrlToggleBtn').addEventListener('click', () => {
-    if (desktopHasControl) {
-      // Pass control to the first waiting phone/operator
-      const waiting = state.waitingList || [];
-      if (waiting.length > 0 && ctrlWs?.readyState === WebSocket.OPEN) {
-        ctrlWs.send(JSON.stringify({ type: 'pass_control_to', targetId: waiting[0].id, sessionId }));
-      }
-    } else {
-      // Force-reclaim: kicks current operator even if their tab is still open
-      reclaimControl(true);
-    }
+    // "Presenter Mode" — force-reclaim control from the operator phone.
+    // Uses ?force=true on the new ctrlWs so the server kicks the phone even
+    // if their tab is still open. Only reachable when !desktopHasControl.
+    reclaimControl(true);
   });
 
   // Reconnect ctrlWs immediately when tab becomes visible again
