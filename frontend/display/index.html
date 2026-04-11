@@ -72,6 +72,7 @@
   .time-display.warning { color: var(--warn); }
   .time-display.danger  { color: var(--danger); }
   .time-display.overtime { color: var(--danger); }
+  .time-display { cursor: pointer; }
 
   /* ── Progress bar ── */
   .progress-bar {
@@ -1207,15 +1208,55 @@
     timerHoldOverlay.classList.remove('visible');
   }
 
-  timeDisplay.addEventListener('mousedown', () => {
-    timerHoldTimer = setTimeout(() => { timerHoldTimer = null; showTimerInput(); }, 500);
-  });
-  timeDisplay.addEventListener('mouseup',    () => clearTimeout(timerHoldTimer));
-  timeDisplay.addEventListener('mouseleave', () => clearTimeout(timerHoldTimer));
-  timeDisplay.addEventListener('touchstart', () => {
-    timerHoldTimer = setTimeout(() => { timerHoldTimer = null; showTimerInput(); }, 500);
-  }, { passive: true });
-  timeDisplay.addEventListener('touchend',   () => clearTimeout(timerHoldTimer));
+  // ── Timer display gestures ─────────────────────────────────────────────────
+  // Single tap/click → start / pause
+  // Double tap/click → reset
+  // Long press (500ms) → open duration input
+  let timerClickTimer  = null;
+  let timerClickCount  = 0;
+
+  function onTimerDown() {
+    if (!desktopHasControl) return;
+    timerHoldTimer = setTimeout(() => {
+      timerHoldTimer = null;
+      timerClickCount = 0;
+      clearTimeout(timerClickTimer);
+      showTimerInput();
+    }, 500);
+  }
+
+  function onTimerUp() {
+    if (!timerHoldTimer) return; // long-press already fired
+    clearTimeout(timerHoldTimer);
+    timerHoldTimer = null;
+    if (!desktopHasControl) return;
+    timerClickCount++;
+    if (timerClickCount === 1) {
+      timerClickTimer = setTimeout(() => {
+        timerClickCount = 0;
+        // Single click — start or pause
+        if (state.running) sendCtrl({ type: 'pause' });
+        else               sendCtrl({ type: 'start' });
+      }, 220);
+    } else {
+      // Double click — reset
+      clearTimeout(timerClickTimer);
+      timerClickCount = 0;
+      sendCtrl({ type: 'reset' });
+    }
+  }
+
+  function onTimerCancel() {
+    clearTimeout(timerHoldTimer);
+    timerHoldTimer = null;
+  }
+
+  timeDisplay.addEventListener('mousedown',  onTimerDown);
+  timeDisplay.addEventListener('mouseup',    onTimerUp);
+  timeDisplay.addEventListener('mouseleave', onTimerCancel);
+  timeDisplay.addEventListener('touchstart', e => { e.preventDefault(); onTimerDown(); }, { passive: false });
+  timeDisplay.addEventListener('touchend',   e => { e.preventDefault(); onTimerUp();   });
+  timeDisplay.addEventListener('touchcancel', onTimerCancel);
 
   timerHoldField.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
