@@ -359,21 +359,63 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 28px 24px 24px;
-      gap: 10px;
+      padding: 32px 28px 28px;
+      gap: 0;
       border-bottom: none;
       flex-wrap: nowrap;
       order: 0;
     }
-    .timer-panel .now-label    { width: auto; text-align: center; }
-    .timer-panel .now-speaker  { width: auto; font-size: 14px; }
-    .timer-panel .time-display { font-size: clamp(88px, 28vw, 160px); }
-    .timer-panel .progress-bar { width: 100%; max-width: 340px; order: 0; margin: 0; }
-    .timer-panel .overtime-badge { order: 0; }
-    .timer-panel .controls     { width: 100%; max-width: 340px; }
-    .timer-panel .btn-start    { height: 54px; font-size: 26px; border-radius: 14px; }
-    .timer-panel .btn-secondary { height: 44px; font-size: 17px; border-radius: 12px; }
-    .timer-panel .qr-corner    { display: none !important; }
+
+    /* Label + speaker: compact header cluster */
+    .timer-panel .now-label {
+      width: auto;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .timer-panel .now-speaker {
+      width: auto;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    /* Big clock */
+    .timer-panel .time-display {
+      font-size: clamp(80px, 24vw, 150px);
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+
+    /* Progress bar: a bit thicker and full-width */
+    .timer-panel .progress-bar {
+      width: 100%;
+      max-width: 360px;
+      height: 5px;
+      order: 0;
+      margin: 0 0 6px;
+    }
+
+    .timer-panel .overtime-badge { order: 0; margin-bottom: 8px; }
+
+    /* Controls: separated from the clock, full-width up to a max */
+    .timer-panel .controls {
+      width: 100%;
+      max-width: 360px;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .timer-panel .btn-start {
+      height: 60px;
+      font-size: 28px;
+      border-radius: 16px;
+      letter-spacing: 0.08em;
+    }
+    .timer-panel .btn-row { gap: 10px; }
+    .timer-panel .btn-secondary {
+      height: 48px;
+      font-size: 18px;
+      border-radius: 12px;
+    }
+    .timer-panel .qr-corner { display: none !important; }
 
     /* ── Agenda tab ── */
     .agenda-panel { flex-direction: column; }
