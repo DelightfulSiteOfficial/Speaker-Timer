@@ -346,48 +346,39 @@
       overflow: hidden;
     }
 
-    /* Both panels fill the full area; JS toggles which is visible */
+    /* Both panels fill the full tab area — JS sets display via inline style */
     .agenda-panel,
     .timer-panel {
       position: absolute;
       inset: 0;
-      display: none;
       overflow: hidden;
     }
-    .agenda-panel.tab-active { display: flex; flex-direction: column; }
-    .timer-panel.tab-active  { display: flex; }
 
     /* ── Timer tab ── */
-    .timer-panel.tab-active {
+    .timer-panel {
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 28px 24px 24px;
       gap: 10px;
+      border-bottom: none;
+      flex-wrap: nowrap;
+      order: 0;
     }
-    .timer-panel.tab-active .now-label    { width: auto; text-align: center; }
-    .timer-panel.tab-active .now-speaker  { width: auto; font-size: 14px; }
-    .timer-panel.tab-active .time-display { font-size: clamp(88px, 28vw, 160px); }
-    .timer-panel.tab-active .progress-bar {
-      width: 100%; max-width: 340px;
-      order: 0; margin: 0;
-    }
-    .timer-panel.tab-active .overtime-badge { order: 0; }
-    .timer-panel.tab-active .controls {
-      width: 100%; max-width: 340px;
-    }
-    .timer-panel.tab-active .btn-start     { height: 54px; font-size: 26px; border-radius: 14px; }
-    .timer-panel.tab-active .btn-secondary { height: 44px; font-size: 17px; border-radius: 12px; }
-    .timer-panel.tab-active .qr-corner     { display: none; }
+    .timer-panel .now-label    { width: auto; text-align: center; }
+    .timer-panel .now-speaker  { width: auto; font-size: 14px; }
+    .timer-panel .time-display { font-size: clamp(88px, 28vw, 160px); }
+    .timer-panel .progress-bar { width: 100%; max-width: 340px; order: 0; margin: 0; }
+    .timer-panel .overtime-badge { order: 0; }
+    .timer-panel .controls     { width: 100%; max-width: 340px; }
+    .timer-panel .btn-start    { height: 54px; font-size: 26px; border-radius: 14px; }
+    .timer-panel .btn-secondary { height: 44px; font-size: 17px; border-radius: 12px; }
+    .timer-panel .qr-corner    { display: none !important; }
 
     /* ── Agenda tab ── */
+    .agenda-panel { flex-direction: column; }
     .agenda-panel-header { padding: 14px 16px 12px; }
-    .agenda-list {
-      flex: 1;
-      min-height: 0;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-    }
+    .agenda-list  { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     .agenda-item  { padding: 14px 16px; }
     .item-name    { font-size: 16px; }
     .item-actions { opacity: 1; }
@@ -1350,27 +1341,28 @@
   const tabTimerBtn   = document.getElementById('tabTimer');
   const tabAgendaBtn  = document.getElementById('tabAgenda');
 
+  let activeTab = 'timer';
+
   function switchTab(tab) {
-    const isMobile = window.innerWidth <= 640;
-    // Always clean up classes regardless of viewport (handles resize edge cases)
-    timerPanelEl.classList.toggle('tab-active',  tab === 'timer');
-    agendaPanelEl.classList.toggle('tab-active', tab === 'agenda');
+    activeTab = tab;
     tabTimerBtn.classList.toggle('active',  tab === 'timer');
     tabAgendaBtn.classList.toggle('active', tab === 'agenda');
+
+    if (window.innerWidth <= 640) {
+      // JS owns show/hide directly — inline styles beat any CSS rule
+      timerPanelEl.style.display  = tab === 'timer'  ? 'flex' : 'none';
+      agendaPanelEl.style.display = tab === 'agenda' ? 'flex' : 'none';
+    }
   }
 
   function initTabs() {
     if (window.innerWidth <= 640) {
-      // Default to timer tab on mobile
-      const active = timerPanelEl.classList.contains('tab-active') ||
-                     agendaPanelEl.classList.contains('tab-active')
-                     ? (timerPanelEl.classList.contains('tab-active') ? 'timer' : 'agenda')
-                     : 'timer';
-      switchTab(active);
+      // Mobile: apply current tab state via inline styles
+      switchTab(activeTab);
     } else {
-      // Remove tab classes on desktop/tablet — CSS handles layout
-      timerPanelEl.classList.remove('tab-active');
-      agendaPanelEl.classList.remove('tab-active');
+      // Desktop/tablet: clear inline styles and let CSS grid handle layout
+      timerPanelEl.style.display  = '';
+      agendaPanelEl.style.display = '';
     }
   }
 
@@ -1393,7 +1385,12 @@
 
   function applyColW(w, save = false) {
     timerPanelW = Math.min(colWMax(), Math.max(COL_W_MIN, Math.round(w)));
-    mainGrid.style.gridTemplateColumns = `1fr 8px ${timerPanelW}px`;
+    if (window.innerWidth > 900) {
+      // Only apply the inline grid style on desktop — let media queries handle mobile
+      mainGrid.style.gridTemplateColumns = `1fr 8px ${timerPanelW}px`;
+    } else {
+      mainGrid.style.gridTemplateColumns = '';
+    }
     if (save) localStorage.setItem(COL_W_KEY, timerPanelW);
   }
 
