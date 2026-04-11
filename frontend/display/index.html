@@ -429,11 +429,11 @@
   }
   .ctrl-status-dot.desktop { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
   .ctrl-status-dot.phone   { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-  .ctrl-status-dot.locked  { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+  .ctrl-status-dot.waiting { background: #888; }
 
   .ctrl-status-label { color: var(--muted); flex: 1; }
 
-  .ctrl-reclaim-btn {
+  .ctrl-toggle-btn {
     background: none;
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -446,7 +446,21 @@
     cursor: pointer;
     transition: all 0.15s;
   }
-  .ctrl-reclaim-btn:hover { border-color: #444; color: var(--text); }
+  .ctrl-toggle-btn:hover { border-color: #444; color: var(--text); }
+  .ctrl-toggle-btn.operator-mode {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .ctrl-toggle-btn.operator-mode:hover {
+    background: rgba(232,255,71,0.08);
+  }
+  .ctrl-toggle-btn.presenter-mode {
+    border-color: #22c55e;
+    color: #22c55e;
+  }
+  .ctrl-toggle-btn.presenter-mode:hover {
+    background: rgba(34,197,94,0.08);
+  }
 
   .presenter-row {
     display: flex;
@@ -676,8 +690,8 @@
 <div class="presenter-panel" id="presenterPanel">
   <div class="ctrl-status" id="ctrlStatus">
     <span class="ctrl-status-dot desktop" id="ctrlStatusDot"></span>
-    <span class="ctrl-status-label" id="ctrlStatusLabel">Desktop in control</span>
-    <button class="ctrl-reclaim-btn" id="ctrlReclaimBtn" style="display:none">Request Control Back</button>
+    <span class="ctrl-status-label" id="ctrlStatusLabel">Presenter in control</span>
+    <button class="ctrl-toggle-btn" id="ctrlToggleBtn" style="display:none">Lock to Operator</button>
   </div>
   <div class="presenter-row">
     <div class="presenter-slider-block">
@@ -990,25 +1004,31 @@
   function updateControlStatus() {
     const dot   = document.getElementById('ctrlStatusDot');
     const label = document.getElementById('ctrlStatusLabel');
-    const btn   = document.getElementById('ctrlReclaimBtn');
+    const btn   = document.getElementById('ctrlToggleBtn');
     if (!dot) return;
 
-    if (state.presenterLocked) {
-      dot.className = 'ctrl-status-dot locked';
-      label.textContent = 'Locked by operator';
-      btn.style.display = 'none';
-    } else if (desktopHasControl) {
+    if (desktopHasControl) {
       dot.className = 'ctrl-status-dot desktop';
-      label.textContent = 'Desktop in control';
-      btn.style.display = 'none';
+      label.textContent = 'Presenter in control';
+      // Show "Lock to Operator" only when a phone is waiting
+      const phoneWaiting = (state.waitingList || []).length > 0;
+      if (phoneWaiting) {
+        btn.textContent = 'Lock to Operator';
+        btn.className = 'ctrl-toggle-btn operator-mode';
+        btn.style.display = '';
+      } else {
+        btn.style.display = 'none';
+      }
     } else {
       dot.className = 'ctrl-status-dot phone';
-      label.textContent = 'Phone in control';
+      label.textContent = 'Operator in control';
+      btn.textContent = 'Presenter Mode';
+      btn.className = 'ctrl-toggle-btn presenter-mode';
       btn.style.display = '';
     }
 
-    // Disable/enable controls based on who has control
-    const disabled = !desktopHasControl || !!state.presenterLocked;
+    // Disable/enable controls based solely on who holds ctrlWs control
+    const disabled = !desktopHasControl;
     presenterSlider.disabled = disabled;
     presenterStart.disabled  = disabled;
     presenterReset.disabled  = disabled;
@@ -1017,7 +1037,7 @@
     presenterReset.style.opacity  = disabled ? '0.35' : '';
   }
 
-  function reclaimControl() {
+  function reclaimControl(force = false) {
     // Disown the current ctrlWs first so its onclose won't trigger a retry,
     // then close it and schedule a fresh connection.
     if (ctrlWs) {
@@ -1027,16 +1047,17 @@
       old.close();
     }
     ctrlWaitingId = null;
-    setTimeout(openCtrlWs, 150);
+    setTimeout(() => openCtrlWs(force), 150);
   }
 
-  function openCtrlWs() {
+  function openCtrlWs(force = false) {
     // Guard against CONNECTING *and* OPEN — creating a second WS while the
     // first is still connecting causes a race where the stale one's
     // control_granted/control_denied messages corrupt desktopHasControl.
     if (ctrlWs) return;
-    const keyParam = controlKey ? `&key=${controlKey}` : '';
-    const localWs = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control${keyParam}`);
+    const keyParam   = controlKey ? `&key=${controlKey}` : '';
+    const forceParam = force && controlKey ? '&force=true' : '';
+    const localWs = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control${keyParam}${forceParam}`);
     ctrlWs = localWs;
     localWs.onopen = () => {};
     localWs.onmessage = e => {
@@ -1078,13 +1099,16 @@
     localWs.onerror = () => localWs.close();
   }
 
-  document.getElementById('ctrlReclaimBtn').addEventListener('click', () => {
-    // If phone is still connected, send a polite request that requires their approval.
-    // If phone has already disconnected, force-reconnect to claim immediately.
-    if (state.controllerConnected && ctrlWaitingId && ctrlWs?.readyState === WebSocket.OPEN) {
-      ctrlWs.send(JSON.stringify({ type: 'request_control', waitingId: ctrlWaitingId, sessionId }));
+  document.getElementById('ctrlToggleBtn').addEventListener('click', () => {
+    if (desktopHasControl) {
+      // Pass control to the first waiting phone/operator
+      const waiting = state.waitingList || [];
+      if (waiting.length > 0 && ctrlWs?.readyState === WebSocket.OPEN) {
+        ctrlWs.send(JSON.stringify({ type: 'pass_control_to', targetId: waiting[0].id, sessionId }));
+      }
     } else {
-      reclaimControl();
+      // Force-reclaim: kicks current operator even if their tab is still open
+      reclaimControl(true);
     }
   });
 
@@ -1116,7 +1140,7 @@
   let   timerHoldTimer   = null;
 
   function showTimerInput() {
-    if (!desktopHasControl || state.presenterLocked) return;
+    if (!desktopHasControl) return;
     timerHoldField.value = Math.max(1, Math.round(state.totalTime / 60));
     timerHoldOverlay.classList.add('visible');
     timerHoldField.focus();

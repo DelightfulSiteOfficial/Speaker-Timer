@@ -452,6 +452,21 @@ wss.on('connection', (ws, req) => {
 
   // Grant or deny control
   if (effectiveRole === 'control') {
+    // Admin force-reclaim: presenter display kicks current operator back to waiting list.
+    // Requires a valid key so only the display page (which holds the key) can do this.
+    if (query.force === 'true' && session.controller && session.keyVerified) {
+      const providedKey = (query.key || '').toUpperCase().trim();
+      if (providedKey === session.controlKey) {
+        const kicked = session.controller;
+        const newWaitingId = generateId();
+        session.waitingControllers.set(newWaitingId, { ws: kicked, name: 'Operator' });
+        sendMsg(kicked, { type: 'control_denied', waitingId: newWaitingId });
+        session.controller = null;
+        session.state.controllerConnected = false;
+        syncWaitingList(session);
+      }
+    }
+
     session.keyVerified = true;
     sendMsg(ws, { type: 'session_info', controlKey: session.controlKey });
     if (!session.controller) {

@@ -883,16 +883,7 @@
     <div class="time-big" id="timeBig">--:--</div>
     <span class="time-status" id="timeStatus">Stopped</span>
   </div>
-  <div class="timer-row-side">
-    <div class="presenter-pill" id="presenterPill">
-      <span class="presenter-pill-word">Presenter</span>
-      <label class="pill-toggle">
-        <input type="checkbox" id="presenterToggle" checked>
-        <span class="pill-track"></span>
-      </label>
-      <span class="presenter-pill-status allowed" id="accessStatus">On</span>
-    </div>
-  </div>
+  <div class="timer-row-side"></div>
 </div>
 
 <!-- ── Room name modal ── -->
@@ -1219,13 +1210,6 @@
       );
     });
 
-    // Presenter pill toggle
-    const locked = !!state.presenterLocked;
-    presenterPill.classList.toggle('visible', hasControl);
-    presenterToggle.checked = !locked;
-    accessStatus.textContent = locked ? 'Locked' : 'On';
-    accessStatus.className = 'presenter-pill-status ' + (locked ? 'locked' : 'allowed');
-
     // Background pulse states
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60 && !overtime;
     const isWarn1  = timeRemaining <= 60  && timeRemaining > 30 && !overtime;
@@ -1532,14 +1516,6 @@
     render();
   });
 
-  // ── Presenter pill toggle ─────────────────────────────────────────────────
-  const presenterPill   = document.getElementById('presenterPill');
-  const presenterToggle = document.getElementById('presenterToggle');
-  const accessStatus    = document.getElementById('accessStatus');
-
-  presenterToggle.addEventListener('change', () => {
-    send({ type: 'set_presenter_lock', sessionId, locked: !presenterToggle.checked });
-  });
 
 
   // ── WebSocket ──────────────────────────────────────────────────────────────
