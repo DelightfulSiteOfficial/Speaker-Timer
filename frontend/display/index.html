@@ -995,15 +995,25 @@
 
   function openCtrlWs() {
     if (ctrlWs?.readyState === WebSocket.OPEN) return;
-    ctrlWs = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control`);
-    ctrlWs.onopen  = () => ctrlWs.send(JSON.stringify({ type: 'join', role: 'control', sessionId }));
-    ctrlWs.onclose = () => { ctrlWs = null; };
+    const keyParam = controlKey ? `&key=${controlKey}` : '';
+    ctrlWs = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control${keyParam}`);
+    ctrlWs.onopen  = () => {};
+    ctrlWs.onclose = () => {
+      ctrlWs = null;
+      // Auto-reconnect if still in presenter mode
+      if (presenterMode) setTimeout(openCtrlWs, 2000);
+    };
     ctrlWs.onerror = () => ctrlWs?.close();
   }
 
   function closeCtrlWs() {
     if (ctrlWs) { ctrlWs.onclose = null; ctrlWs.close(); ctrlWs = null; }
   }
+
+  // Reconnect ctrlWs immediately when tab becomes visible again
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && presenterMode) openCtrlWs();
+  });
 
   function setMode(mode) {
     presenterMode = (mode === 'presenter');
