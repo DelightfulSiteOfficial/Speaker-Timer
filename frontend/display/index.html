@@ -151,6 +151,20 @@
     visibility: hidden;
   }
 
+  /* Ghost hit area shown when QR is hidden — same size/position, invisible */
+  .qr-ghost {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 192px;   /* approx qr-panel width */
+    height: 220px;  /* approx qr-panel height */
+    cursor: pointer;
+    z-index: 10;
+  }
+  .qr-ghost.active { display: block; }
+
   .qr-frame {
     width: 148px;
     height: 148px;
@@ -701,6 +715,9 @@
     <div class="overtime-badge" id="overtimeBadge">Overtime</div>
   </div>
 
+  <!-- Ghost hit area for restoring hidden QR via double-click -->
+  <div class="qr-ghost" id="qrGhost"></div>
+
   <!-- QR panel — vertically centered to the right of timer -->
   <div class="qr-panel" id="qrPanel">
     <div class="qr-frame" id="qrFrame">
@@ -1011,15 +1028,25 @@
 
   // ── QR toggle ──────────────────────────────────────────────────────────────
   const qrPanel  = document.getElementById('qrPanel');
+  const qrGhost  = document.getElementById('qrGhost');
   const qrToggle = document.getElementById('qrToggle');
   let qrVisible  = true;
 
-  qrToggle.addEventListener('click', () => {
-    qrVisible = !qrVisible;
+  function setQrVisible(visible) {
+    qrVisible = visible;
     qrPanel.classList.toggle('hidden', !qrVisible);
+    qrGhost.classList.toggle('active', !qrVisible);
     qrToggle.textContent = qrVisible ? 'Hide QR' : 'Show QR';
     qrToggle.classList.toggle('active', !qrVisible);
-  });
+  }
+
+  qrToggle.addEventListener('click', () => setQrVisible(!qrVisible));
+
+  // Double-click the QR panel itself to hide it
+  qrPanel.addEventListener('dblclick', () => setQrVisible(false));
+
+  // Double-click the ghost area to bring it back
+  qrGhost.addEventListener('dblclick', () => setQrVisible(true));
 
   // ── Controls toggle ────────────────────────────────────────────────────────
   const controlsToggle = document.getElementById('controlsToggle');
