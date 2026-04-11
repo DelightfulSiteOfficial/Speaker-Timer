@@ -473,8 +473,11 @@
     if (!sessions.length) { empty.style.display = ''; return; }
     empty.style.display = 'none';
     const items = sessions.map(s => {
-      const icon = s.type === 'event' ? '📋' : '⚡';
-      const href = s.type === 'event' ? `/event/?session=${s.id}` : `/display/?session=${s.id}`;
+      const key  = s.key ? `&key=${s.key}` : '';
+      const icon = s.type === 'event' ? '📋' : s.type === 'control' ? '🎛' : '⚡';
+      const href = s.type === 'event'   ? `/event/?session=${s.id}${key}`
+                 : s.type === 'control' ? `/control/?session=${s.id}${key}`
+                 :                        `/display/?session=${s.id}`;
       return `<div class="recent-item">
         <span class="recent-icon">${icon}</span>
         <span class="recent-id">${s.id}</span>
