@@ -220,10 +220,126 @@
     overflow: hidden;
   }
 
+  /* ══════════════════════════════════════════
+     MOBILE TAB BAR (hidden on desktop)
+  ══════════════════════════════════════════ */
+  .mobile-tab-bar {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 58px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    z-index: 200;
+    flex-shrink: 0;
+  }
+  .mobile-tab {
+    flex: 1;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-tab.active { color: var(--accent); }
+  .mobile-tab-icon { font-size: 19px; line-height: 1; }
+
+  /* ══════════════════════════════════════════
+     TABLET  ≤ 900px — stack vertically
+  ══════════════════════════════════════════ */
   @media (max-width: 900px) {
-    html, body { overflow: auto; }
-    .main { grid-template-columns: 1fr; overflow: visible; }
-    body { overflow: auto; }
+    html, body { overflow: hidden; }
+
+    .main {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+      overflow: hidden;
+    }
+
+    /* Put timer on top when stacked */
+    .timer-panel       { order: -1; }
+    .col-resize-handle { display: none; }
+
+    .timer-panel {
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px 10px;
+      gap: 4px;
+    }
+
+    .time-display { font-size: clamp(52px, 14vw, 96px); }
+    .progress-bar { margin: 6px 0 8px; }
+    .btn-start    { height: 40px; font-size: 22px; }
+    .btn-secondary { height: 34px; font-size: 15px; }
+    .now-label    { margin-bottom: 2px; }
+    .qr-corner    { display: none; }
+  }
+
+  /* ══════════════════════════════════════════
+     PHONE  ≤ 640px — tab-based layout
+  ══════════════════════════════════════════ */
+  @media (max-width: 640px) {
+    .mobile-tab-bar { display: flex; }
+
+    .main {
+      position: fixed;
+      top: 56px;   /* header height */
+      left: 0; right: 0;
+      bottom: 58px; /* tab bar height */
+      display: block;
+      overflow: hidden;
+    }
+
+    /* Each panel fills the full tab area; only active one shows */
+    .agenda-panel,
+    .timer-panel {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      display: none;
+    }
+    .agenda-panel { flex-direction: column; }
+    .agenda-panel.tab-active  { display: flex; }
+    .timer-panel.tab-active   { display: flex; }
+
+    /* Timer tab — big and touch-friendly */
+    .timer-panel.tab-active {
+      justify-content: center;
+      align-items: center;
+      padding: 24px 20px 20px;
+      border-bottom: none;
+      gap: 8px;
+      order: 0; /* reset order override from tablet */
+    }
+    .time-display { font-size: clamp(80px, 26vw, 160px); }
+    .controls     { width: 100%; max-width: 320px; }
+    .btn-start    { height: 56px; font-size: 28px; border-radius: 14px; }
+    .btn-secondary { height: 46px; font-size: 18px; border-radius: 12px; }
+    .progress-bar { margin: 8px 0 10px; width: 100%; max-width: 320px; }
+    .overtime-badge { margin-bottom: 4px; }
+
+    /* Agenda tab */
+    .agenda-panel-header { padding: 14px 16px 12px; }
+    .agenda-list  { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .agenda-item  { padding: 14px 16px; }
+    .item-name    { font-size: 16px; }
+    .item-actions { opacity: 1; } /* always visible on touch */
+    .add-form     { padding: 12px 16px 16px; }
+    .add-form-row { gap: 6px; }
+    .add-name-input { font-size: 16px; } /* prevent iOS zoom */
+    .add-dur-input  { width: 64px; font-size: 18px; }
+
+    /* Toast sits above tab bar on mobile */
+    .toast { bottom: 72px; }
   }
 
   /* ── Column resize handle ── */
@@ -1075,6 +1191,18 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Mobile tab bar (hidden on desktop via CSS) -->
+<div class="mobile-tab-bar" id="mobileTabBar">
+  <button class="mobile-tab active" id="tabTimer">
+    <span class="mobile-tab-icon">⏱</span>
+    Timer
+  </button>
+  <button class="mobile-tab" id="tabAgenda">
+    <span class="mobile-tab-icon">☰</span>
+    Agenda
+  </button>
+</div>
+
 <script>
   const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
   const params     = new URLSearchParams(window.location.search);
@@ -1177,6 +1305,41 @@
   const ctrlRequestName   = document.getElementById('ctrlRequestName');
   const approveRequestBtn = document.getElementById('approveRequestBtn');
   const denyRequestBtn    = document.getElementById('denyRequestBtn');
+
+  // ── Mobile tabs ───────────────────────────────────────────────────────────
+  const timerPanelEl  = document.querySelector('.timer-panel');
+  const agendaPanelEl = document.querySelector('.agenda-panel');
+  const tabTimerBtn   = document.getElementById('tabTimer');
+  const tabAgendaBtn  = document.getElementById('tabAgenda');
+
+  function switchTab(tab) {
+    const isMobile = window.innerWidth <= 640;
+    // Always clean up classes regardless of viewport (handles resize edge cases)
+    timerPanelEl.classList.toggle('tab-active',  tab === 'timer');
+    agendaPanelEl.classList.toggle('tab-active', tab === 'agenda');
+    tabTimerBtn.classList.toggle('active',  tab === 'timer');
+    tabAgendaBtn.classList.toggle('active', tab === 'agenda');
+  }
+
+  function initTabs() {
+    if (window.innerWidth <= 640) {
+      // Default to timer tab on mobile
+      const active = timerPanelEl.classList.contains('tab-active') ||
+                     agendaPanelEl.classList.contains('tab-active')
+                     ? (timerPanelEl.classList.contains('tab-active') ? 'timer' : 'agenda')
+                     : 'timer';
+      switchTab(active);
+    } else {
+      // Remove tab classes on desktop/tablet — CSS handles layout
+      timerPanelEl.classList.remove('tab-active');
+      agendaPanelEl.classList.remove('tab-active');
+    }
+  }
+
+  tabTimerBtn.addEventListener('click',  () => switchTab('timer'));
+  tabAgendaBtn.addEventListener('click', () => switchTab('agenda'));
+  window.addEventListener('resize', initTabs);
+  initTabs();
 
   // ── Column resize ─────────────────────────────────────────────────────────
   const colResizeHandle = document.getElementById('colResizeHandle');
