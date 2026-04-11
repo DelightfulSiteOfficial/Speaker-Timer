@@ -38,7 +38,7 @@ function createSession(id) {
       coHost: false,
       coHostName: '',
       presenterLocked: false,  // true = desktop presenter controls disabled
-      operatorApproved: false, // true after first operator is approved — unlocks trusted_reclaim
+      operatorApproved: false, // true after first operator is approved (display-side gate)
     },
     clients: new Set(),
     tickInterval: null,
@@ -48,6 +48,7 @@ function createSession(id) {
     coHostWs: null,
     controlKey: Math.random().toString(36).slice(2,8).toUpperCase() + Math.random().toString(36).slice(2,8).toUpperCase(),
     keyVerified: false,
+    approvedDeviceTokens: new Set(), // per-device tokens issued on approval — required for trusted_reclaim
   };
 }
 
@@ -548,13 +549,14 @@ wss.on('connection', (ws, req) => {
     }
 
     if (msg.type === 'trusted_reclaim') {
-      // Key-authenticated force-reclaim — only works after a first manual approval.
-      // This prevents a bad actor with a stolen QR from instantly hijacking control;
-      // they still have to go through the normal approval popup once first.
-      if (!session.state.operatorApproved) return;
+      // Requires BOTH the session key AND a per-device token issued at approval time.
+      // Having the QR URL (key) alone is not enough — the device token is never in
+      // the URL, only in the approving device's localStorage.
       if (!session.keyVerified || !session.controlKey) return;
-      const providedKey = (msg.key || '').toUpperCase().trim();
+      const providedKey   = (msg.key || '').toUpperCase().trim();
+      const deviceToken   = (msg.deviceToken || '').toUpperCase().trim();
       if (providedKey !== session.controlKey) return;
+      if (!deviceToken || !session.approvedDeviceTokens.has(deviceToken)) return;
       // Must be in the waiting list
       let myWaitingId = null;
       for (const [wid, entry] of session.waitingControllers.entries()) {
@@ -674,9 +676,13 @@ wss.on('connection', (ws, req) => {
         session.waitingControllers.delete(msg.targetId);
         session.controller = target.ws;
         session.state.controllerConnected = true;
-        session.state.operatorApproved = true; // first approval unlocks trusted_reclaim
+        session.state.operatorApproved = true;
+        // Mint a per-device token for this specific device — only this device can
+        // use trusted_reclaim. Having the QR key alone is not sufficient.
+        const deviceToken = generateId() + generateId() + generateId();
+        session.approvedDeviceTokens.add(deviceToken);
         syncWaitingList(session);
-        sendMsg(target.ws, { type: 'control_granted' });
+        sendMsg(target.ws, { type: 'control_granted', deviceToken });
         broadcast(session);
         break;
       }
