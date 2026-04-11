@@ -1,0 +1,29 @@
+[[redirects]]
+  from = "/event/*"
+  to = "/event/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/hub/*"
+  to = "/hub/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/display/*"
+  to = "/display/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/control/*"
+  to = "/control/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/view/*"
+  to = "/view/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/*"
+  to = "/admin/index.html"
+  status = 200
