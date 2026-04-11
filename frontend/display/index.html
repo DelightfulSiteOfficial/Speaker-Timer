@@ -219,6 +219,68 @@
   .toolbar-btn:hover { border-color: var(--muted); color: var(--text); }
   .toolbar-btn.active { border-color: var(--accent); color: var(--accent); }
 
+  /* ── Control request modal ── */
+  .ctrl-request-modal {
+    position: fixed; inset: 0;
+    background: rgba(10,10,10,0.88);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 350;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .ctrl-request-modal.visible { opacity: 1; pointer-events: auto; }
+
+  .ctrl-request-box {
+    background: var(--surface);
+    border: 1px solid #262626;
+    border-radius: 20px;
+    padding: 28px 24px 20px;
+    width: 380px;
+    display: flex; flex-direction: column; gap: 6px;
+    align-items: center; text-align: center;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.7);
+  }
+
+  .ctrl-request-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 0.25em;
+    text-transform: uppercase; color: var(--accent);
+  }
+
+  .ctrl-request-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 44px; color: var(--text);
+    letter-spacing: 0.04em; line-height: 1;
+  }
+
+  .ctrl-request-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; color: var(--muted);
+    font-weight: 300; margin-bottom: 12px;
+  }
+
+  .ctrl-request-actions {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; width: 100%;
+  }
+
+  .btn-approve-req {
+    height: 56px; border-radius: 12px; border: none;
+    background: var(--accent); color: #000;
+    font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 0.06em;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .btn-approve-req:active { transform: scale(0.96); opacity: 0.85; }
+
+  .btn-deny-req {
+    height: 56px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+    font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 0.06em;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .btn-deny-req:hover { border-color: #444; color: var(--text); }
+  .btn-deny-req:active { transform: scale(0.96); }
+
   /* ── Disconnected overlay ── */
   .overlay {
     position: fixed;
@@ -650,6 +712,19 @@
   <div class="flash-countdown" id="flashCountdown"></div>
 </div>
 
+<!-- Control request modal -->
+<div class="ctrl-request-modal" id="ctrlRequestModal">
+  <div class="ctrl-request-box">
+    <div class="ctrl-request-eyebrow">Control Request</div>
+    <div class="ctrl-request-name" id="ctrlRequestName">Someone</div>
+    <div class="ctrl-request-sub">wants to control this session</div>
+    <div class="ctrl-request-actions">
+      <button class="btn-deny-req" id="denyRequestBtn">Deny</button>
+      <button class="btn-approve-req" id="approveRequestBtn">Approve</button>
+    </div>
+  </div>
+</div>
+
 <!-- Disconnected / PiP-prompt overlay -->
 <div class="overlay" id="overlay">
   <div class="overlay-title" id="overlayTitle">Connecting…</div>
@@ -884,6 +959,26 @@
   let ctrlWs           = null;
   let desktopHasControl = true;
   let ctrlWaitingId     = null;
+  let pendingRequestId  = null;
+
+  const ctrlRequestModal  = document.getElementById('ctrlRequestModal');
+  const ctrlRequestName   = document.getElementById('ctrlRequestName');
+  const approveRequestBtn = document.getElementById('approveRequestBtn');
+  const denyRequestBtn    = document.getElementById('denyRequestBtn');
+
+  approveRequestBtn.addEventListener('click', () => {
+    if (!pendingRequestId) return;
+    ctrlWs?.send(JSON.stringify({ type: 'approve_request', sessionId, targetId: pendingRequestId }));
+    ctrlRequestModal.classList.remove('visible');
+    pendingRequestId = null;
+  });
+
+  denyRequestBtn.addEventListener('click', () => {
+    if (!pendingRequestId) return;
+    ctrlWs?.send(JSON.stringify({ type: 'deny_request', sessionId, targetId: pendingRequestId }));
+    ctrlRequestModal.classList.remove('visible');
+    pendingRequestId = null;
+  });
 
   function sendCtrl(msg) {
     if (ctrlWs?.readyState === WebSocket.OPEN) {
@@ -941,6 +1036,15 @@
           // Phone disconnected — reclaim automatically
           if (ctrlWaitingId) {
             ctrlWs.send(JSON.stringify({ type: 'claim_control', sessionId }));
+          }
+        } else if (msg.type === 'control_request') {
+          pendingRequestId = msg.requestId;
+          ctrlRequestName.textContent = msg.fromName || 'Someone';
+          ctrlRequestModal.classList.add('visible');
+        } else if (msg.type === 'control_request_cancelled') {
+          if (pendingRequestId === msg.requestId) {
+            ctrlRequestModal.classList.remove('visible');
+            pendingRequestId = null;
           }
         }
       } catch {}
