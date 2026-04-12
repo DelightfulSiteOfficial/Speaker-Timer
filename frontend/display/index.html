@@ -698,9 +698,9 @@
   /* ── Mobile circular dial ── */
   .mobile-dial-wrap {
     position: relative;
-    width: min(220px, 64vw);
+    width: min(190px, 58vw);
     aspect-ratio: 1;
-    margin-top: 10px;
+    margin-top: 6px;
     flex-direction: column;
     align-items: center;
   }
@@ -772,9 +772,9 @@
     bottom: 0; left: 0; right: 0;
     background: rgba(10,10,10,0.96);
     border-top: 1px solid #1e1e1e;
-    padding: 10px 20px 24px;
+    padding: 8px 16px 20px;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     z-index: 60;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -844,9 +844,9 @@
      MOBILE PORTRAIT  ≤ 640px
   ══════════════════════════════════════════ */
   @media (max-width: 640px) {
-    /* Body becomes a scrollable column */
+    /* Body: column, centered, fixed height so nothing scrolls off */
     body {
-      padding: 0 0 110px; /* bottom pad for fixed footer */
+      padding: 0 0 96px; /* bottom pad = footer height */
       justify-content: flex-start;
       align-items: center;
       overflow-y: auto;
@@ -861,33 +861,36 @@
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      padding-top: 52px; /* clear the top-bar */
+      padding-top: 44px; /* clear the top-bar */
       width: 100%;
       gap: 0;
     }
 
-    /* QR panel: float to top, centered, out of absolute */
+    /* QR panel: float to top, centered, compact */
     .qr-panel {
       position: static !important;
       transform: none !important;
       order: -1;
-      padding: 12px 12px 10px;
-      border-radius: 12px;
-      margin-bottom: 14px;
+      padding: 10px 10px 8px;
+      border-radius: 10px;
+      margin-bottom: 10px;
       width: fit-content;
     }
-    .qr-frame { width: 100px !important; height: 100px !important; }
+    .qr-frame { width: 80px !important; height: 80px !important; }
     .qr-frame canvas, .qr-frame img {
-      width: 100px !important;
-      height: 100px !important;
+      width: 80px !important;
+      height: 80px !important;
     }
+    .qr-label  { font-size: 7px; }
+    .session-id { font-size: 10px; margin-top: 3px; }
     .qr-ghost { display: none !important; }
 
-    /* Timer block */
-    .timer-block { align-items: center; }
-    .time-display { font-size: clamp(72px, 24vw, 130px); }
-    .progress-bar { width: min(100%, 300px); }
-    .speaker-name { font-size: 13px; margin-top: 4px; }
+    /* Timer block — compact */
+    .timer-block { align-items: center; gap: 4px; }
+    .time-display { font-size: clamp(68px, 22vw, 120px); }
+    .progress-bar { width: min(100%, 280px); margin: 4px 0 2px; height: 4px; }
+    .speaker-name { font-size: 12px; }
+    .overtime-badge { font-size: 8px; padding: 3px 10px; }
 
     /* Show mobile-only elements */
     .mobile-dial-wrap { display: flex; }
@@ -1121,7 +1124,7 @@
     const url = controlKey
       ? `${window.location.origin}/control/?session=${sessionId}&key=${controlKey}`
       : `${window.location.origin}/control/?session=${sessionId}`;
-    const size = window.innerWidth <= 640 ? 100 : 132;
+    const size = window.innerWidth <= 640 ? 80 : 132;
     const frame = document.getElementById('qrFrame');
     frame.innerHTML = '';
     new QRCode(frame, {
@@ -1327,7 +1330,15 @@
 
   controlsToggle.addEventListener('click', () => {
     controlsVisible = !controlsVisible;
+    // Desktop: slide presenter panel
     presenterPanel.classList.toggle('hidden', !controlsVisible);
+    // Mobile: hide footer + dial
+    const mFooter = document.getElementById('mobileFooter');
+    const mDial   = document.getElementById('mobileDial');
+    if (mFooter) mFooter.style.display = controlsVisible ? '' : 'none';
+    if (mDial)   mDial.style.display   = controlsVisible ? '' : 'none';
+    // Also remove bottom padding when controls hidden (no footer to clear)
+    document.body.style.paddingBottom = controlsVisible ? '' : '0';
     controlsToggle.textContent = controlsVisible ? 'Hide Controls' : 'Show Controls';
     controlsToggle.classList.toggle('active', !controlsVisible);
   });
