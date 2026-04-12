@@ -1646,14 +1646,10 @@
       <div class="card-progress">
         <div class="card-progress-fill ${tc}" style="width:${offline ? '100' : pct}%"></div>
       </div>
-      ${!offline && controllerConnected ? `
+      ${!offline && controllerConnected && coHost ? `
       <div class="card-actions">
-        ${coHost ? `
-          <span class="cohost-label">&#11041; Co-host${coHostName ? ': ' + escHtml(coHostName) : ''}</span>
-          <button class="btn-revoke-cohost" data-id="${sessionId}">Revoke</button>
-        ` : `
-          <button class="btn-make-cohost" data-id="${sessionId}">Make Co-host</button>
-        `}
+        <span class="cohost-label">&#11041; Co-host${coHostName ? ': ' + escHtml(coHostName) : ''}</span>
+        <button class="btn-revoke-cohost" data-id="${sessionId}">Revoke</button>
       </div>` : ''}
     `;
 
