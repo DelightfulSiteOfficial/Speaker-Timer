@@ -353,10 +353,21 @@ const server = createServer(async (req, res) => {
       syncWaitingList(session);
       sendMsg(ws, { type: 'control_denied', waitingId: newWaitingId });
       broadcast(session);
-      // Hand off to the next human in the queue rather than broadcasting
-      // control_available (which would let presenter mode grab it first)
+
+      // If someone is already waiting (e.g. admin is on the control page),
+      // promote them immediately.  Otherwise start a 15-second grace period
+      // so the admin can navigate back to the control page and claim control
+      // before the Presenter Display grabs it.
       if (!autoPromote(session)) {
-        broadcastMsg(session, { type: 'control_available' });
+        clearTimeout(session.controlGraceTimer);
+        session.controlGraceTimer = setTimeout(() => {
+          session.controlGraceTimer = null;
+          if (!session.controller) {
+            if (!autoPromote(session)) {
+              broadcastMsg(session, { type: 'control_available' });
+            }
+          }
+        }, 15000);
       }
     }
     res.writeHead(200, { 'Content-Type': 'application/json' });
