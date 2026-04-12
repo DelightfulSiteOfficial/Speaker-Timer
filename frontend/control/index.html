@@ -1005,7 +1005,16 @@
 
   const params = new URLSearchParams(window.location.search);
   const sessionId  = params.get('session') || 'NOSESSION';
-  const controlKey = params.get('key') || '';
+  // Key comes from the QR-scanned URL. If the user navigates back via the hub
+  // (which only has the session ID, not the key), fall back to the value saved
+  // from their last QR scan so they don't hit "Access Denied".
+  const KEY_STORE = `speakerTimerKey_${sessionId}`;
+  let controlKey  = params.get('key') || '';
+  if (controlKey) {
+    localStorage.setItem(KEY_STORE, controlKey);   // save on first QR scan
+  } else {
+    controlKey = localStorage.getItem(KEY_STORE) || ''; // use saved on return visits
+  }
   saveSession(sessionId, 'control', controlKey);
   const MY_NAME_KEY        = 'speakerTimerMyName';
   const NAME_PROMPTED_KEY  = 'speakerTimerNamePromptSeen';
