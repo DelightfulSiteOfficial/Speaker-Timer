@@ -1308,21 +1308,53 @@
   // ── Fullscreen toggle ──────────────────────────────────────────────────────
   const fullscreenToggle = document.getElementById('fullscreenToggle');
 
-  function updateFullscreenLabel() {
-    const inFs = !!document.fullscreenElement;
-    fullscreenToggle.textContent = inFs ? 'Exit Fullscreen' : 'Fullscreen';
-    fullscreenToggle.classList.toggle('active', inFs);
-  }
+  // iOS Safari blocks the Fullscreen API entirely — detect and adapt
+  const fullscreenSupported = !!(
+    document.documentElement.requestFullscreen ||
+    document.documentElement.webkitRequestFullscreen
+  );
+  // navigator.standalone = true when already running as a home screen app on iOS
+  const isIOS       = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = navigator.standalone === true ||
+                       window.matchMedia('(display-mode: standalone)').matches;
 
-  fullscreenToggle.addEventListener('click', () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+  if (!fullscreenSupported || isIOS) {
+    if (isStandalone) {
+      // Already running fullscreen via home screen — hide the option
+      fullscreenToggle.style.display = 'none';
+    } else if (isIOS) {
+      // iOS but not standalone — offer Add to Home Screen guidance
+      fullscreenToggle.textContent = 'Add to Home Screen';
+      fullscreenToggle.addEventListener('click', () => {
+        overflowMenu.classList.remove('open');
+        alert('Tap the Share button (⬆) in Safari, then "Add to Home Screen" to run this page fullscreen.');
+      });
     } else {
-      document.exitFullscreen().catch(() => {});
+      // Non-iOS device with no fullscreen support — just hide it
+      fullscreenToggle.style.display = 'none';
     }
-  });
+  } else {
+    function updateFullscreenLabel() {
+      const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      fullscreenToggle.textContent = inFs ? 'Exit Fullscreen' : 'Fullscreen';
+      fullscreenToggle.classList.toggle('active', inFs);
+    }
 
-  document.addEventListener('fullscreenchange', updateFullscreenLabel);
+    fullscreenToggle.addEventListener('click', () => {
+      const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      if (!inFs) {
+        (document.documentElement.requestFullscreen ||
+         document.documentElement.webkitRequestFullscreen)
+          .call(document.documentElement).catch(() => {});
+      } else {
+        (document.exitFullscreen || document.webkitExitFullscreen)
+          .call(document).catch(() => {});
+      }
+    });
+
+    document.addEventListener('fullscreenchange',       updateFullscreenLabel);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenLabel);
+  }
 
   // ── Controls toggle ────────────────────────────────────────────────────────
   const controlsToggle = document.getElementById('controlsToggle');
