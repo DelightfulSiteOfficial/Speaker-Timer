@@ -947,7 +947,7 @@
       <div class="mobile-dial-unit">min</div>
       <div class="mobile-dial-hint">drag to set</div>
     </div>
-    <input class="mobile-dial-input" id="mobileDialInput" type="number" min="1" max="300">
+    <input class="mobile-dial-input" id="mobileDialInput" type="number" min="1" max="120">
   </div>
 
   <!-- Ghost hit area for restoring hidden QR via double-click -->
@@ -966,7 +966,7 @@
 
 <!-- Hold-to-set duration overlay -->
 <div class="timer-hold-overlay" id="timerHoldOverlay">
-  <input class="timer-hold-field" id="timerHoldField" type="number" min="1" max="300" placeholder="—">
+  <input class="timer-hold-field" id="timerHoldField" type="number" min="1" max="120" placeholder="—">
   <div class="timer-hold-unit">minutes</div>
   <div class="timer-hold-hint">enter to set &nbsp;·&nbsp; esc to cancel</div>
 </div>
@@ -999,15 +999,16 @@
         <span class="presenter-dur-unit">min</span>
       </div>
       <div class="presenter-slider-wrap">
-        <input type="range" class="presenter-slider" id="presenterSlider" min="1" max="90" value="10" step="1">
+        <input type="range" class="presenter-slider" id="presenterSlider" min="1" max="120" value="10" step="1">
         <div class="presenter-slider-ticks">
-          <!-- positions: (value-1)/89*100 -->
+          <!-- positions: (value-1)/119*100 -->
           <span style="left:0%">1m</span>
-          <span style="left:15.7%">15m</span>
-          <span style="left:32.6%">30m</span>
-          <span style="left:49.4%">45m</span>
-          <span style="left:66.3%">60m</span>
-          <span style="left:100%">90m</span>
+          <span style="left:11.8%">15m</span>
+          <span style="left:24.4%">30m</span>
+          <span style="left:37.0%">45m</span>
+          <span style="left:49.6%">60m</span>
+          <span style="left:74.8%">90m</span>
+          <span style="left:100%">120m</span>
         </div>
       </div>
     </div>
@@ -1829,7 +1830,7 @@
           </div>
         </div>
         <div id="pip-input">
-          <input class="pip-min-input" id="pipMinInput" type="number" min="1" max="300" placeholder="10">
+          <input class="pip-min-input" id="pipMinInput" type="number" min="1" max="120" placeholder="10">
           <div class="pip-min-label">minutes — press enter</div>
         </div>
         <div id="pip-msg" style="display:none">
@@ -1958,7 +1959,7 @@
 
   // ── Mobile circular dial ───────────────────────────────────────────────────
   ;(function () {
-    const DIAL_MAX   = 90;
+    const DIAL_MAX   = 120;
     const DIAL_START = 210;
     const DIAL_SWEEP = 300;
     const DIAL_R     = 96;
@@ -1988,7 +1989,7 @@
     }
 
     function updateDial(mins, sendUpdate) {
-      mins = Math.max(1, Math.min(300, Math.round(mins)));
+      mins = Math.max(1, Math.min(120, Math.round(mins)));
       dialMins = mins;
       const display  = Math.min(mins, DIAL_MAX);
       const endAngle = (DIAL_START + (display / DIAL_MAX) * DIAL_SWEEP) % 360;
@@ -2023,13 +2024,13 @@
       window._mDialDragging = true;
       dialSvg.setPointerCapture(e.pointerId);
       const [cx, cy] = clientToSVG(e);
-      updateDial(Math.round(coordsToMins(cx, cy) / 5) * 5 || 5, false);
+      updateDial(Math.round(coordsToMins(cx, cy)) || 1, false);
       e.preventDefault();
     });
     dialSvg.addEventListener('pointermove', e => {
       if (!isDragging) return;
       const [cx, cy] = clientToSVG(e);
-      updateDial(Math.round(coordsToMins(cx, cy) / 5) * 5 || 5, false);
+      updateDial(Math.round(coordsToMins(cx, cy)) || 1, false);
     });
     dialSvg.addEventListener('pointerup', e => {
       if (!isDragging) return;

@@ -889,7 +889,7 @@
         <div class="dial-unit">min</div>
         <div class="dial-hint">tap to type</div>
       </div>
-      <input class="dial-direct-input" id="dialDirectInput" type="number" min="1" max="300">
+      <input class="dial-direct-input" id="dialDirectInput" type="number" min="1" max="120">
     </div>
     <div class="dial-presets">
       <button class="dial-preset" data-mins="15">15m</button>
@@ -1249,7 +1249,7 @@
   });
 
   // ── Duration dial ──────────────────────────────────────────────────────────
-  const DIAL_MAX   = 90;
+  const DIAL_MAX   = 120;
   const DIAL_START = 210;
   const DIAL_SWEEP = 300;
   const DIAL_R     = 96;
@@ -1279,7 +1279,7 @@
   }
 
   function updateDial(mins, sendUpdate) {
-    mins = Math.max(1, Math.min(300, Math.round(mins)));
+    mins = Math.max(1, Math.min(120, Math.round(mins)));
     dialMins = mins;
     const displayMins = Math.min(mins, DIAL_MAX);
     const endAngle = (DIAL_START + (displayMins / DIAL_MAX) * DIAL_SWEEP) % 360;
@@ -1318,14 +1318,14 @@
     dialDragging = true;
     durationDial.setPointerCapture(e.pointerId);
     const [cx, cy] = clientToDialCoords(e);
-    updateDial(Math.round(coordsToMins(cx, cy) / 5) * 5 || 5, false);
+    updateDial(Math.round(coordsToMins(cx, cy)) || 1, false);
     e.preventDefault();
   });
 
   durationDial.addEventListener('pointermove', e => {
     if (!dialDragging) return;
     const [cx, cy] = clientToDialCoords(e);
-    updateDial(Math.round(coordsToMins(cx, cy) / 5) * 5 || 5, false);
+    updateDial(Math.round(coordsToMins(cx, cy)) || 1, false);
     e.preventDefault();
   });
 
