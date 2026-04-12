@@ -60,6 +60,40 @@ function syncWaitingList(session) {
     .map(([id, { name }]) => ({ id, name }));
 }
 
+// ── Auto-promote the next waiting controller ─────────────────────────────────
+// Prefers human participants over the Presenter Display so that when a co-host
+// is revoked the original operator gets control back without needing approval.
+// Returns true if someone was promoted, false if the waiting list was empty.
+function autoPromote(session) {
+  // Purge any dead connections first
+  for (const [wid, entry] of [...session.waitingControllers.entries()]) {
+    if (entry.ws.readyState !== WebSocket.OPEN) {
+      session.waitingControllers.delete(wid);
+    }
+  }
+
+  let chosenWid = null, chosenEntry = null;
+  for (const [wid, entry] of session.waitingControllers.entries()) {
+    if (entry.name !== 'Presenter Display') {
+      // Take the first human immediately
+      chosenWid = wid; chosenEntry = entry;
+      break;
+    }
+    // Keep display as fallback if no humans found
+    if (!chosenWid) { chosenWid = wid; chosenEntry = entry; }
+  }
+
+  if (!chosenWid) return false;
+
+  session.waitingControllers.delete(chosenWid);
+  session.controller = chosenEntry.ws;
+  session.state.controllerConnected = true;
+  syncWaitingList(session);
+  sendMsg(chosenEntry.ws, { type: 'control_granted' });
+  broadcast(session);
+  return true;
+}
+
 // ── Broadcast state to all clients in a session ───────────────────────────────
 function broadcast(session) {
   const msg = JSON.stringify({ type: 'state', payload: session.state });
@@ -305,7 +339,11 @@ const server = createServer(async (req, res) => {
       syncWaitingList(session);
       sendMsg(ws, { type: 'control_denied', waitingId: newWaitingId });
       broadcast(session);
-      broadcastMsg(session, { type: 'control_available' });
+      // Hand off to the next human in the queue rather than broadcasting
+      // control_available (which would let presenter mode grab it first)
+      if (!autoPromote(session)) {
+        broadcastMsg(session, { type: 'control_available' });
+      }
     }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true }));
@@ -680,7 +718,7 @@ wss.on('connection', (ws, req) => {
         if (!target) break;
         const prevWs = ws;
         const newWaitingId = generateId();
-        session.waitingControllers.set(newWaitingId, { ws: prevWs, name: 'Presenter Display' });
+        session.waitingControllers.set(newWaitingId, { ws: prevWs, name: '' }); // device will set its own name via set_waiting_name
         sendMsg(prevWs, { type: 'control_denied', waitingId: newWaitingId });
         session.waitingControllers.delete(msg.targetId);
         session.controller = target.ws;
@@ -725,7 +763,10 @@ wss.on('connection', (ws, req) => {
         syncWaitingList(session);
         sendMsg(ws, { type: 'control_denied', waitingId: newWaitingId });
         broadcast(session);
-        broadcastMsg(session, { type: 'control_available' });
+        // Auto-promote next human rather than racing with presenter mode
+        if (!autoPromote(session)) {
+          broadcastMsg(session, { type: 'control_available' });
+        }
         break;
       }
     }
@@ -754,7 +795,9 @@ wss.on('connection', (ws, req) => {
       session.controlGraceTimer = setTimeout(() => {
         session.controlGraceTimer = null;
         if (!session.controller) {
-          broadcastMsg(session, { type: 'control_available' });
+          if (!autoPromote(session)) {
+            broadcastMsg(session, { type: 'control_available' });
+          }
         }
       }, 20000);
     }
