@@ -61,13 +61,15 @@ function syncWaitingList(session) {
 }
 
 // ── Auto-promote the next waiting controller ─────────────────────────────────
-// Priority order:
-//   1. The admin who most recently promoted a co-host (session.prevControllerWaitingId)
-//   2. First human (non-Presenter-Display) in the waiting list
-//   3. Presenter Display as last resort
-// Returns true if someone was promoted, false if the waiting list was empty.
-function autoPromote(session) {
-  // Purge dead connections first; clear stale prevControllerWaitingId if gone
+// skipWid   – waitingId to exclude (the just-released controller, so they
+//             don't immediately get control back after being revoked)
+// humanOnly – if true, never fall back to Presenter Display (used by the
+//             HTTP revoke path so the grace period fires instead)
+//
+// Priority: prevControllerWaitingId → first human → Presenter Display fallback
+// Returns true if someone was promoted, false otherwise.
+function autoPromote(session, skipWid = null, humanOnly = false) {
+  // Purge dead connections; clear stale prevControllerWaitingId if gone
   for (const [wid, entry] of [...session.waitingControllers.entries()]) {
     if (entry.ws.readyState !== WebSocket.OPEN) {
       session.waitingControllers.delete(wid);
@@ -77,24 +79,25 @@ function autoPromote(session) {
 
   let chosenWid = null, chosenEntry = null;
 
-  // 1. Restore the admin who delegated control to the co-host
-  if (session.prevControllerWaitingId) {
+  // 1. Restore the admin who delegated control (skip if they are the revokee)
+  if (session.prevControllerWaitingId && session.prevControllerWaitingId !== skipWid) {
     const entry = session.waitingControllers.get(session.prevControllerWaitingId);
     if (entry) { chosenWid = session.prevControllerWaitingId; chosenEntry = entry; }
-    session.prevControllerWaitingId = null; // consume it
+    session.prevControllerWaitingId = null;
   }
 
-  // 2. First human in queue
+  // 2. First human in queue (skip the just-released entry)
   if (!chosenWid) {
     let displayWid = null, displayEntry = null;
     for (const [wid, entry] of session.waitingControllers.entries()) {
+      if (wid === skipWid) continue;
       if (entry.name !== 'Presenter Display') {
         chosenWid = wid; chosenEntry = entry; break;
       }
       if (!displayWid) { displayWid = wid; displayEntry = entry; }
     }
-    // 3. Fallback: Presenter Display
-    if (!chosenWid) { chosenWid = displayWid; chosenEntry = displayEntry; }
+    // 3. Presenter Display fallback (skipped when humanOnly=true)
+    if (!chosenWid && !humanOnly) { chosenWid = displayWid; chosenEntry = displayEntry; }
   }
 
   if (!chosenWid) return false;
@@ -354,15 +357,17 @@ const server = createServer(async (req, res) => {
       sendMsg(ws, { type: 'control_denied', waitingId: newWaitingId });
       broadcast(session);
 
-      // If someone is already waiting (e.g. admin is on the control page),
-      // promote them immediately.  Otherwise start a 15-second grace period
-      // so the admin can navigate back to the control page and claim control
-      // before the Presenter Display grabs it.
-      if (!autoPromote(session)) {
+      // Skip the just-revoked co-host (newWaitingId) so they can't immediately
+      // re-claim control. Also skip Presenter Display in this first pass
+      // (humanOnly=true) — if no human is already waiting, start a 15-second
+      // grace period so the admin can navigate back to the control page and
+      // claim it before the display grabs it.
+      if (!autoPromote(session, newWaitingId, true)) {
         clearTimeout(session.controlGraceTimer);
         session.controlGraceTimer = setTimeout(() => {
           session.controlGraceTimer = null;
           if (!session.controller) {
+            // Full promote now (includes Presenter Display fallback)
             if (!autoPromote(session)) {
               broadcastMsg(session, { type: 'control_available' });
             }
