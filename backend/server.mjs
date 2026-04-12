@@ -61,26 +61,40 @@ function syncWaitingList(session) {
 }
 
 // ── Auto-promote the next waiting controller ─────────────────────────────────
-// Prefers human participants over the Presenter Display so that when a co-host
-// is revoked the original operator gets control back without needing approval.
+// Priority order:
+//   1. The admin who most recently promoted a co-host (session.prevControllerWaitingId)
+//   2. First human (non-Presenter-Display) in the waiting list
+//   3. Presenter Display as last resort
 // Returns true if someone was promoted, false if the waiting list was empty.
 function autoPromote(session) {
-  // Purge any dead connections first
+  // Purge dead connections first; clear stale prevControllerWaitingId if gone
   for (const [wid, entry] of [...session.waitingControllers.entries()]) {
     if (entry.ws.readyState !== WebSocket.OPEN) {
       session.waitingControllers.delete(wid);
+      if (wid === session.prevControllerWaitingId) session.prevControllerWaitingId = null;
     }
   }
 
   let chosenWid = null, chosenEntry = null;
-  for (const [wid, entry] of session.waitingControllers.entries()) {
-    if (entry.name !== 'Presenter Display') {
-      // Take the first human immediately
-      chosenWid = wid; chosenEntry = entry;
-      break;
+
+  // 1. Restore the admin who delegated control to the co-host
+  if (session.prevControllerWaitingId) {
+    const entry = session.waitingControllers.get(session.prevControllerWaitingId);
+    if (entry) { chosenWid = session.prevControllerWaitingId; chosenEntry = entry; }
+    session.prevControllerWaitingId = null; // consume it
+  }
+
+  // 2. First human in queue
+  if (!chosenWid) {
+    let displayWid = null, displayEntry = null;
+    for (const [wid, entry] of session.waitingControllers.entries()) {
+      if (entry.name !== 'Presenter Display') {
+        chosenWid = wid; chosenEntry = entry; break;
+      }
+      if (!displayWid) { displayWid = wid; displayEntry = entry; }
     }
-    // Keep display as fallback if no humans found
-    if (!chosenWid) { chosenWid = wid; chosenEntry = entry; }
+    // 3. Fallback: Presenter Display
+    if (!chosenWid) { chosenWid = displayWid; chosenEntry = displayEntry; }
   }
 
   if (!chosenWid) return false;
@@ -413,11 +427,13 @@ const server = createServer(async (req, res) => {
         res.end(JSON.stringify({ ok: false, error: 'Target not found' }));
         return;
       }
-      // Demote current controller (if any) to waiting
+      // Demote current controller (if any) to waiting — remember them so
+      // revoking the co-host gives control straight back to this admin.
       if (session.controller) {
         const prevWs = session.controller;
         const newWaitingId = generateId();
         session.waitingControllers.set(newWaitingId, { ws: prevWs, name: '' });
+        session.prevControllerWaitingId = newWaitingId;
         sendMsg(prevWs, { type: 'control_denied', waitingId: newWaitingId });
       }
       // Promote target as co-host
@@ -740,9 +756,11 @@ wss.on('connection', (ws, req) => {
         const target = session.waitingControllers.get(msg.targetId);
         if (!target) break;
 
-        // Put current controller into the waiting list
+        // Put current controller into the waiting list and remember them
+        // so releasing the new controller returns control here first.
         const newWaitingId = generateId();
         session.waitingControllers.set(newWaitingId, { ws, name: '' });
+        session.prevControllerWaitingId = newWaitingId;
         sendMsg(ws, { type: 'control_denied', waitingId: newWaitingId });
 
         // Promote the target
@@ -802,10 +820,11 @@ wss.on('connection', (ws, req) => {
       }, 20000);
     }
 
-    // Remove from waiting list if present
+    // Remove from waiting list if present; clear prevControllerWaitingId if it was them
     for (const [wid, entry] of session.waitingControllers.entries()) {
       if (entry.ws === ws) {
         session.waitingControllers.delete(wid);
+        if (wid === session.prevControllerWaitingId) session.prevControllerWaitingId = null;
         syncWaitingList(session);
         broadcast(session);
         break;
