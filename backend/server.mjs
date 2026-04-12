@@ -416,12 +416,27 @@ const server = createServer(async (req, res) => {
 // ── WebSocket server ──────────────────────────────────────────────────────────
 const wss = new WebSocketServer({ server });
 
+// Ping/pong heartbeat — terminates dead connections within ~35 s so stale
+// controller slots are freed quickly when a phone's screen locks.
+const HEARTBEAT_MS = 25000;
+setInterval(() => {
+  for (const client of wss.clients) {
+    if (client.isAlive === false) { client.terminate(); continue; }
+    client.isAlive = false;
+    try { client.ping(); } catch {}
+  }
+}, HEARTBEAT_MS);
+
 wss.on('connection', (ws, req) => {
   const { query } = parse(req.url, true);
   const sessionId = (query.session || '').toUpperCase().trim();
   const role      = query.role || 'view'; // display | control | view
 
   if (!sessionId) { ws.close(1008, 'No session ID'); return; }
+
+  // Heartbeat tracking
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
 
   const session = getSession(sessionId);
   session.clients.add(ws);
@@ -452,6 +467,25 @@ wss.on('connection', (ws, req) => {
 
   // Grant or deny control
   if (effectiveRole === 'control') {
+    // Clean up stale controller reference — phone may have disconnected while its
+    // close event was still in-flight (e.g. screen-lock race condition).
+    if (session.controller && session.controller.readyState !== WebSocket.OPEN) {
+      const deadWs = session.controller;
+      session.controller = null;
+      session.state.controllerConnected = false;
+      if (session.coHostWs === deadWs) {
+        session.coHostWs = null;
+        session.state.coHost = false;
+        session.state.coHostName = '';
+      }
+    }
+    // Also remove any dead entries from the waiting list
+    for (const [wid, entry] of session.waitingControllers.entries()) {
+      if (entry.ws.readyState !== WebSocket.OPEN) {
+        session.waitingControllers.delete(wid);
+      }
+    }
+
     // Admin force-reclaim: presenter display kicks the current operator back to the
     // waiting list. Requires only the session key — NOT operatorApproved — so the
     // display can always recover even when a bad actor grabbed control first.
