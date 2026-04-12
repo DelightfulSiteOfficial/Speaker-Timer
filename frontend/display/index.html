@@ -689,12 +689,222 @@
 
   body.presenter-mode .time-display { cursor: pointer; }
 
-  /* ── Compact / small window ── */
-  @media (max-width: 520px), (max-height: 400px) {
-    body { padding: 20px; }
+  /* ══════════════════════════════════════════
+     MOBILE ELEMENTS — hidden until ≤640px
+  ══════════════════════════════════════════ */
+  .mobile-dial-wrap,
+  .mobile-footer { display: none; }
+
+  /* ── Mobile circular dial ── */
+  .mobile-dial-wrap {
+    position: relative;
+    width: min(220px, 64vw);
+    aspect-ratio: 1;
+    margin-top: 10px;
+    flex-direction: column;
+    align-items: center;
+  }
+  .mobile-dial-svg {
+    width: 100%; height: 100%;
+    touch-action: none;
+    user-select: none;
+    cursor: pointer;
+    overflow: visible;
+  }
+  .mobile-dial-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    user-select: none;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+  .mobile-dial-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    line-height: 1;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+  .mobile-dial-unit {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: -6px;
+  }
+  .mobile-dial-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+    opacity: 0.5;
+  }
+  .mobile-dial-input {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 110px;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    padding: 4px 8px;
+    color: var(--text);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 44px;
+    text-align: center;
+    outline: none;
+    display: none;
+    z-index: 10;
+    -moz-appearance: textfield;
+  }
+  .mobile-dial-input::-webkit-inner-spin-button,
+  .mobile-dial-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .mobile-dial-wrap.locked { opacity: 0.35; pointer-events: none; }
+
+  /* ── Mobile footer ── */
+  .mobile-footer {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(10,10,10,0.96);
+    border-top: 1px solid #1e1e1e;
+    padding: 10px 20px 24px;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 60;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .mobile-footer-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 2px;
+  }
+  .mobile-footer-lbl {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    flex: 1;
+  }
+  .mobile-footer-btns {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 10px;
+  }
+  .mobile-btn-secondary {
+    height: 52px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mobile-btn-secondary:active { opacity: 0.7; transform: scale(0.97); }
+  .mobile-btn-primary {
+    height: 52px;
+    border: none;
+    border-radius: 12px;
+    background: #22c55e;
+    color: #000;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mobile-btn-primary.pause { background: var(--danger); color: #fff; }
+  .mobile-btn-primary:active { transform: scale(0.97); }
+  .mobile-btn-secondary:disabled,
+  .mobile-btn-primary:disabled { opacity: 0.3; pointer-events: none; }
+  .mobile-reclaim-btn {
+    background: none;
+    border: 1px solid #22c55e;
+    border-radius: 6px;
+    color: #22c55e;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+
+  /* ══════════════════════════════════════════
+     MOBILE PORTRAIT  ≤ 640px
+  ══════════════════════════════════════════ */
+  @media (max-width: 640px) {
+    /* Body becomes a scrollable column */
+    body {
+      padding: 0 0 110px; /* bottom pad for fixed footer */
+      justify-content: flex-start;
+      align-items: center;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* Keep top-bar visible so ··· menu works */
+    .top-bar { display: flex !important; }
+
+    /* Timer area: vertical stack */
+    .timer-area {
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 52px; /* clear the top-bar */
+      width: 100%;
+      gap: 0;
+    }
+
+    /* QR panel: float to top, centered, out of absolute */
+    .qr-panel {
+      position: static !important;
+      transform: none !important;
+      order: -1;
+      padding: 12px 12px 10px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      width: fit-content;
+    }
+    .qr-frame { width: 100px !important; height: 100px !important; }
+    .qr-frame canvas, .qr-frame img {
+      width: 100px !important;
+      height: 100px !important;
+    }
+    .qr-ghost { display: none !important; }
+
+    /* Timer block */
+    .timer-block { align-items: center; }
+    .time-display { font-size: clamp(72px, 24vw, 130px); }
+    .progress-bar { width: min(100%, 300px); }
+    .speaker-name { font-size: 13px; margin-top: 4px; }
+
+    /* Show mobile-only elements */
+    .mobile-dial-wrap { display: flex; }
+    .mobile-footer    { display: flex; }
+
+    /* Hide desktop presenter panel */
+    .presenter-panel { display: none !important; }
+  }
+
+  /* ── Landscape / tiny window — minimal view ── */
+  @media (max-height: 400px) {
+    .mobile-dial-wrap, .mobile-footer { display: none !important; }
+    .qr-panel { display: none !important; }
+    .top-bar { display: none !important; }
+    body { padding: 20px; overflow: hidden; justify-content: center; }
     .time-display { font-size: clamp(72px, 30vw, 160px); }
-    .qr-panel, .top-bar { display: none !important; }
-    .label { font-size: 11px; }
+    .presenter-panel { display: flex !important; transform: none !important; opacity: 1 !important; pointer-events: auto !important; }
   }
 </style>
 </head>
@@ -715,10 +925,26 @@
     <div class="overtime-badge" id="overtimeBadge">Overtime</div>
   </div>
 
+  <!-- Mobile circular dial (portrait phones, hidden on desktop) -->
+  <div class="mobile-dial-wrap" id="mobileDial">
+    <svg class="mobile-dial-svg" id="mobileDurationDial" viewBox="0 0 240 240">
+      <path fill="none" stroke="#1e1e1e" stroke-width="10" stroke-linecap="round"
+            d="M 72.00 203.08 A 96 96 0 1 1 168.00 203.08"/>
+      <path id="mobileDialArc" fill="none" stroke="#e8ff47" stroke-width="10" stroke-linecap="round"/>
+      <circle id="mobileDialThumb" r="14" fill="#e8ff47"/>
+    </svg>
+    <div class="mobile-dial-center" id="mobileDialCenter">
+      <div class="mobile-dial-val" id="mobileDialVal">10</div>
+      <div class="mobile-dial-unit">min</div>
+      <div class="mobile-dial-hint">drag to set</div>
+    </div>
+    <input class="mobile-dial-input" id="mobileDialInput" type="number" min="1" max="300">
+  </div>
+
   <!-- Ghost hit area for restoring hidden QR via double-click -->
   <div class="qr-ghost" id="qrGhost"></div>
 
-  <!-- QR panel — vertically centered to the right of timer -->
+  <!-- QR panel — vertically centered to the right of timer (repositioned to top on mobile) -->
   <div class="qr-panel" id="qrPanel">
     <div class="qr-frame" id="qrFrame">
       <div style="width:132px;height:132px;background:#eee;border-radius:3px;"></div>
@@ -803,6 +1029,19 @@
   </div>
 </div>
 
+<!-- Mobile footer: Start / Reset (portrait phones only) -->
+<div class="mobile-footer" id="mobileFooter">
+  <div class="mobile-footer-status">
+    <span class="ctrl-status-dot desktop" id="mobileCtrlDot"></span>
+    <span class="mobile-footer-lbl" id="mobileCtrlLbl">Presenter in control</span>
+    <button class="mobile-reclaim-btn" id="mobileReclaimBtn" style="display:none">Reclaim</button>
+  </div>
+  <div class="mobile-footer-btns">
+    <button class="mobile-btn-secondary" id="mobileResetBtn">Reset</button>
+    <button class="mobile-btn-primary"   id="mobileStartBtn">Start</button>
+  </div>
+</div>
+
 <!-- Disconnected / PiP-prompt overlay -->
 <div class="overlay" id="overlay">
   <div class="overlay-title" id="overlayTitle">Connecting…</div>
@@ -882,10 +1121,12 @@
     const url = controlKey
       ? `${window.location.origin}/control/?session=${sessionId}&key=${controlKey}`
       : `${window.location.origin}/control/?session=${sessionId}`;
-    document.getElementById('qrFrame').innerHTML = '';
-    new QRCode(document.getElementById('qrFrame'), {
+    const size = window.innerWidth <= 640 ? 100 : 132;
+    const frame = document.getElementById('qrFrame');
+    frame.innerHTML = '';
+    new QRCode(frame, {
       text: url,
-      width: 132, height: 132,
+      width: size, height: size,
       colorDark: '#000000', colorLight: '#ffffff',
       correctLevel: QRCode.CorrectLevel.M
     });
@@ -934,6 +1175,18 @@
       const mins = Math.max(1, Math.min(90, Math.round(state.totalTime / 60)));
       presenterSlider.value        = mins;
       presenterDurVal.textContent  = mins;
+    }
+
+    // Sync mobile start button label
+    const mStart = document.getElementById('mobileStartBtn');
+    if (mStart) {
+      mStart.textContent = running ? 'Pause' : 'Start';
+      mStart.classList.toggle('pause', running);
+    }
+    // Sync mobile dial (only when not actively dragging it)
+    if (!window._mDialDragging) {
+      const totalMins = Math.max(1, Math.round(state.totalTime / 60));
+      if (window._updateMDial) window._updateMDial(totalMins, false);
     }
 
     // Update control status (handles presenterLocked state)
@@ -1141,6 +1394,22 @@
     presenterSlider.style.opacity = disabled ? '0.35' : '';
     presenterStart.style.opacity  = disabled ? '0.35' : '';
     presenterReset.style.opacity  = disabled ? '0.35' : '';
+
+    // Sync mobile footer
+    const mDot    = document.getElementById('mobileCtrlDot');
+    const mLbl    = document.getElementById('mobileCtrlLbl');
+    const mRclaim = document.getElementById('mobileReclaimBtn');
+    const mStart  = document.getElementById('mobileStartBtn');
+    const mReset  = document.getElementById('mobileResetBtn');
+    const mDial   = document.getElementById('mobileDial');
+    if (mDot) {
+      mDot.className = 'ctrl-status-dot ' + (desktopHasControl ? 'desktop' : 'phone');
+      mLbl.textContent = desktopHasControl ? 'Presenter in control' : 'Operator in control';
+      mRclaim.style.display = desktopHasControl ? 'none' : '';
+      mStart.disabled = disabled;
+      mReset.disabled = disabled;
+      mDial.classList.toggle('locked', disabled);
+    }
   }
 
   function reclaimControl(force = false) {
@@ -1625,6 +1894,131 @@
   openCtrlWs();
 
   setInterval(() => { render(); updatePiP(); }, 500);
+
+  // ── Mobile footer buttons ──────────────────────────────────────────────────
+  document.getElementById('mobileStartBtn').addEventListener('click', () => {
+    if (state.running) sendCtrl({ type: 'pause' });
+    else               sendCtrl({ type: 'start' });
+  });
+  document.getElementById('mobileResetBtn').addEventListener('click', () => {
+    sendCtrl({ type: 'reset' });
+  });
+  document.getElementById('mobileReclaimBtn').addEventListener('click', () => {
+    reclaimControl(true);
+  });
+
+  // ── Mobile circular dial ───────────────────────────────────────────────────
+  ;(function () {
+    const DIAL_MAX   = 90;
+    const DIAL_START = 210;
+    const DIAL_SWEEP = 300;
+    const DIAL_R     = 96;
+
+    const dialSvg    = document.getElementById('mobileDurationDial');
+    const dialArc    = document.getElementById('mobileDialArc');
+    const dialThumb  = document.getElementById('mobileDialThumb');
+    const dialValEl  = document.getElementById('mobileDialVal');
+    const dialCenter = document.getElementById('mobileDialCenter');
+    const dialInput  = document.getElementById('mobileDialInput');
+    const dialWrap   = document.getElementById('mobileDial');
+
+    let dialMins    = 10;
+    let isDragging  = false;
+
+    function polarToXY(deg, r) {
+      const rad = deg * Math.PI / 180;
+      return [120 + r * Math.sin(rad), 120 - r * Math.cos(rad)];
+    }
+
+    function describeArc(from, to, r) {
+      const [sx, sy] = polarToXY(from, r);
+      const [ex, ey] = polarToXY(to, r);
+      const sweep = ((to - from) + 360) % 360 || 360;
+      const large = sweep > 180 ? 1 : 0;
+      return `M ${sx.toFixed(2)} ${sy.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
+    }
+
+    function updateDial(mins, sendUpdate) {
+      mins = Math.max(1, Math.min(300, Math.round(mins)));
+      dialMins = mins;
+      const display  = Math.min(mins, DIAL_MAX);
+      const endAngle = (DIAL_START + (display / DIAL_MAX) * DIAL_SWEEP) % 360;
+      dialArc.setAttribute('d', describeArc(DIAL_START, endAngle, DIAL_R));
+      const [tx, ty] = polarToXY(endAngle, DIAL_R);
+      dialThumb.setAttribute('cx', tx.toFixed(2));
+      dialThumb.setAttribute('cy', ty.toFixed(2));
+      dialValEl.textContent = mins;
+      if (sendUpdate) sendCtrl({ type: 'set_duration', seconds: mins * 60 });
+    }
+
+    function clientToSVG(e) {
+      const r = dialSvg.getBoundingClientRect();
+      return [(e.clientX - r.left) * (240 / r.width),
+              (e.clientY - r.top)  * (240 / r.height)];
+    }
+
+    function coordsToMins(cx, cy) {
+      const dx = cx - 120, dy = cy - 120;
+      let angle = Math.atan2(dx, -dy) * 180 / Math.PI;
+      angle = ((angle % 360) + 360) % 360;
+      let offset = ((angle - DIAL_START) + 360) % 360;
+      if (offset > DIAL_SWEEP) {
+        offset = offset < (DIAL_SWEEP + (360 - DIAL_SWEEP) / 2) ? DIAL_SWEEP : 0;
+      }
+      return Math.max(1, (offset / DIAL_SWEEP) * DIAL_MAX);
+    }
+
+    dialSvg.addEventListener('pointerdown', e => {
+      if (!desktopHasControl || state.running) return;
+      isDragging = true;
+      window._mDialDragging = true;
+      dialSvg.setPointerCapture(e.pointerId);
+      const [cx, cy] = clientToSVG(e);
+      updateDial(Math.round(coordsToMins(cx, cy) / 5) * 5 || 5, false);
+      e.preventDefault();
+    });
+    dialSvg.addEventListener('pointermove', e => {
+      if (!isDragging) return;
+      const [cx, cy] = clientToSVG(e);
+      updateDial(Math.round(coordsToMins(cx, cy) / 5) * 5 || 5, false);
+    });
+    dialSvg.addEventListener('pointerup', e => {
+      if (!isDragging) return;
+      isDragging = false;
+      window._mDialDragging = false;
+      dialSvg.releasePointerCapture(e.pointerId);
+      sendCtrl({ type: 'set_duration', seconds: dialMins * 60 });
+    });
+    dialSvg.addEventListener('pointercancel', () => {
+      isDragging = false;
+      window._mDialDragging = false;
+    });
+
+    // Tap center to type value directly
+    dialCenter.addEventListener('click', () => {
+      if (!desktopHasControl || state.running) return;
+      dialInput.value = dialMins;
+      dialInput.style.display = 'block';
+      setTimeout(() => { dialInput.focus(); dialInput.select(); }, 30);
+    });
+    dialInput.addEventListener('blur', () => {
+      const v = parseInt(dialInput.value);
+      dialInput.style.display = 'none';
+      if (!state.running && v >= 1 && v <= 300) updateDial(v, true);
+    });
+    dialInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const v = parseInt(dialInput.value);
+        if (v >= 1 && v <= 300) updateDial(v, true);
+        dialInput.style.display = 'none';
+      }
+      if (e.key === 'Escape') dialInput.style.display = 'none';
+    });
+
+    // Expose updater for the render loop to call
+    window._updateMDial = updateDial;
+    updateDial(10, false);
+  })();
 </script>
 </body>
 </html>
