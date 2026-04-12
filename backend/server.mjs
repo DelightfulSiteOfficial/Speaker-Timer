@@ -467,6 +467,13 @@ wss.on('connection', (ws, req) => {
 
   // Grant or deny control
   if (effectiveRole === 'control') {
+    // Phone reconnected — cancel the grace-period timer so presenter mode
+    // doesn't grab control after the phone has already reclaimed it.
+    if (session.controlGraceTimer) {
+      clearTimeout(session.controlGraceTimer);
+      session.controlGraceTimer = null;
+    }
+
     // Clean up stale controller reference — phone may have disconnected while its
     // close event was still in-flight (e.g. screen-lock race condition).
     if (session.controller && session.controller.readyState !== WebSocket.OPEN) {
@@ -740,7 +747,16 @@ wss.on('connection', (ws, req) => {
       }
       syncWaitingList(session);
       broadcast(session);
-      broadcastMsg(session, { type: 'control_available' });
+      // Grace period: wait 20 s before telling presenter mode control is free.
+      // If the phone reconnects within that window (e.g. screen-lock/wake),
+      // the timer is cancelled and control is silently restored.
+      clearTimeout(session.controlGraceTimer);
+      session.controlGraceTimer = setTimeout(() => {
+        session.controlGraceTimer = null;
+        if (!session.controller) {
+          broadcastMsg(session, { type: 'control_available' });
+        }
+      }, 20000);
     }
 
     // Remove from waiting list if present
