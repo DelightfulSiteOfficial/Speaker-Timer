@@ -849,14 +849,13 @@
       padding: 0 0 96px; /* bottom pad = footer height */
       justify-content: flex-start;
       align-items: center;
-      overflow-y: auto;
-      overflow-x: hidden;
+      overflow: hidden;
     }
 
     /* Keep top-bar visible so ··· menu works */
     .top-bar { display: flex !important; }
 
-    /* Timer area: vertical stack */
+    /* Timer area: vertical stack, full height so margin-top:auto works */
     .timer-area {
       flex-direction: column;
       align-items: center;
@@ -864,6 +863,7 @@
       padding-top: 44px; /* clear the top-bar */
       width: 100%;
       gap: 0;
+      min-height: calc(100dvh - 96px); /* dial pushed to bottom via margin-top:auto */
     }
 
     /* QR panel: float to top, centered, compact */
