@@ -1503,6 +1503,30 @@
     reconnectTimer = setTimeout(connect, 3000);
   }
 
+  // ── Wake Lock — keep screen alive so the phone doesn't disconnect ──────────
+  let wakeLock = null;
+
+  async function acquireWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    if (wakeLock) return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch (e) { /* battery saver mode or unsupported — fail silently */ }
+  }
+
+  // When the phone wakes up: re-acquire wake lock and reconnect immediately
+  // instead of waiting for the 3-second reconnect timer.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      acquireWakeLock();
+      if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+        clearTimeout(reconnectTimer);
+        connect();
+      }
+    }
+  });
+
   function connect() {
     initialStateReceived = false;
     try {
@@ -1604,6 +1628,7 @@
   }
 
   connect();
+  acquireWakeLock();
 </script>
 </body>
 </html>
