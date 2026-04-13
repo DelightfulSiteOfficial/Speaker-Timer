@@ -127,12 +127,12 @@
   .overtime-badge.visible { display: block; }
 
 
-  /* ── QR panel — fixed to bottom-left corner ── */
+  /* ── QR panel — floats to the right, out of flow so timer stays centred ── */
   .qr-panel {
-    position: fixed;
-    bottom: 16px;
-    left: 16px;
-    z-index: 50;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -154,13 +154,14 @@
   /* Ghost hit area shown when QR is hidden — same size/position, invisible */
   .qr-ghost {
     display: none;
-    position: fixed;
-    bottom: 16px;
-    left: 16px;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
     width: 192px;   /* approx qr-panel width */
     height: 220px;  /* approx qr-panel height */
     cursor: pointer;
-    z-index: 49;
+    z-index: 10;
   }
   .qr-ghost.active { display: block; }
 
@@ -909,21 +910,23 @@
       gap: 0;
     }
 
-    /* QR panel: fixed bottom-left, compact */
+    /* QR panel: float to top, centered, compact */
     .qr-panel {
-      bottom: 10px !important;
-      left: 10px !important;
-      padding: 8px 10px 6px !important;
-      border-radius: 10px !important;
-      gap: 4px !important;
+      position: static !important;
+      transform: none !important;
+      order: -1;
+      padding: 10px 10px 8px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      width: fit-content;
     }
-    .qr-frame { width: 72px !important; height: 72px !important; }
+    .qr-frame { width: 80px !important; height: 80px !important; }
     .qr-frame canvas, .qr-frame img {
-      width: 72px !important;
-      height: 72px !important;
+      width: 80px !important;
+      height: 80px !important;
     }
     .qr-label  { font-size: 7px; }
-    .session-id { font-size: 9px; margin-top: 2px; }
+    .session-id { font-size: 10px; margin-top: 3px; }
     .qr-ghost { display: none !important; }
 
     /* Timer block — compact */
