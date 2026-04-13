@@ -818,6 +818,28 @@
   }
   .btn-secondary:hover { border-color: #333; color: var(--text); }
   .btn-secondary:active { transform: scale(0.96); }
+
+  .nudge-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+  .nudge-btn {
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .nudge-btn:active { transform: scale(0.95); background: var(--border); }
+  .nudge-btn.add { color: var(--accent); border-color: rgba(232,255,71,0.2); background: rgba(232,255,71,0.04); }
+  .nudge-btn.sub { color: var(--warn);   border-color: rgba(255,153,0,0.2);  background: rgba(255,153,0,0.04); }
+
   .btn-secondary.next-btn {
     border-color: rgba(232,255,71,0.25);
     color: var(--accent);
@@ -1202,6 +1224,12 @@
       <div class="btn-row">
         <button class="btn-secondary" id="resetBtn">Reset</button>
         <button class="btn-secondary next-btn" id="nextBtn">Next →</button>
+      </div>
+      <div class="nudge-row">
+        <button class="nudge-btn sub" data-nudge="-60">−1m</button>
+        <button class="nudge-btn sub" data-nudge="-30">−30s</button>
+        <button class="nudge-btn add" data-nudge="30">+30s</button>
+        <button class="nudge-btn add" data-nudge="60">+1m</button>
       </div>
     </div>
 
@@ -1733,6 +1761,10 @@
 
   resetBtn.addEventListener('click', () =>
     send({ type: 'reset', sessionId }));
+
+  document.querySelectorAll('[data-nudge]').forEach(btn =>
+    btn.addEventListener('click', () =>
+      send({ type: 'nudge', sessionId, delta: parseInt(btn.dataset.nudge) })));
 
   nextBtn.addEventListener('click', () => loadNextItem());
 
