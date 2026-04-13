@@ -99,19 +99,21 @@ function autoPromote(session, skipWid = null, humanOnly = false) {
     session.prevControllerWaitingId = null;
   }
 
-  // 2. First non-background human in queue (skip the just-released entry)
+  // 2. First real human in queue — skip background and presenter entries
   if (!chosenWid) {
     let backgroundWid = null, backgroundEntry = null;
     let displayWid    = null, displayEntry    = null;
     for (const [wid, entry] of session.waitingControllers.entries()) {
       if (wid === skipWid) continue;
       if (entry.ws.isBackground) {
-        // Background admin hub WS — prefer over Presenter Display but below humans
+        // Hub's background admin WS — prefer over Presenter Display but below humans
         if (!backgroundWid) { backgroundWid = wid; backgroundEntry = entry; }
-      } else if (entry.name !== 'Presenter Display') {
-        chosenWid = wid; chosenEntry = entry; break;
-      } else {
+      } else if (entry.ws.isPresenter) {
+        // Display page's presenter socket — last resort fallback
         if (!displayWid) { displayWid = wid; displayEntry = entry; }
+      } else {
+        // Real human — takes priority
+        chosenWid = wid; chosenEntry = entry; break;
       }
     }
     // 3. Background admin (hub) before Presenter Display fallback
@@ -658,9 +660,10 @@ wss.on('connection', (ws, req) => {
       session.keyDenied.add(ws);
       sendMsg(ws, { type: 'key_required' });
     }
-    // Tag this WS connection as admin (correct key supplied) or regular user
+    // Tag this WS connection — properties used throughout the session lifetime
     ws.isAdmin      = keyProvided && (!session.keyVerified || providedKey === session.controlKey);
     ws.isBackground = isBackground && ws.isAdmin;
+    ws.isPresenter  = isPresenter;  // display page's internal control socket
   }
 
   // Grant or deny control
@@ -697,16 +700,21 @@ wss.on('connection', (ws, req) => {
     //   • Background admin WS: reclaims only from Presenter Display
     //     (not from mobile users who were explicitly approved)
     const connectingIsRealAdmin = ws.isAdmin && !isBackground;
+    // A "passive" holder is one that should yield silently to a real admin:
+    // the display page's presenter socket, or the hub's background admin socket.
+    // Use ws properties (set at connection time) — NOT controllerName strings,
+    // which can be empty if the holder got control via the direct-grant path.
     const holderIsPassive = session.controller &&
-      (session.controller.isBackground || session.state.controllerName === 'Presenter Display');
+      (session.controller.isPresenter || session.controller.isBackground);
     const bgReclaimsPresenter = isBackground && ws.isAdmin &&
-      session.controller && session.state.controllerName === 'Presenter Display';
+      session.controller?.isPresenter;
 
     if (session.keyVerified && (connectingIsRealAdmin && holderIsPassive || bgReclaimsPresenter)) {
       const dead    = session.controller;
       const newWid  = generateId();
-      // Preserve the passive holder's name so it shows correctly in the waiting list
-      const deadName = session.state.controllerName || (dead.isBackground ? 'Admin Hub' : 'Presenter Display');
+      const deadName = dead.isPresenter ? 'Presenter Display'
+                     : dead.isBackground ? 'Admin Hub'
+                     : (session.state.controllerName || '');
       session.waitingControllers.set(newWid, { ws: dead, name: deadName });
       sendMsg(dead, { type: 'control_denied', waitingId: newWid });
       session.controller = null;
@@ -746,6 +754,10 @@ wss.on('connection', (ws, req) => {
     if (!session.controller) {
       session.controller = ws;
       session.state.controllerConnected = true;
+      // Always stamp controllerName so passive-holder detection works
+      session.state.controllerName = isPresenter    ? 'Presenter Display'
+                                   : isBackground   ? 'Admin Hub'
+                                   : '';
       sendMsg(ws, { type: 'control_granted' });
       broadcast(session);
     } else {
