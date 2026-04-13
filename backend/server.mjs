@@ -674,6 +674,25 @@ wss.on('connection', (ws, req) => {
       }
     }
 
+    // Auto-reclaim for admin key holder: if the person connecting has the
+    // correct control key and the *only* thing holding control is the Presenter
+    // Display (auto-mode fallback), silently kick the display back to the
+    // waiting list so the admin gets control without a permission request.
+    // This prevents the confusing loop where the admin navigates back to a room
+    // and finds themselves in the waiting list behind their own display.
+    if (session.controller && session.keyVerified &&
+        (query.key || '').toUpperCase().trim() === session.controlKey &&
+        session.state.controllerName === 'Presenter Display') {
+      const dead = session.controller;
+      const newWid = generateId();
+      session.waitingControllers.set(newWid, { ws: dead, name: 'Presenter Display' });
+      sendMsg(dead, { type: 'control_denied', waitingId: newWid });
+      session.controller = null;
+      session.state.controllerConnected = false;
+      session.state.controllerName = '';
+      syncWaitingList(session);
+    }
+
     // Admin force-reclaim: presenter display kicks the current operator back to the
     // waiting list. Requires only the session key — NOT operatorApproved — so the
     // display can always recover even when a bad actor grabbed control first.
