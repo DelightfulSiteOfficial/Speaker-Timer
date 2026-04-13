@@ -49,6 +49,7 @@ function createSession(id) {
     coHostWs: null,
     controlKey: Math.random().toString(36).slice(2,8).toUpperCase() + Math.random().toString(36).slice(2,8).toUpperCase(),
     keyVerified: false,
+    presenterActivated: false, // true while Presenter Mode was intentionally force-activated
   };
 }
 
@@ -708,9 +709,16 @@ wss.on('connection', (ws, req) => {
     // kicks any passive holder (presenter display or hub background WS) and takes
     // control immediately.  Background WS additionally reclaims from the presenter.
     const connectingIsRealAdmin = ws.isAdmin && !isBackground && !isPresenter;
+    // A holder is "passive" (can be silently reclaimed) if it's a bg hub WS,
+    // OR if it's the Presenter Display but presenter mode was NOT intentionally
+    // activated (i.e. it's just the idle fallback holder, not an active presenter).
     const holderIsPassive = session.controller &&
-      (session.controller.isPresenter || session.controller.isBackground);
-    const bgReclaimsPresenter = ws.isBackground && session.controller?.isPresenter;
+      (session.controller.isBackground ||
+       (session.controller.isPresenter && !session.presenterActivated));
+    // Background admin WS reclaims from Presenter Display only when presenter
+    // mode was NOT intentionally activated — never undo an explicit Presenter Mode.
+    const bgReclaimsPresenter = ws.isBackground && session.controller?.isPresenter
+                                && !session.presenterActivated;
 
     if (connectingIsRealAdmin && holderIsPassive || bgReclaimsPresenter) {
       const dead    = session.controller;
@@ -726,19 +734,27 @@ wss.on('connection', (ws, req) => {
       syncWaitingList(session);
     }
 
-    // Admin force-reclaim: presenter display kicks the current operator back to the
-    // waiting list. Requires only the session key — NOT operatorApproved — so the
-    // display can always recover even when a bad actor grabbed control first.
+    // Force-reclaim: presenter display (highest in hierarchy) or a key-holder can
+    // kick whoever currently holds control back to the waiting list.
+    // Presenter Display is always allowed — it IS the physical screen and doesn't
+    // need a key match to assert its priority.  Key-holders (admin) are also allowed.
     if (query.force === 'true' && session.controller) {
       const providedKey = (query.key || '').toUpperCase().trim();
-      if (session.controlKey && providedKey === session.controlKey) {
+      const keyOk = !session.keyVerified || providedKey === session.controlKey;
+      if (isPresenter || (session.controlKey && keyOk)) {
         const kicked = session.controller;
+        const kickedName = kicked.isPresenter  ? 'Presenter Display'
+                         : kicked.isBackground ? 'Admin Hub'
+                         : (session.state.controllerName || 'Operator');
         const newWaitingId = generateId();
-        session.waitingControllers.set(newWaitingId, { ws: kicked, name: 'Operator' });
+        session.waitingControllers.set(newWaitingId, { ws: kicked, name: kickedName });
         sendMsg(kicked, { type: 'control_denied', waitingId: newWaitingId });
         session.controller = null;
         session.state.controllerConnected = false;
+        session.state.controllerName = '';
         syncWaitingList(session);
+        // Mark presenter mode active so bg WS can't silently undo it on reconnect
+        if (isPresenter) session.presenterActivated = true;
       }
     }
 
@@ -1048,6 +1064,11 @@ wss.on('connection', (ws, req) => {
 
     // Release control if the controller disconnected
     if (session.controller === ws) {
+      // If an intentionally-activated Presenter Display just dropped, deactivate
+      // presenter mode so normal admin auto-reclaim can resume.
+      if (ws.isPresenter && session.presenterActivated) {
+        session.presenterActivated = false;
+      }
       session.controller = null;
       session.state.controllerConnected = false;
       session.state.controllerName = '';
