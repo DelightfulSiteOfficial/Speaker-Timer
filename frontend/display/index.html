@@ -951,14 +951,66 @@
     .presenter-panel { display: none !important; }
   }
 
-  /* ── Landscape / tiny window — minimal view ── */
-  @media (max-height: 400px) {
+  /* ── Landscape phone — side-by-side layout ── */
+  @media (max-height: 500px) and (orientation: landscape) {
+    /* Hide mobile-only elements (dial, footer) */
     .mobile-dial-wrap, .mobile-footer { display: none !important; }
-    .qr-panel { display: none !important; }
-    .top-bar { display: none !important; }
-    body { padding: 20px; overflow: hidden; justify-content: center; }
-    .time-display { font-size: clamp(72px, 30vw, 160px); }
-    .presenter-panel { display: flex !important; transform: none !important; opacity: 1 !important; pointer-events: auto !important; }
+    .qr-panel  { display: none !important; }
+    .top-bar   { display: none !important; }
+
+    /* Body: horizontal split */
+    body {
+      flex-direction: row;
+      padding: 0;
+      overflow: hidden;
+      align-items: stretch;
+      justify-content: flex-start;
+    }
+
+    /* Left: timer area */
+    .timer-area {
+      flex: 1;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 16px;
+      gap: 4px;
+      min-width: 0;
+    }
+    .timer-block { align-items: center; gap: 2px; }
+    .time-display { font-size: clamp(52px, 16vh, 110px); }
+    .progress-bar { width: min(100%, 320px); margin: 4px 0 2px; }
+    .speaker-name { font-size: 11px; }
+    .overtime-badge { font-size: 8px; padding: 2px 8px; }
+
+    /* Right: presenter panel as a static right column */
+    .presenter-panel {
+      display: flex !important;
+      position: static !important;
+      transform: none !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      width: 320px;
+      flex-shrink: 0;
+      border-top: none !important;
+      border-left: 1px solid #1e1e1e;
+      padding: 10px 16px 12px;
+      gap: 8px;
+      overflow-y: auto;
+      justify-content: center;
+    }
+
+    /* Compact presenter controls */
+    .ctrl-status { padding: 4px 8px; font-size: 9px; }
+    .presenter-row { gap: 8px; }
+    .presenter-slider-block { gap: 12px; }
+    .presenter-dur-val { font-size: 34px; }
+    .presenter-dur-unit { font-size: 10px; }
+    .presenter-slider-ticks span { font-size: 8px; }
+    .presenter-btn-stack { gap: 6px; }
+    .presenter-btn { height: 36px; font-size: 18px; padding: 0 18px; }
+    .presenter-nudge-btn { height: 24px; font-size: 10px; }
+    .presenter-nudge-row { gap: 5px; }
   }
 </style>
 </head>
