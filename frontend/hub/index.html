@@ -1557,9 +1557,9 @@
 
   function openAssignCohostModal(sessionId) {
     passSessionId = sessionId;
-    // Filter out background/system entries — only show real human waiters
+    // Filter out background/system entries — only show real human/presenter waiters
     const waitingList = (roomData[sessionId]?.state?.waitingList || [])
-      .filter(w => w.name !== 'Admin Hub' && w.name !== 'Presenter Display');
+      .filter(w => w.name !== 'Admin Hub');
     const listEl = document.getElementById('passWaitingList');
 
     if (waitingList.length === 0) {
@@ -1908,7 +1908,7 @@
     const pillLabel = offline ? (status === 'connecting' ? 'Connecting' : 'Offline') : running ? 'Running' : (overtime ? 'Overtime' : 'Paused');
 
     // Filter out background/system entries from the human waiting count
-    const humanWaiting = (waitingList || []).filter(p => p.name !== 'Admin Hub' && p.name !== 'Presenter Display');
+    const humanWaiting = (waitingList || []).filter(p => p.name !== 'Admin Hub');
     const waitingCount = humanWaiting.length;
     const metaParts = [];
     if (!offline && runCount > 0) metaParts.push(`Timer ${runCount + 1}`);
