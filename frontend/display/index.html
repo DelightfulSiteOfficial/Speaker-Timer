@@ -953,6 +953,10 @@
 
   /* ── Tablet portrait overrides (641px – 1200px) ── */
   @media (min-width: 641px) and (max-width: 1200px) and (orientation: portrait) {
+    /* Timer: 2× size, pushed down */
+    .timer-block  { margin-top: 80px !important; }
+    .time-display { font-size: clamp(200px, 28vw, 280px) !important; }
+
     /* Dial: ~2× phone size, positioned higher */
     .mobile-dial-wrap {
       width: min(347px, 44vw) !important;
