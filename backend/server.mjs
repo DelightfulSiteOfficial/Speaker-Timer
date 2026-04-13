@@ -699,17 +699,23 @@ wss.on('connection', (ws, req) => {
     //     (background hub WS or Presenter Display)
     //   • Background admin WS: reclaims only from Presenter Display
     //     (not from mobile users who were explicitly approved)
-    const connectingIsRealAdmin = ws.isAdmin && !isBackground;
+    // Check the provided key directly — don't rely on session.keyVerified,
+    // which may still be false when the first real admin connects (because the
+    // presenter WS and background WS both skip setting it).
+    const providedKeyNow = (query.key || '').toUpperCase().trim();
+    const correctKeyGiven = providedKeyNow === session.controlKey;
+
+    const connectingIsRealAdmin = correctKeyGiven && !isBackground && !isPresenter;
     // A "passive" holder is one that should yield silently to a real admin:
     // the display page's presenter socket, or the hub's background admin socket.
     // Use ws properties (set at connection time) — NOT controllerName strings,
     // which can be empty if the holder got control via the direct-grant path.
     const holderIsPassive = session.controller &&
       (session.controller.isPresenter || session.controller.isBackground);
-    const bgReclaimsPresenter = isBackground && ws.isAdmin &&
+    const bgReclaimsPresenter = isBackground && correctKeyGiven &&
       session.controller?.isPresenter;
 
-    if (session.keyVerified && (connectingIsRealAdmin && holderIsPassive || bgReclaimsPresenter)) {
+    if (connectingIsRealAdmin && holderIsPassive || bgReclaimsPresenter) {
       const dead    = session.controller;
       const newWid  = generateId();
       const deadName = dead.isPresenter ? 'Presenter Display'
@@ -900,8 +906,11 @@ wss.on('connection', (ws, req) => {
     }
 
     // Admin-only actions — non-admin controllers (scanned plain QR) cannot
-    // approve/deny requests or transfer control
-    if (!ws.isAdmin && ['approve_request', 'deny_request', 'pass_control_to', 'set_presenter_lock'].includes(msg.type)) return;
+    // approve/deny requests or transfer control.
+    // Presenter WS (display page) is also trusted here — it connected as the
+    // physical display and may not have the key yet (key arrives via session_info
+    // after the WS is already open), so isAdmin can be false on first connect.
+    if (!ws.isAdmin && !ws.isPresenter && ['approve_request', 'deny_request', 'pass_control_to', 'set_presenter_lock'].includes(msg.type)) return;
 
     const s = session.state;
 
