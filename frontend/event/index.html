@@ -1800,7 +1800,7 @@
         } else if (msg.type === 'control_denied') {
           hasControl = false;
         } else if (msg.type === 'control_request') {
-          if (!isAdmin) break;
+          if (!isAdmin) return;
           pendingRequestId = msg.requestId;
           ctrlRequestName.textContent = msg.fromName || 'Someone';
           ctrlRequestModal.classList.add('visible');
