@@ -1532,11 +1532,27 @@
     controlsVisible = !controlsVisible;
     // Desktop: slide presenter panel
     presenterPanel.classList.toggle('hidden', !controlsVisible);
-    // Mobile: hide footer + dial
+    // Mobile / Landscape: hide footer + dial
     const mFooter = document.getElementById('mobileFooter');
     const mDial   = document.getElementById('mobileDial');
     if (mFooter) mFooter.style.display = controlsVisible ? '' : 'none';
     if (mDial)   mDial.style.display   = controlsVisible ? '' : 'none';
+    // Landscape: expand timer area to fill full width when controls are hidden
+    const isLandscape = window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
+    const timerArea = document.querySelector('.timer-area');
+    if (isLandscape && timerArea) {
+      if (!controlsVisible) {
+        timerArea.style.setProperty('flex',      '0 0 100vw', 'important');
+        timerArea.style.setProperty('width',     '100vw',     'important');
+        timerArea.style.setProperty('max-width', '100vw',     'important');
+        timerArea.style.borderRight = 'none';
+      } else {
+        timerArea.style.removeProperty('flex');
+        timerArea.style.removeProperty('width');
+        timerArea.style.removeProperty('max-width');
+        timerArea.style.borderRight = '';
+      }
+    }
     // Also remove bottom padding when controls hidden (no footer to clear)
     document.body.style.paddingBottom = controlsVisible ? '' : '0';
     controlsToggle.textContent = controlsVisible ? 'Hide Controls' : 'Show Controls';
