@@ -1276,6 +1276,7 @@
 
 <script>
   const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
+  const HTTP_URL   = SERVER_URL.replace(/^wss?:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
   const params     = new URLSearchParams(window.location.search);
   const sessionId  = (params.get('session') || '').toUpperCase().trim()
                      || Math.random().toString(36).slice(2,8).toUpperCase();
@@ -1471,18 +1472,40 @@
     document.addEventListener('touchend',  onUp);
   }
 
-  approveRequestBtn.addEventListener('click', () => {
+  approveRequestBtn.addEventListener('click', async () => {
     if (!pendingRequestId) return;
-    send({ type: 'approve_request', sessionId, targetId: pendingRequestId });
+    const id = pendingRequestId;
     ctrlRequestModal.classList.remove('visible');
     pendingRequestId = null;
+    if (hasControl) {
+      send({ type: 'approve_request', sessionId, targetId: id });
+    } else {
+      try {
+        await fetch(`${HTTP_URL}/sessions/${sessionId}/approve-request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ targetId: id }),
+        });
+      } catch {}
+    }
   });
 
-  denyRequestBtn.addEventListener('click', () => {
+  denyRequestBtn.addEventListener('click', async () => {
     if (!pendingRequestId) return;
-    send({ type: 'deny_request', sessionId, targetId: pendingRequestId });
+    const id = pendingRequestId;
     ctrlRequestModal.classList.remove('visible');
     pendingRequestId = null;
+    if (hasControl) {
+      send({ type: 'deny_request', sessionId, targetId: id });
+    } else {
+      try {
+        await fetch(`${HTTP_URL}/sessions/${sessionId}/deny-request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ targetId: id }),
+        });
+      } catch {}
+    }
   });
   const nextBtn       = document.getElementById('nextBtn');
   const toast         = document.getElementById('toast');
@@ -1750,6 +1773,20 @@
           lastServerAt = Date.now();
           lastServerRemaining = state.timeRemaining;
           renderTimer();
+          // Show control request modal from state for requests not already handled via WS
+          const pending = state.pendingRequests || [];
+          if (pending.length > 0) {
+            const first = pending[0];
+            if (!pendingRequestId) {
+              pendingRequestId = first.id;
+              ctrlRequestName.textContent = first.fromName || 'Someone';
+              ctrlRequestModal.classList.add('visible');
+            }
+          } else if (pending.length === 0 && pendingRequestId) {
+            // Request was handled elsewhere — hide modal
+            ctrlRequestModal.classList.remove('visible');
+            pendingRequestId = null;
+          }
         } else if (msg.type === 'control_granted') {
           hasControl = true;
           // Identify this device to waiting clients

@@ -31,7 +31,8 @@ function createSession(id) {
       roomName: '',
       overtime: false,
       controllerConnected: false,
-      waitingList: [], // [{ id, name }] — visible to all clients
+      waitingList: [],    // [{ id, name }] — visible to all clients
+      pendingRequests: [], // [{ id, fromName }] — awaiting admin approval
       message: '',     // operator message shown on display when QR is hidden
       messageSeq: 0,   // increments on every set_message so same-text resends are detectable
       runCount: 0,     // increments each time reset is called after a timer was started
@@ -58,6 +59,10 @@ function getSession(id) {
 function syncWaitingList(session) {
   session.state.waitingList = Array.from(session.waitingControllers.entries())
     .map(([id, { name }]) => ({ id, name }));
+}
+
+function removePendingRequest(session, waitingId) {
+  session.state.pendingRequests = session.state.pendingRequests.filter(r => r.id !== waitingId);
 }
 
 // ── Auto-promote the next waiting controller ─────────────────────────────────
@@ -479,6 +484,72 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  // POST /sessions/:id/approve-request  — admin approves a pending control request
+  const approveReqMatch = req.url.match(/^\/sessions\/([^/]+)\/approve-request$/);
+  if (req.method === 'POST' && approveReqMatch) {
+    const sessionId = approveReqMatch[1].toUpperCase().trim();
+    const body = await readBody(req);
+    let targetId;
+    try { ({ targetId } = JSON.parse(body)); } catch { targetId = undefined; }
+    const session = sessions.get(sessionId);
+    if (!session) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Session not found' }));
+      return;
+    }
+    const target = session.waitingControllers.get(targetId);
+    if (!target) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Target not found' }));
+      return;
+    }
+    // Demote current controller to waiting (if any)
+    if (session.controller) {
+      const prevWs = session.controller;
+      const newWaitingId = generateId();
+      session.waitingControllers.set(newWaitingId, { ws: prevWs, name: '' });
+      session.prevControllerWaitingId = newWaitingId;
+      sendMsg(prevWs, { type: 'control_denied', waitingId: newWaitingId });
+      if (session.coHostWs === prevWs) {
+        session.coHostWs = null;
+        session.state.coHost = false;
+        session.state.coHostName = '';
+      }
+    }
+    session.waitingControllers.delete(targetId);
+    session.controller = target.ws;
+    session.state.controllerConnected = true;
+    removePendingRequest(session, targetId);
+    syncWaitingList(session);
+    sendMsg(target.ws, { type: 'control_granted' });
+    broadcast(session);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+
+  // POST /sessions/:id/deny-request  — admin denies a pending control request
+  const denyReqMatch = req.url.match(/^\/sessions\/([^/]+)\/deny-request$/);
+  if (req.method === 'POST' && denyReqMatch) {
+    const sessionId = denyReqMatch[1].toUpperCase().trim();
+    const body = await readBody(req);
+    let targetId;
+    try { ({ targetId } = JSON.parse(body)); } catch { targetId = undefined; }
+    const session = sessions.get(sessionId);
+    if (!session) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Session not found' }));
+      return;
+    }
+    const target = session.waitingControllers.get(targetId);
+    if (target) sendMsg(target.ws, { type: 'request_denied' });
+    removePendingRequest(session, targetId);
+    broadcast(session);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+
   res.writeHead(200, { 'Content-Type': 'text/plain' });
   res.end('Speaker Timer WebSocket server running.');
 });
@@ -614,10 +685,16 @@ wss.on('connection', (ws, req) => {
     if (msg.type === 'request_control') {
       const entry = session.waitingControllers.get(msg.waitingId);
       if (!entry || entry.ws !== ws) return;
+      const fromName = entry.name || 'Someone';
       if (!session.controller) {
         // If a grace period is active the admin just revoked a co-host and is
         // navigating back — hold control for them; don't auto-grant to anyone.
+        // Add to pendingRequests so hub/event pages can approve.
         if (session.controlGraceTimer) {
+          if (!session.state.pendingRequests.find(r => r.id === msg.waitingId)) {
+            session.state.pendingRequests.push({ id: msg.waitingId, fromName });
+            broadcast(session);
+          }
           sendMsg(ws, { type: 'request_pending' });
           return;
         }
@@ -630,12 +707,21 @@ wss.on('connection', (ws, req) => {
         broadcast(session);
         return;
       }
-      // If a co-host has control, don't forward requests to them — they can't approve
+      // If a co-host has control, add to pending so the real admin
+      // can approve from hub/event pages (co-host cannot approve).
       if (session.coHostWs === session.controller) {
+        if (!session.state.pendingRequests.find(r => r.id === msg.waitingId)) {
+          session.state.pendingRequests.push({ id: msg.waitingId, fromName });
+          broadcast(session);
+        }
         sendMsg(ws, { type: 'request_pending' });
         return;
       }
-      const fromName = entry.name || 'Someone';
+      // Forward to controller AND add to pendingRequests so hub/event see it
+      if (!session.state.pendingRequests.find(r => r.id === msg.waitingId)) {
+        session.state.pendingRequests.push({ id: msg.waitingId, fromName });
+        broadcast(session);
+      }
       sendMsg(session.controller, { type: 'control_request', requestId: msg.waitingId, fromName });
       sendMsg(ws, { type: 'request_pending' });
       return;
@@ -645,6 +731,8 @@ wss.on('connection', (ws, req) => {
       if (session.controller) {
         sendMsg(session.controller, { type: 'control_request_cancelled', requestId: msg.waitingId });
       }
+      removePendingRequest(session, msg.waitingId);
+      broadcast(session);
       sendMsg(ws, { type: 'request_cancelled' });
       return;
     }
@@ -761,6 +849,7 @@ wss.on('connection', (ws, req) => {
         session.waitingControllers.delete(msg.targetId);
         session.controller = target.ws;
         session.state.controllerConnected = true;
+        removePendingRequest(session, msg.targetId);
         syncWaitingList(session);
         sendMsg(target.ws, { type: 'control_granted' });
         broadcast(session);
@@ -769,8 +858,9 @@ wss.on('connection', (ws, req) => {
 
       case 'deny_request': {
         const target = session.waitingControllers.get(msg.targetId);
-        if (!target) break;
-        sendMsg(target.ws, { type: 'request_denied' });
+        if (target) sendMsg(target.ws, { type: 'request_denied' });
+        removePendingRequest(session, msg.targetId);
+        broadcast(session);
         break;
       }
 
@@ -842,11 +932,12 @@ wss.on('connection', (ws, req) => {
       }, 20000);
     }
 
-    // Remove from waiting list if present; clear prevControllerWaitingId if it was them
+    // Remove from waiting list and pending requests if present
     for (const [wid, entry] of session.waitingControllers.entries()) {
       if (entry.ws === ws) {
         session.waitingControllers.delete(wid);
         if (wid === session.prevControllerWaitingId) session.prevControllerWaitingId = null;
+        removePendingRequest(session, wid);
         syncWaitingList(session);
         broadcast(session);
         break;

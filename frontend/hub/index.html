@@ -584,6 +584,82 @@
   }
   .btn-make-cohost:active { background: var(--border); color: var(--text); }
 
+  /* ── Pending control request banner in card ── */
+  .card-requests {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,153,0,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .req-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: rgba(255,153,0,0.06);
+    border: 1px solid rgba(255,153,0,0.2);
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+
+  .req-info { flex: 1; min-width: 0; }
+
+  .req-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--warn);
+    margin-bottom: 2px;
+    opacity: 0.7;
+  }
+
+  .req-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--warn);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .req-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  .btn-req-approve {
+    background: none;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 5px 12px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-req-approve:active { background: rgba(232,255,71,0.1); transform: scale(0.95); }
+
+  .btn-req-deny {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 10px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-req-deny:active { background: var(--border); color: var(--text); }
+
   /* ── Confirm modal ── */
   .confirm-modal {
     position: fixed; inset: 0;
@@ -1603,7 +1679,7 @@
     if (!el) return;
 
     const { state, status } = roomData[sessionId] || {};
-    const { running, timeRemaining, totalTime, roomName, overtime, waitingList = [], runCount = 0, controllerConnected = false, coHost = false, coHostName = '' } = state || {};
+    const { running, timeRemaining, totalTime, roomName, overtime, waitingList = [], runCount = 0, controllerConnected = false, coHost = false, coHostName = '', pendingRequests = [] } = state || {};
     const offline = status === 'offline' || status === 'connecting';
     const tc = offline ? '' : timeClass(timeRemaining, overtime);
     const pct = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) * 100 : 100;
@@ -1650,6 +1726,20 @@
       <div class="card-actions">
         <span class="cohost-label">&#11041; Co-host${coHostName ? ': ' + escHtml(coHostName) : ''}</span>
         <button class="btn-revoke-cohost" data-id="${sessionId}">Revoke</button>
+      </div>` : ''}
+      ${!offline && pendingRequests.length > 0 ? `
+      <div class="card-requests">
+        ${pendingRequests.map(r => `
+        <div class="req-item">
+          <div class="req-info">
+            <div class="req-label">Requesting control</div>
+            <div class="req-name">${escHtml(r.fromName || 'Someone')}</div>
+          </div>
+          <div class="req-actions">
+            <button class="btn-req-deny" data-req-id="${r.id}">Deny</button>
+            <button class="btn-req-approve" data-req-id="${r.id}">Allow</button>
+          </div>
+        </div>`).join('')}
       </div>` : ''}
     `;
 
@@ -1699,6 +1789,32 @@
         } catch {}
       });
     }
+
+    el.querySelectorAll('.btn-req-approve').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        try {
+          await fetch(`${HTTP_URL}/sessions/${sessionId}/approve-request`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetId: btn.dataset.reqId }),
+          });
+        } catch {}
+      });
+    });
+
+    el.querySelectorAll('.btn-req-deny').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        try {
+          await fetch(`${HTTP_URL}/sessions/${sessionId}/deny-request`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetId: btn.dataset.reqId }),
+          });
+        } catch {}
+      });
+    });
   }
 
   // ── Render full rooms list ────────────────────────────────────────────────────
