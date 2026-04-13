@@ -1533,10 +1533,17 @@
     // Desktop: slide presenter panel
     presenterPanel.classList.toggle('hidden', !controlsVisible);
     // Mobile / Landscape: hide footer + dial
+    // Must use setProperty with 'important' to beat the !important in the media queries
     const mFooter = document.getElementById('mobileFooter');
     const mDial   = document.getElementById('mobileDial');
-    if (mFooter) mFooter.style.display = controlsVisible ? '' : 'none';
-    if (mDial)   mDial.style.display   = controlsVisible ? '' : 'none';
+    if (mFooter) {
+      if (controlsVisible) mFooter.style.removeProperty('display');
+      else mFooter.style.setProperty('display', 'none', 'important');
+    }
+    if (mDial) {
+      if (controlsVisible) mDial.style.removeProperty('display');
+      else mDial.style.setProperty('display', 'none', 'important');
+    }
     // Landscape: expand timer area to fill full width when controls are hidden
     const isLandscape = window.matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
     const timerArea = document.querySelector('.timer-area');
