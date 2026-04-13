@@ -520,13 +520,12 @@
 
   .presenter-row {
     display: flex;
-    align-items: center;
-    gap: 20px;
+    flex-direction: column;
+    gap: 12px;
   }
 
-  /* ── Duration slider block ── */
+  /* ── Duration slider block — full width row ── */
   .presenter-slider-block {
-    flex: 1;
     display: flex;
     align-items: center;
     gap: 20px;
@@ -614,10 +613,16 @@
   .presenter-slider-ticks span:first-child { transform: translateX(0); }
   .presenter-slider-ticks span:last-child  { transform: translateX(-100%); }
 
+  /* ── Button stack: Start/Reset above nudges ── */
+  .presenter-btn-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
   .presenter-actions {
     display: flex;
     gap: 10px;
-    margin-left: auto;
   }
 
   .presenter-btn {
@@ -641,17 +646,15 @@
   .presenter-nudge-row {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr;
-    gap: 8px;
-    width: 100%;
-    margin-top: 4px;
+    gap: 6px;
   }
   .presenter-nudge-btn {
-    height: 36px;
-    border-radius: 10px;
+    height: 28px;
+    border-radius: 8px;
     border: 1px solid var(--border);
     background: var(--surface);
     font-family: 'DM Mono', monospace;
-    font-size: 13px;
+    font-size: 11px;
     letter-spacing: 0.04em;
     cursor: pointer;
     transition: all 0.15s;
@@ -1034,15 +1037,17 @@
         </div>
       </div>
     </div>
-    <div class="presenter-actions">
-      <button class="presenter-btn reset" id="presenterReset">Reset</button>
-      <button class="presenter-btn start" id="presenterStart">Start</button>
-    </div>
-    <div class="presenter-nudge-row">
-      <button class="presenter-nudge-btn sub" data-nudge="-60">−1m</button>
-      <button class="presenter-nudge-btn sub" data-nudge="-30">−30s</button>
-      <button class="presenter-nudge-btn add" data-nudge="30">+30s</button>
-      <button class="presenter-nudge-btn add" data-nudge="60">+1m</button>
+    <div class="presenter-btn-stack">
+      <div class="presenter-actions">
+        <button class="presenter-btn reset" id="presenterReset">Reset</button>
+        <button class="presenter-btn start" id="presenterStart">Start</button>
+      </div>
+      <div class="presenter-nudge-row">
+        <button class="presenter-nudge-btn sub" data-nudge="-60">−1m</button>
+        <button class="presenter-nudge-btn sub" data-nudge="-30">−30s</button>
+        <button class="presenter-nudge-btn add" data-nudge="30">+30s</button>
+        <button class="presenter-nudge-btn add" data-nudge="60">+1m</button>
+      </div>
     </div>
   </div>
 </div>
