@@ -650,9 +650,8 @@ wss.on('connection', (ws, req) => {
   let effectiveRole = role;
   if (role === 'control') {
     const providedKey = (query.key || '').toUpperCase().trim();
-    // Only reject connections that supply a WRONG key (not missing ones).
-    // Users who scan the plain QR (no key) are allowed in as regular controllers.
     const keyProvided = providedKey.length > 0;
+    // Only reject connections that supply a WRONG key (not missing ones).
     const keyValid = !keyProvided || !session.keyVerified || providedKey === session.controlKey;
     if (!keyValid) {
       effectiveRole = 'view';
@@ -660,10 +659,16 @@ wss.on('connection', (ws, req) => {
       session.keyDenied.add(ws);
       sendMsg(ws, { type: 'key_required' });
     }
+    // "First human admin" — if the session hasn't been claimed yet (keyVerified=false)
+    // and this is a plain control connection (not presenter/background), the first
+    // person to open the control page becomes the admin automatically.
+    // They receive the key via session_info and become the session owner.
+    const isFirstHumanAdmin = !session.keyVerified && !isPresenter && !isBackground && !keyProvided;
     // Tag this WS connection — properties used throughout the session lifetime
-    ws.isAdmin      = keyProvided && (!session.keyVerified || providedKey === session.controlKey);
+    ws.isAdmin      = isFirstHumanAdmin ||
+                      (keyProvided && (!session.keyVerified || providedKey === session.controlKey));
     ws.isBackground = isBackground && ws.isAdmin;
-    ws.isPresenter  = isPresenter;  // display page's internal control socket
+    ws.isPresenter  = isPresenter;
   }
 
   // Grant or deny control
@@ -699,21 +704,13 @@ wss.on('connection', (ws, req) => {
     //     (background hub WS or Presenter Display)
     //   • Background admin WS: reclaims only from Presenter Display
     //     (not from mobile users who were explicitly approved)
-    // Check the provided key directly — don't rely on session.keyVerified,
-    // which may still be false when the first real admin connects (because the
-    // presenter WS and background WS both skip setting it).
-    const providedKeyNow = (query.key || '').toUpperCase().trim();
-    const correctKeyGiven = providedKeyNow === session.controlKey;
-
-    const connectingIsRealAdmin = correctKeyGiven && !isBackground && !isPresenter;
-    // A "passive" holder is one that should yield silently to a real admin:
-    // the display page's presenter socket, or the hub's background admin socket.
-    // Use ws properties (set at connection time) — NOT controllerName strings,
-    // which can be empty if the holder got control via the direct-grant path.
+    // Auto-reclaim: a real admin page (control/event) with ws.isAdmin=true silently
+    // kicks any passive holder (presenter display or hub background WS) and takes
+    // control immediately.  Background WS additionally reclaims from the presenter.
+    const connectingIsRealAdmin = ws.isAdmin && !isBackground && !isPresenter;
     const holderIsPassive = session.controller &&
       (session.controller.isPresenter || session.controller.isBackground);
-    const bgReclaimsPresenter = isBackground && correctKeyGiven &&
-      session.controller?.isPresenter;
+    const bgReclaimsPresenter = ws.isBackground && session.controller?.isPresenter;
 
     if (connectingIsRealAdmin && holderIsPassive || bgReclaimsPresenter) {
       const dead    = session.controller;

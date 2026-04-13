@@ -1755,8 +1755,14 @@
             }));
           } else if (msg.type === 'request_pending') {
             // Already queued — nothing to do
-          } else if (msg.type === 'session_info') {
-            // Key confirmed — nothing extra needed for background WS
+          } else if (msg.type === 'session_info' && msg.controlKey) {
+            // Server confirmed our key (or assigned us as first admin).
+            // Save it so the hub shows admin UI for this room.
+            const stored = getAdminKey(sessionId);
+            if (!stored) {
+              localStorage.setItem(`speakerTimerKey_${sessionId}`, msg.controlKey);
+              renderCard(sessionId); // flip card from "View only" → admin view
+            }
           }
         } catch {}
       };
@@ -2452,6 +2458,28 @@
   // ── Boot ──────────────────────────────────────────────────────────────────────
   renderRooms();
   rooms.forEach(connectRoom);
+
+  // When the control page (same device, different tab) saves the admin key to
+  // localStorage, pick it up here and upgrade the card to admin view.
+  window.addEventListener('storage', (e) => {
+    if (!e.key || !e.key.startsWith('speakerTimerKey_')) return;
+    const sid = e.key.replace('speakerTimerKey_', '');
+    if (!rooms.includes(sid)) return;
+    // Key just became available — start background admin WS and refresh card
+    connectAdminBg(sid);
+    renderCard(sid);
+  });
+
+  // When user switches back to this tab, retry bg WS for any room that now
+  // has a key (e.g. admin just returned from the control page tab).
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      rooms.forEach(sid => {
+        connectAdminBg(sid);
+        renderCard(sid);
+      });
+    }
+  });
 </script>
 </body>
 </html>
