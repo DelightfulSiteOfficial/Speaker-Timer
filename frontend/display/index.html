@@ -127,12 +127,12 @@
   .overtime-badge.visible { display: block; }
 
 
-  /* ── QR panel — floats to the right, out of flow so timer stays centred ── */
+  /* ── QR panel — fixed to bottom-left corner ── */
   .qr-panel {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    z-index: 50;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -154,14 +154,13 @@
   /* Ghost hit area shown when QR is hidden — same size/position, invisible */
   .qr-ghost {
     display: none;
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
     width: 192px;   /* approx qr-panel width */
     height: 220px;  /* approx qr-panel height */
     cursor: pointer;
-    z-index: 10;
+    z-index: 49;
   }
   .qr-ghost.active { display: block; }
 
@@ -910,23 +909,21 @@
       gap: 0;
     }
 
-    /* QR panel: float to top, centered, compact */
+    /* QR panel: fixed bottom-left, compact */
     .qr-panel {
-      position: static !important;
-      transform: none !important;
-      order: -1;
-      padding: 10px 10px 8px;
-      border-radius: 10px;
-      margin-bottom: 10px;
-      width: fit-content;
+      bottom: 10px !important;
+      left: 10px !important;
+      padding: 8px 10px 6px !important;
+      border-radius: 10px !important;
+      gap: 4px !important;
     }
-    .qr-frame { width: 80px !important; height: 80px !important; }
+    .qr-frame { width: 72px !important; height: 72px !important; }
     .qr-frame canvas, .qr-frame img {
-      width: 80px !important;
-      height: 80px !important;
+      width: 72px !important;
+      height: 72px !important;
     }
     .qr-label  { font-size: 7px; }
-    .session-id { font-size: 10px; margin-top: 3px; }
+    .session-id { font-size: 9px; margin-top: 2px; }
     .qr-ghost { display: none !important; }
 
     /* Timer block — compact */
@@ -981,15 +978,16 @@
       overflow: hidden;
     }
 
-    /* QR: show at top of left column */
+    /* QR: fixed to bottom-left corner */
     .qr-panel {
-      position: static !important;
+      position: fixed !important;
+      bottom: 10px !important;
+      left: 10px !important;
       transform: none !important;
-      order: -1;
       padding: 5px 8px !important;
       border-radius: 8px;
       width: fit-content;
-      flex-shrink: 0;
+      z-index: 50;
     }
     .qr-frame { width: 52px !important; height: 52px !important; }
     .qr-frame canvas, .qr-frame img { width: 52px !important; height: 52px !important; }
