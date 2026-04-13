@@ -1853,11 +1853,6 @@
       <div class="card-progress">
         <div class="card-progress-fill ${tc}" style="width:${offline ? '100' : pct}%"></div>
       </div>
-      ${isAdmin && !offline && controllerConnected && !coHost ? `
-      <div class="card-actions">
-        <span class="controller-label">${controllerName ? escHtml(controllerName) + ' — active' : 'Controller active'}</span>
-        <button class="btn-assign-operator" data-id="${sessionId}">Assign Op</button>
-      </div>` : ''}
       ${isAdmin && !offline && controllerConnected && coHost ? `
       <div class="card-actions">
         <span class="cohost-label">&#11041; Operator${coHostName ? ': ' + escHtml(coHostName) : ''}</span>
@@ -1919,14 +1914,6 @@
       revokeCoHostBtn.addEventListener('click', async (e) => {
         e.preventDefault(); e.stopPropagation();
         try { await adminFetch(sessionId, 'release'); } catch {}
-      });
-    }
-
-    const assignOperatorBtn = el.querySelector('.btn-assign-operator');
-    if (assignOperatorBtn) {
-      assignOperatorBtn.addEventListener('click', async (e) => {
-        e.preventDefault(); e.stopPropagation();
-        try { await adminFetch(sessionId, 'assign-cohost'); } catch {}
       });
     }
 
