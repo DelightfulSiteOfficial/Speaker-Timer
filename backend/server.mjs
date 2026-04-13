@@ -691,14 +691,18 @@ wss.on('connection', (ws, req) => {
       }
     }
 
-    // Auto-reclaim for non-background admin: if a real admin page (control/event)
-    // connects with the key and control is held by a background/passive holder
-    // (Presenter Display or the hub's background admin WS), silently kick it back
-    // to the waiting list so the admin gets control without a permission request.
+    // Auto-reclaim at connection time:
+    //   • Real admin page (control/event): reclaims from any passive holder
+    //     (background hub WS or Presenter Display)
+    //   • Background admin WS: reclaims only from Presenter Display
+    //     (not from mobile users who were explicitly approved)
     const connectingIsRealAdmin = ws.isAdmin && !isBackground;
     const holderIsPassive = session.controller &&
       (session.controller.isBackground || session.state.controllerName === 'Presenter Display');
-    if (connectingIsRealAdmin && holderIsPassive && session.keyVerified) {
+    const bgReclaimsPresenter = isBackground && ws.isAdmin &&
+      session.controller && session.state.controllerName === 'Presenter Display';
+
+    if (session.keyVerified && (connectingIsRealAdmin && holderIsPassive || bgReclaimsPresenter)) {
       const dead    = session.controller;
       const newWid  = generateId();
       // Preserve the passive holder's name so it shows correctly in the waiting list
@@ -771,11 +775,13 @@ wss.on('connection', (ws, req) => {
       if (!entry || entry.ws !== ws) return;
       const fromName = entry.name || 'Someone';
 
-      // ── Background admin WS special paths ────────────────────────────────
+      // ── Background admin WS — never steals; just queues silently ────────────
+      // The background hub WS should NEVER forcibly take control mid-session.
+      // autoPromote() already prioritises it above Presenter Display.
+      // When the current controller finishes/disconnects, autoPromote restores it.
       if (ws.isBackground) {
         if (!session.controller) {
-          // No current controller (grace period may be active — that's fine,
-          // the hub reconnecting should be treated like admin returning).
+          // Slot is free — take it (also cancel any grace-period holding the slot)
           if (session.controlGraceTimer) {
             clearTimeout(session.controlGraceTimer);
             session.controlGraceTimer = null;
@@ -789,23 +795,8 @@ wss.on('connection', (ws, req) => {
           broadcast(session);
           return;
         }
-        if (!session.controller.isAdmin) {
-          // Non-admin holds control — silently promote the background admin WS
-          const prev = session.controller;
-          const newWid = generateId();
-          session.waitingControllers.set(newWid, { ws: prev, name: session.state.controllerName || '' });
-          session.waitingControllers.delete(msg.waitingId);
-          sendMsg(prev, { type: 'control_denied', waitingId: newWid });
-          session.controller = ws;
-          session.state.controllerConnected = true;
-          session.state.controllerName = 'Admin Hub';
-          syncWaitingList(session);
-          sendMsg(ws, { type: 'control_granted' });
-          broadcast(session);
-          return;
-        }
-        // Real admin (control/event page) already has control — stay in queue
-        // silently; don't send a control_request notification (no modal pop-up).
+        // Someone has control (admin, mobile approved, co-host…) — stay in queue
+        // silently.  autoPromote() will restore us when they're done.
         sendMsg(ws, { type: 'request_pending' });
         return;
       }

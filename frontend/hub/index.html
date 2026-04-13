@@ -1741,22 +1741,20 @@
             entry.adminHasControl = true;
             entry.adminWaitingId  = null;
           } else if (msg.type === 'control_denied') {
-            // Kicked to waiting (control/event page took over) — request control
-            // back so we're queued; server gives it to us automatically when
-            // the control/event page disconnects.
+            // Kicked to the waiting list — we're already in waitingControllers
+            // on the server.  Do NOT call request_control here; that would make
+            // the server try to steal control back immediately, which breaks the
+            // admin-approved-mobile flow.  autoPromote() will restore us
+            // automatically when whoever has control finishes.
             entry.adminHasControl = false;
             entry.adminWaitingId  = msg.waitingId;
-            // Set our name in waiting list
+            // Label ourselves in the waiting list so admin UI shows the right name
             ws.send(JSON.stringify({
               type: 'set_waiting_name', sessionId,
               waitingId: msg.waitingId, name: 'Admin Hub'
             }));
-            // Request control — server will queue us silently behind the real admin
-            ws.send(JSON.stringify({
-              type: 'request_control', sessionId, waitingId: msg.waitingId
-            }));
           } else if (msg.type === 'request_pending') {
-            // Queued behind the control/event page — that's expected, do nothing
+            // Already queued — nothing to do
           } else if (msg.type === 'session_info') {
             // Key confirmed — nothing extra needed for background WS
           }
