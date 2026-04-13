@@ -1481,7 +1481,7 @@
     // control_granted/control_denied messages corrupt desktopHasControl.
     if (ctrlWs) return;
     const keyParam   = controlKey ? `&key=${controlKey}` : '';
-    const forceParam = force && controlKey ? '&force=true' : '';
+    const forceParam = force ? '&force=true' : '';
     // presenter=true tells the server this is the display page's internal
     // control socket, not a human admin — it won't lock in keyVerified and
     // won't appear as an admin to other clients.
