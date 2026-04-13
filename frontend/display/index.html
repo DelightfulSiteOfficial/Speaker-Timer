@@ -951,14 +951,14 @@
     .presenter-panel { display: none !important; }
   }
 
-  /* ── Landscape phone — side-by-side layout ── */
+  /* ── Landscape phone — mirror the portrait split view ── */
   @media (max-height: 500px) and (orientation: landscape) {
-    /* Hide mobile-only elements (dial, footer) */
-    .mobile-dial-wrap, .mobile-footer { display: none !important; }
-    .qr-panel  { display: none !important; }
-    .top-bar   { display: none !important; }
+    /* Hide desktop presenter panel and top bar */
+    .presenter-panel { display: none !important; }
+    .top-bar         { display: none !important; }
+    .qr-ghost        { display: none !important; }
 
-    /* Body: horizontal split */
+    /* Body: two-column split */
     body {
       flex-direction: row;
       padding: 0;
@@ -967,50 +967,75 @@
       justify-content: flex-start;
     }
 
-    /* Left: timer area */
+    /* ── LEFT COLUMN: QR + big timer ── */
     .timer-area {
-      flex: 1;
+      width: 55vw;
+      flex-shrink: 0;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 12px 16px;
+      padding: 8px 16px;
       gap: 4px;
-      min-width: 0;
+      border-right: 1px solid #1e1e1e;
     }
-    .timer-block { align-items: center; gap: 2px; }
-    .time-display { font-size: clamp(52px, 16vh, 110px); }
-    .progress-bar { width: min(100%, 320px); margin: 4px 0 2px; }
-    .speaker-name { font-size: 11px; }
-    .overtime-badge { font-size: 8px; padding: 2px 8px; }
 
-    /* Right: presenter panel as a static right column */
-    .presenter-panel {
-      display: flex !important;
+    /* QR panel: static, compact, at top of left column */
+    .qr-panel {
       position: static !important;
       transform: none !important;
-      opacity: 1 !important;
-      pointer-events: auto !important;
-      width: 320px;
-      flex-shrink: 0;
-      border-top: none !important;
-      border-left: 1px solid #1e1e1e;
-      padding: 10px 16px 12px;
-      gap: 8px;
-      overflow-y: auto;
-      justify-content: center;
+      order: -1;
+      padding: 6px 8px 5px;
+      border-radius: 8px;
+      margin-bottom: 4px;
+      width: fit-content;
     }
+    .qr-frame { width: 56px !important; height: 56px !important; }
+    .qr-frame canvas, .qr-frame img { width: 56px !important; height: 56px !important; }
+    .qr-label   { font-size: 6px; }
+    .session-id { font-size: 9px; margin-top: 2px; }
 
-    /* Compact presenter controls */
-    .ctrl-status { padding: 4px 8px; font-size: 9px; }
-    .presenter-row { gap: 8px; }
-    .presenter-slider-block { gap: 12px; }
-    .presenter-dur-val { font-size: 34px; }
-    .presenter-dur-unit { font-size: 10px; }
-    .presenter-slider-ticks span { font-size: 8px; }
-    .presenter-btn-stack { gap: 6px; }
-    .presenter-btn { height: 36px; font-size: 18px; padding: 0 18px; }
-    .presenter-nudge-btn { height: 24px; font-size: 10px; }
-    .presenter-nudge-row { gap: 5px; }
+    /* Timer: large, centered in left column */
+    .timer-block { align-items: center; gap: 2px; }
+    .time-display { font-size: clamp(52px, 17vh, 120px); }
+    .progress-bar { width: min(100%, 260px); margin: 2px 0 1px; height: 3px; }
+    .speaker-name   { font-size: 10px; }
+    .overtime-badge { font-size: 8px; padding: 2px 8px; }
+
+    /* ── RIGHT COLUMN: circular dial + mobile footer ── */
+
+    /* Dial: fixed, centered in right 45% */
+    .mobile-dial-wrap {
+      display: flex !important;
+      position: fixed !important;
+      width: min(150px, 26vw) !important;
+      left: auto !important;
+      right: calc(22.5vw - min(75px, 13vw)); /* center in right 45% */
+      bottom: auto !important;
+      top: 50%;
+      transform: translateY(-58%) !important;
+    }
+    .mobile-dial-val  { font-size: 36px; }
+    .mobile-dial-unit { font-size: 9px; }
+    .mobile-dial-hint { font-size: 7px; margin-top: 2px; }
+
+    /* Footer: fixed, bottom of right 45% */
+    .mobile-footer {
+      display: flex !important;
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 55vw !important;
+      right: 0 !important;
+      width: auto !important;
+      padding: 5px 10px 8px;
+      gap: 5px;
+      border-top: 1px solid #1e1e1e;
+      border-left: 1px solid #1e1e1e;
+    }
+    .mobile-footer-btns { gap: 7px; }
+    .mobile-btn-secondary,
+    .mobile-btn-primary   { height: 38px; font-size: 17px; }
+    .mobile-nudge-row     { gap: 5px; }
+    .mobile-nudge-btn     { height: 26px; font-size: 11px; }
   }
 </style>
 </head>
