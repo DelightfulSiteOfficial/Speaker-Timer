@@ -864,6 +864,26 @@
     padding: 4px 10px;
     cursor: pointer;
   }
+  .mobile-nudge-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 7px;
+  }
+  .mobile-nudge-btn {
+    height: 32px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mobile-nudge-btn:active { transform: scale(0.95); background: var(--border); }
+  .mobile-nudge-btn.add { color: var(--accent); border-color: rgba(232,255,71,0.2); background: rgba(232,255,71,0.04); }
+  .mobile-nudge-btn.sub { color: var(--warn);   border-color: rgba(255,153,0,0.2);  background: rgba(255,153,0,0.04); }
+  .mobile-nudge-btn:disabled { opacity: 0.3; pointer-events: none; }
 
   /* ══════════════════════════════════════════
      MOBILE PORTRAIT  ≤ 640px
@@ -1082,6 +1102,12 @@
   <div class="mobile-footer-btns">
     <button class="mobile-btn-secondary" id="mobileResetBtn">Reset</button>
     <button class="mobile-btn-primary"   id="mobileStartBtn">Start</button>
+  </div>
+  <div class="mobile-nudge-row">
+    <button class="mobile-nudge-btn sub" data-nudge="-60">−1m</button>
+    <button class="mobile-nudge-btn sub" data-nudge="-30">−30s</button>
+    <button class="mobile-nudge-btn add" data-nudge="30">+30s</button>
+    <button class="mobile-nudge-btn add" data-nudge="60">+1m</button>
   </div>
 </div>
 
@@ -1496,6 +1522,7 @@
       mStart.disabled = disabled;
       mReset.disabled = disabled;
       mDial.classList.toggle('locked', disabled);
+      document.querySelectorAll('.mobile-nudge-btn').forEach(b => { b.disabled = disabled; });
     }
   }
 
@@ -2001,6 +2028,10 @@
   document.getElementById('mobileReclaimBtn').addEventListener('click', () => {
     reclaimControl(true);
   });
+
+  document.querySelectorAll('.mobile-nudge-btn').forEach(btn =>
+    btn.addEventListener('click', () =>
+      sendCtrl({ type: 'nudge', delta: parseInt(btn.dataset.nudge) })));
 
   // ── Mobile circular dial ───────────────────────────────────────────────────
   ;(function () {
