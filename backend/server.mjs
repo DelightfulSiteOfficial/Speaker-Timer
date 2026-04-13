@@ -99,17 +99,24 @@ function autoPromote(session, skipWid = null, humanOnly = false) {
     session.prevControllerWaitingId = null;
   }
 
-  // 2. First human in queue (skip the just-released entry)
+  // 2. First non-background human in queue (skip the just-released entry)
   if (!chosenWid) {
-    let displayWid = null, displayEntry = null;
+    let backgroundWid = null, backgroundEntry = null;
+    let displayWid    = null, displayEntry    = null;
     for (const [wid, entry] of session.waitingControllers.entries()) {
       if (wid === skipWid) continue;
-      if (entry.name !== 'Presenter Display') {
+      if (entry.ws.isBackground) {
+        // Background admin hub WS — prefer over Presenter Display but below humans
+        if (!backgroundWid) { backgroundWid = wid; backgroundEntry = entry; }
+      } else if (entry.name !== 'Presenter Display') {
         chosenWid = wid; chosenEntry = entry; break;
+      } else {
+        if (!displayWid) { displayWid = wid; displayEntry = entry; }
       }
-      if (!displayWid) { displayWid = wid; displayEntry = entry; }
     }
-    // 3. Presenter Display fallback (skipped when humanOnly=true)
+    // 3. Background admin (hub) before Presenter Display fallback
+    if (!chosenWid && backgroundWid) { chosenWid = backgroundWid; chosenEntry = backgroundEntry; }
+    // 4. Presenter Display fallback (skipped when humanOnly=true)
     if (!chosenWid && !humanOnly) { chosenWid = displayWid; chosenEntry = displayEntry; }
   }
 
@@ -634,7 +641,10 @@ wss.on('connection', (ws, req) => {
   sendMsg(ws, { type: 'state', payload: session.state });
 
   // Key validation for control role
-  const isPresenter = role === 'control' && query.presenter === 'true';
+  const isPresenter   = role === 'control' && query.presenter   === 'true';
+  // background=true: hub page's silent admin WS — holds control passively
+  // and yields immediately to any non-background admin (control/event page).
+  const isBackground  = role === 'control' && query.background  === 'true';
   let effectiveRole = role;
   if (role === 'control') {
     const providedKey = (query.key || '').toUpperCase().trim();
@@ -649,7 +659,8 @@ wss.on('connection', (ws, req) => {
       sendMsg(ws, { type: 'key_required' });
     }
     // Tag this WS connection as admin (correct key supplied) or regular user
-    ws.isAdmin = keyProvided && (!session.keyVerified || providedKey === session.controlKey);
+    ws.isAdmin      = keyProvided && (!session.keyVerified || providedKey === session.controlKey);
+    ws.isBackground = isBackground && ws.isAdmin;
   }
 
   // Grant or deny control
@@ -680,18 +691,19 @@ wss.on('connection', (ws, req) => {
       }
     }
 
-    // Auto-reclaim for admin key holder: if the person connecting has the
-    // correct control key and the *only* thing holding control is the Presenter
-    // Display (auto-mode fallback), silently kick the display back to the
-    // waiting list so the admin gets control without a permission request.
-    // This prevents the confusing loop where the admin navigates back to a room
-    // and finds themselves in the waiting list behind their own display.
-    if (session.controller && session.keyVerified &&
-        (query.key || '').toUpperCase().trim() === session.controlKey &&
-        session.state.controllerName === 'Presenter Display') {
-      const dead = session.controller;
-      const newWid = generateId();
-      session.waitingControllers.set(newWid, { ws: dead, name: 'Presenter Display' });
+    // Auto-reclaim for non-background admin: if a real admin page (control/event)
+    // connects with the key and control is held by a background/passive holder
+    // (Presenter Display or the hub's background admin WS), silently kick it back
+    // to the waiting list so the admin gets control without a permission request.
+    const connectingIsRealAdmin = ws.isAdmin && !isBackground;
+    const holderIsPassive = session.controller &&
+      (session.controller.isBackground || session.state.controllerName === 'Presenter Display');
+    if (connectingIsRealAdmin && holderIsPassive && session.keyVerified) {
+      const dead    = session.controller;
+      const newWid  = generateId();
+      // Preserve the passive holder's name so it shows correctly in the waiting list
+      const deadName = session.state.controllerName || (dead.isBackground ? 'Admin Hub' : 'Presenter Display');
+      session.waitingControllers.set(newWid, { ws: dead, name: deadName });
       sendMsg(dead, { type: 'control_denied', waitingId: newWid });
       session.controller = null;
       session.state.controllerConnected = false;
@@ -758,6 +770,47 @@ wss.on('connection', (ws, req) => {
       const entry = session.waitingControllers.get(msg.waitingId);
       if (!entry || entry.ws !== ws) return;
       const fromName = entry.name || 'Someone';
+
+      // ── Background admin WS special paths ────────────────────────────────
+      if (ws.isBackground) {
+        if (!session.controller) {
+          // No current controller (grace period may be active — that's fine,
+          // the hub reconnecting should be treated like admin returning).
+          if (session.controlGraceTimer) {
+            clearTimeout(session.controlGraceTimer);
+            session.controlGraceTimer = null;
+          }
+          session.waitingControllers.delete(msg.waitingId);
+          session.controller = ws;
+          session.state.controllerConnected = true;
+          session.state.controllerName = 'Admin Hub';
+          syncWaitingList(session);
+          sendMsg(ws, { type: 'control_granted' });
+          broadcast(session);
+          return;
+        }
+        if (!session.controller.isAdmin) {
+          // Non-admin holds control — silently promote the background admin WS
+          const prev = session.controller;
+          const newWid = generateId();
+          session.waitingControllers.set(newWid, { ws: prev, name: session.state.controllerName || '' });
+          session.waitingControllers.delete(msg.waitingId);
+          sendMsg(prev, { type: 'control_denied', waitingId: newWid });
+          session.controller = ws;
+          session.state.controllerConnected = true;
+          session.state.controllerName = 'Admin Hub';
+          syncWaitingList(session);
+          sendMsg(ws, { type: 'control_granted' });
+          broadcast(session);
+          return;
+        }
+        // Real admin (control/event page) already has control — stay in queue
+        // silently; don't send a control_request notification (no modal pop-up).
+        sendMsg(ws, { type: 'request_pending' });
+        return;
+      }
+      // ── End background admin path ─────────────────────────────────────────
+
       if (!session.controller) {
         // If a grace period is active the admin just revoked a co-host and is
         // navigating back — hold control for them; don't auto-grant to anyone.
