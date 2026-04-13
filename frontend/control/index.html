@@ -1016,6 +1016,9 @@
     controlKey = localStorage.getItem(KEY_STORE) || ''; // use saved on return visits
   }
   saveSession(sessionId, 'control', controlKey);
+  // isAdmin: true only if this browser holds the admin key for this session.
+  // Regular users who scanned the plain QR have no key → isAdmin = false.
+  let isAdmin = !!controlKey;
   const MY_NAME_KEY        = 'speakerTimerMyName';
   const NAME_PROMPTED_KEY  = 'speakerTimerNamePromptSeen';
 
@@ -1178,9 +1181,9 @@
       }
     }
 
-    // Waiting list
+    // Waiting list — only visible to the admin (key-holder)
     const wl = state.waitingList || [];
-    waitingSection.classList.toggle('visible', hasControl && !state.coHost && wl.length > 0);
+    waitingSection.classList.toggle('visible', isAdmin && hasControl && !state.coHost && wl.length > 0);
     waitingListEl.innerHTML = wl.map(p => `
       <div class="waiting-item">
         <span class="waiting-item-name ${p.name ? '' : 'unnamed'}">${escHtml(p.name) || 'Unknown device'}</span>
@@ -1611,8 +1614,8 @@
           setRequestState('idle');
 
         } else if (msg.type === 'control_request') {
-          // Co-hosts cannot approve requests — server shouldn't send this but guard anyway
-          if (state.coHost) return;
+          // Only admins and the current controller can approve requests
+          if (state.coHost || !isAdmin) return;
           pendingRequestId = msg.requestId;
           ctrlRequestName.textContent = msg.fromName || 'Someone';
           ctrlRequestModal.classList.add('visible');
@@ -1622,6 +1625,14 @@
             ctrlRequestModal.classList.remove('visible');
             pendingRequestId = null;
           }
+        } else if (msg.type === 'session_info' && msg.controlKey) {
+          // Server confirmed we are the admin — save key and update isAdmin
+          controlKey = msg.controlKey;
+          isAdmin = true;
+          localStorage.setItem(KEY_STORE, controlKey);
+          saveSession(sessionId, 'control', controlKey);
+          render(); // refresh waiting list visibility now that isAdmin = true
+
         } else if (msg.type === 'key_required') {
           hasControl = false;
           lockTitle.textContent = 'Access Denied';

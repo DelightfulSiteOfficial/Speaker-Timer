@@ -1128,9 +1128,9 @@
   let controlKey = '';
 
   function buildQR() {
-    const url = controlKey
-      ? `${window.location.origin}/control/?session=${sessionId}&key=${controlKey}`
-      : `${window.location.origin}/control/?session=${sessionId}`;
+    // Never embed the admin key in the QR — anyone scanning gets the
+    // key-free URL so they join as a regular controller, not admin.
+    const url = `${window.location.origin}/control/?session=${sessionId}`;
     const size = window.innerWidth <= 640 ? 80 : 132;
     const frame = document.getElementById('qrFrame');
     frame.innerHTML = '';
@@ -1482,7 +1482,10 @@
     if (ctrlWs) return;
     const keyParam   = controlKey ? `&key=${controlKey}` : '';
     const forceParam = force && controlKey ? '&force=true' : '';
-    const localWs = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control${keyParam}${forceParam}`);
+    // presenter=true tells the server this is the display page's internal
+    // control socket, not a human admin — it won't lock in keyVerified and
+    // won't appear as an admin to other clients.
+    const localWs = new WebSocket(`${SERVER_URL}?session=${sessionId}&role=control&presenter=true${keyParam}${forceParam}`);
     ctrlWs = localWs;
     localWs.onopen = () => {};
     localWs.onmessage = e => {

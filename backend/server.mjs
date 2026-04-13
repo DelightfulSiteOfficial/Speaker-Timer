@@ -634,16 +634,22 @@ wss.on('connection', (ws, req) => {
   sendMsg(ws, { type: 'state', payload: session.state });
 
   // Key validation for control role
+  const isPresenter = role === 'control' && query.presenter === 'true';
   let effectiveRole = role;
   if (role === 'control') {
     const providedKey = (query.key || '').toUpperCase().trim();
-    const keyValid = !session.keyVerified || providedKey === session.controlKey;
+    // Only reject connections that supply a WRONG key (not missing ones).
+    // Users who scan the plain QR (no key) are allowed in as regular controllers.
+    const keyProvided = providedKey.length > 0;
+    const keyValid = !keyProvided || !session.keyVerified || providedKey === session.controlKey;
     if (!keyValid) {
       effectiveRole = 'view';
       session.keyDenied = session.keyDenied || new Set();
       session.keyDenied.add(ws);
       sendMsg(ws, { type: 'key_required' });
     }
+    // Tag this WS connection as admin (correct key supplied) or regular user
+    ws.isAdmin = keyProvided && (!session.keyVerified || providedKey === session.controlKey);
   }
 
   // Grant or deny control
@@ -709,8 +715,18 @@ wss.on('connection', (ws, req) => {
       }
     }
 
-    session.keyVerified = true;
-    sendMsg(ws, { type: 'session_info', controlKey: session.controlKey });
+    // Presenter Display connections must not lock in the key — they connect
+    // before any human admin and would prevent the real admin from being
+    // recognized as the first authenticated connection.
+    if (!isPresenter) {
+      session.keyVerified = true;
+    }
+    // Only send the control key back to admin connections (and the presenter
+    // for its own internal use).  Regular users who scanned the plain QR
+    // must never receive the key.
+    if (ws.isAdmin || isPresenter) {
+      sendMsg(ws, { type: 'session_info', controlKey: session.controlKey });
+    }
     if (!session.controller) {
       session.controller = ws;
       session.state.controllerConnected = true;
@@ -725,10 +741,7 @@ wss.on('connection', (ws, req) => {
     }
   }
 
-  // Send controlKey to display clients so they can build the QR URL
-  if (role === 'display') {
-    sendMsg(ws, { type: 'session_info', controlKey: session.controlKey });
-  }
+  // Display page no longer receives the key — the QR code is now key-free.
 
   console.log(`[${sessionId}] ${role} connected. Clients: ${session.clients.size}`);
 
@@ -829,6 +842,10 @@ wss.on('connection', (ws, req) => {
     if (session.coHostWs === ws) {
       if (['pass_control_to', 'approve_request', 'deny_request', 'release_control', 'set_presenter_lock'].includes(msg.type)) return;
     }
+
+    // Admin-only actions — non-admin controllers (scanned plain QR) cannot
+    // approve/deny requests or transfer control
+    if (!ws.isAdmin && ['approve_request', 'deny_request', 'pass_control_to', 'set_presenter_lock'].includes(msg.type)) return;
 
     const s = session.state;
 
