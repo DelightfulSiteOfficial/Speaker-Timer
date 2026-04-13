@@ -1085,6 +1085,9 @@
 
   /* ── Tablet landscape overrides (641px+ width, landscape) ── */
   @media (min-width: 641px) and (max-height: 1100px) and (orientation: landscape) {
+    .timer-block  { margin-top: -40px !important; }
+    .time-display { font-size: clamp(80px, 42vh, 310px) !important; }
+
     .mobile-dial-wrap {
       width: min(360px, 44vw) !important;
       bottom: calc(144px + (100vh - 144px - min(360px, 44vw)) / 2 - 26px) !important;
