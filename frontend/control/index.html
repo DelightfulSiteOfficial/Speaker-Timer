@@ -694,29 +694,6 @@
   .overlay.hidden { opacity: 0; pointer-events: none; }
   .overlay-text { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); letter-spacing: 0.2em; text-transform: uppercase; }
 
-  /* ── Co-host banner ── */
-  .cohost-banner {
-    display: none;
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--accent);
-    text-align: center;
-    padding: 6px 12px;
-    background: rgba(232,255,71,0.05);
-    border: 1px solid rgba(232,255,71,0.15);
-    border-radius: 8px;
-    flex-shrink: 0;
-  }
-  .cohost-banner.visible { display: block; }
-
-  /* ── Lock screen co-host state ── */
-  .lock-screen.cohost-mode .waiting-name-input,
-  .lock-screen.cohost-mode .btn-request-control,
-  .lock-screen.cohost-mode .request-feedback,
-  .lock-screen.cohost-mode .btn-cancel-request { display: none !important; }
-
   /* ── Message flash overlay ── */
   .message-flash {
     position: fixed;
@@ -846,9 +823,6 @@
     <div class="conn-dot" id="connDot"></div>
   </div>
 </div>
-
-<!-- ── Co-host banner ── -->
-<div class="cohost-banner" id="cohostBanner">⬡ Co-hosting — Timer controls assigned by event organizer</div>
 
 <!-- ── Timer + presenter pill ── -->
 <div class="timer-row">
@@ -1054,7 +1028,6 @@
   const ctrlRequestName     = document.getElementById('ctrlRequestName');
   const approveRequestBtn   = document.getElementById('approveRequestBtn');
   const denyRequestBtn      = document.getElementById('denyRequestBtn');
-  const cohostBanner = document.getElementById('cohostBanner');
   const lockTitle    = document.getElementById('lockTitle');
   const lockSub      = document.getElementById('lockSub');
 
@@ -1168,23 +1141,15 @@
     lockScreen.classList.toggle('visible', !hasControl);
     takeControlBtn.classList.toggle('visible', !hasControl && controlAvailable);
 
-    // Co-host states
-    cohostBanner.classList.toggle('visible', hasControl && !!state.coHost);
-    lockScreen.classList.toggle('cohost-mode', !hasControl && !!state.coHost);
     if (!hasControl) {
-      if (state.coHost) {
-        lockTitle.textContent = 'Co-host Active';
-        lockSub.innerHTML = 'A co-host is managing this room.<br>Contact the event organizer for access.';
-      } else {
-        lockTitle.textContent = 'Control Active';
-        lockSub.innerHTML = 'Another device is controlling<br>this session';
-      }
+      lockTitle.textContent = 'Control Active';
+      lockSub.innerHTML = 'Another device is controlling<br>this session';
     }
 
     // Waiting list — only visible to the admin (key-holder)
     // Filter out the admin's own background hub connection (it's not a real person)
     const wl = (state.waitingList || []).filter(p => p.name !== 'Admin Hub');
-    waitingSection.classList.toggle('visible', isAdmin && hasControl && !state.coHost && wl.length > 0);
+    waitingSection.classList.toggle('visible', isAdmin && hasControl && wl.length > 0);
     waitingListEl.innerHTML = wl.map(p => `
       <div class="waiting-item">
         <span class="waiting-item-name ${p.name ? '' : 'unnamed'}">${escHtml(p.name) || 'Unknown device'}</span>
@@ -1616,7 +1581,7 @@
 
         } else if (msg.type === 'control_request') {
           // Only admins and the current controller can approve requests
-          if (state.coHost || !isAdmin) return;
+          if (!isAdmin) return;
           pendingRequestId = msg.requestId;
           ctrlRequestName.textContent = msg.fromName || 'Someone';
           ctrlRequestModal.classList.add('visible');

@@ -36,8 +36,6 @@ function createSession(id) {
       message: '',     // operator message shown on display when QR is hidden
       messageSeq: 0,   // increments on every set_message so same-text resends are detectable
       runCount: 0,     // increments each time reset is called after a timer was started
-      coHost: false,
-      coHostName: '',
       controllerName: '',
       presenterLocked: false,  // true = desktop presenter controls disabled
     },
@@ -46,7 +44,6 @@ function createSession(id) {
     controller: null,             // WebSocket of the current controller
     waitingControllers: new Map(), // waitingId → { ws, name }
     everStarted: false,           // internal flag — tracks if current timer was ever started
-    coHostWs: null,
     controlKey: Math.random().toString(36).slice(2,8).toUpperCase() + Math.random().toString(36).slice(2,8).toUpperCase(),
     keyVerified: false,
     presenterActivated: false, // true while Presenter Mode was intentionally force-activated
@@ -382,15 +379,12 @@ const server = createServer(async (req, res) => {
       session.waitingControllers.set(newWaitingId, { ws, name: '' });
       session.controller = null;
       session.state.controllerConnected = false;
-      session.coHostWs = null;
-      session.state.coHost = false;
-      session.state.coHostName = '';
       session.state.controllerName = '';
       syncWaitingList(session);
       sendMsg(ws, { type: 'control_denied', waitingId: newWaitingId });
       broadcast(session);
 
-      // Skip the just-revoked co-host (newWaitingId) so they can't immediately
+      // Skip the just-revoked controller (newWaitingId) so they can't immediately
       // re-claim control. Also skip Presenter Display in this first pass
       // (humanOnly=true) — if no human is already waiting, start a 15-second
       // grace period so the admin can navigate back to the control page and
@@ -461,68 +455,6 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  // POST /sessions/:id/assign-cohost  — admin assigns a co-host
-  const assignCohostMatch = req.url.match(/^\/sessions\/([^/]+)\/assign-cohost$/);
-  if (req.method === 'POST' && assignCohostMatch) {
-    const sessionId = assignCohostMatch[1].toUpperCase().trim();
-    const body = await readBody(req);
-    let targetId, key;
-    try { ({ targetId, key } = JSON.parse(body)); } catch { targetId = undefined; key = undefined; }
-    const session = sessions.get(sessionId);
-    if (!session) {
-      res.writeHead(404, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: false, error: 'Session not found' }));
-      return;
-    }
-    if (!checkAdminKey(session, key)) {
-      res.writeHead(403, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: false, error: 'Unauthorized' }));
-      return;
-    }
-    if (targetId) {
-      // Promote a waiting person as co-host
-      const target = session.waitingControllers.get(targetId);
-      if (!target) {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: false, error: 'Target not found' }));
-        return;
-      }
-      // Demote current controller (if any) to waiting — remember them so
-      // revoking the co-host gives control straight back to this admin.
-      if (session.controller) {
-        const prevWs = session.controller;
-        const newWaitingId = generateId();
-        session.waitingControllers.set(newWaitingId, { ws: prevWs, name: '' });
-        session.prevControllerWaitingId = newWaitingId;
-        sendMsg(prevWs, { type: 'control_denied', waitingId: newWaitingId });
-      }
-      // Promote target as co-host
-      session.waitingControllers.delete(targetId);
-      session.controller = target.ws;
-      session.coHostWs = target.ws;
-      session.state.controllerConnected = true;
-      session.state.coHost = true;
-      session.state.coHostName = target.name || '';
-      syncWaitingList(session);
-      sendMsg(target.ws, { type: 'control_granted' });
-      broadcast(session);
-    } else {
-      // Mark current controller as co-host (designate as room operator from hub)
-      if (!session.controller) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: false, error: 'No active controller' }));
-        return;
-      }
-      session.coHostWs = session.controller;
-      session.state.coHost = true;
-      session.state.coHostName = session.state.controllerName || '';
-      broadcast(session);
-    }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true }));
-    return;
-  }
-
   // POST /sessions/:id/approve-request  — admin approves a pending control request
   const approveReqMatch = req.url.match(/^\/sessions\/([^/]+)\/approve-request$/);
   if (req.method === 'POST' && approveReqMatch) {
@@ -554,11 +486,6 @@ const server = createServer(async (req, res) => {
       session.waitingControllers.set(newWaitingId, { ws: prevWs, name: '' });
       session.prevControllerWaitingId = newWaitingId;
       sendMsg(prevWs, { type: 'control_denied', waitingId: newWaitingId });
-      if (session.coHostWs === prevWs) {
-        session.coHostWs = null;
-        session.state.coHost = false;
-        session.state.coHostName = '';
-      }
     }
     session.waitingControllers.delete(targetId);
     session.controller = target.ws;
@@ -687,11 +614,6 @@ wss.on('connection', (ws, req) => {
       const deadWs = session.controller;
       session.controller = null;
       session.state.controllerConnected = false;
-      if (session.coHostWs === deadWs) {
-        session.coHostWs = null;
-        session.state.coHost = false;
-        session.state.coHostName = '';
-      }
     }
     // Also remove any dead entries from the waiting list
     for (const [wid, entry] of session.waitingControllers.entries()) {
@@ -854,16 +776,6 @@ wss.on('connection', (ws, req) => {
         broadcast(session);
         return;
       }
-      // If a co-host has control, add to pending so the real admin
-      // can approve from hub/event pages (co-host cannot approve).
-      if (session.coHostWs === session.controller) {
-        if (!session.state.pendingRequests.find(r => r.id === msg.waitingId)) {
-          session.state.pendingRequests.push({ id: msg.waitingId, fromName });
-          broadcast(session);
-        }
-        sendMsg(ws, { type: 'request_pending' });
-        return;
-      }
       // Forward to controller AND add to pendingRequests so hub/event see it
       if (!session.state.pendingRequests.find(r => r.id === msg.waitingId)) {
         session.state.pendingRequests.push({ id: msg.waitingId, fromName });
@@ -912,11 +824,6 @@ wss.on('connection', (ws, req) => {
 
     // ── Controller-only messages ──────────────────────────────────────────────
     if (ws !== session.controller) return;
-
-    // Co-host restrictions — cannot transfer or delegate control
-    if (session.coHostWs === ws) {
-      if (['pass_control_to', 'approve_request', 'deny_request', 'release_control', 'set_presenter_lock'].includes(msg.type)) return;
-    }
 
     // Admin-only actions — non-admin controllers (scanned plain QR) cannot
     // approve/deny requests or transfer control.
@@ -1072,11 +979,6 @@ wss.on('connection', (ws, req) => {
       session.controller = null;
       session.state.controllerConnected = false;
       session.state.controllerName = '';
-      if (session.coHostWs === ws) {
-        session.coHostWs = null;
-        session.state.coHost = false;
-        session.state.coHostName = '';
-      }
       syncWaitingList(session);
       broadcast(session);
       // Grace period: wait 20 s before telling presenter mode control is free.
