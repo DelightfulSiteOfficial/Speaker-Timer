@@ -66,6 +66,13 @@ function removePendingRequest(session, waitingId) {
   session.state.pendingRequests = session.state.pendingRequests.filter(r => r.id !== waitingId);
 }
 
+// Returns true if the provided key grants admin access to this session.
+// Before anyone has connected with the key it's not locked in yet → open access.
+function checkAdminKey(session, providedKey) {
+  if (!session.keyVerified) return true;
+  return (providedKey || '').toUpperCase().trim() === session.controlKey;
+}
+
 // ── Auto-promote the next waiting controller ─────────────────────────────────
 // skipWid   – waitingId to exclude (the just-released controller, so they
 //             don't immediately get control back after being revoked)
@@ -345,10 +352,18 @@ const server = createServer(async (req, res) => {
   const releaseMatch = req.url.match(/^\/sessions\/([^/]+)\/release$/);
   if (req.method === 'POST' && releaseMatch) {
     const sessionId = releaseMatch[1].toUpperCase().trim();
+    const body = await readBody(req);
+    let key;
+    try { ({ key } = JSON.parse(body)); } catch { key = undefined; }
     const session = sessions.get(sessionId);
     if (!session) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: 'Session not found' }));
+      return;
+    }
+    if (!checkAdminKey(session, key)) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Unauthorized' }));
       return;
     }
     if (session.controller) {
@@ -393,8 +408,8 @@ const server = createServer(async (req, res) => {
   if (req.method === 'POST' && passMatch) {
     const sessionId = passMatch[1].toUpperCase().trim();
     const body = await readBody(req);
-    let targetId;
-    try { ({ targetId } = JSON.parse(body)); } catch {
+    let targetId, key;
+    try { ({ targetId, key } = JSON.parse(body)); } catch {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: 'Invalid JSON' }));
       return;
@@ -403,6 +418,11 @@ const server = createServer(async (req, res) => {
     if (!session) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: 'Session not found' }));
+      return;
+    }
+    if (!checkAdminKey(session, key)) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Unauthorized' }));
       return;
     }
     const target = session.waitingControllers.get(targetId);
@@ -436,12 +456,17 @@ const server = createServer(async (req, res) => {
   if (req.method === 'POST' && assignCohostMatch) {
     const sessionId = assignCohostMatch[1].toUpperCase().trim();
     const body = await readBody(req);
-    let targetId;
-    try { ({ targetId } = JSON.parse(body)); } catch { targetId = undefined; }
+    let targetId, key;
+    try { ({ targetId, key } = JSON.parse(body)); } catch { targetId = undefined; key = undefined; }
     const session = sessions.get(sessionId);
     if (!session) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: 'Session not found' }));
+      return;
+    }
+    if (!checkAdminKey(session, key)) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Unauthorized' }));
       return;
     }
     if (targetId) {
@@ -493,12 +518,17 @@ const server = createServer(async (req, res) => {
   if (req.method === 'POST' && approveReqMatch) {
     const sessionId = approveReqMatch[1].toUpperCase().trim();
     const body = await readBody(req);
-    let targetId;
-    try { ({ targetId } = JSON.parse(body)); } catch { targetId = undefined; }
+    let targetId, key;
+    try { ({ targetId, key } = JSON.parse(body)); } catch { targetId = undefined; key = undefined; }
     const session = sessions.get(sessionId);
     if (!session) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: 'Session not found' }));
+      return;
+    }
+    if (!checkAdminKey(session, key)) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Unauthorized' }));
       return;
     }
     const target = session.waitingControllers.get(targetId);
@@ -538,12 +568,17 @@ const server = createServer(async (req, res) => {
   if (req.method === 'POST' && denyReqMatch) {
     const sessionId = denyReqMatch[1].toUpperCase().trim();
     const body = await readBody(req);
-    let targetId;
-    try { ({ targetId } = JSON.parse(body)); } catch { targetId = undefined; }
+    let targetId, key;
+    try { ({ targetId, key } = JSON.parse(body)); } catch { targetId = undefined; key = undefined; }
     const session = sessions.get(sessionId);
     if (!session) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: 'Session not found' }));
+      return;
+    }
+    if (!checkAdminKey(session, key)) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Unauthorized' }));
       return;
     }
     const target = session.waitingControllers.get(targetId);

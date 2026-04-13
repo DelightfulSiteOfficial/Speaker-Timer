@@ -1494,6 +1494,28 @@
     return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // ── Admin key helpers ─────────────────────────────────────────────────────────
+  // The control key stored in localStorage is proof that this device was the
+  // first to connect (or had control passed to it). Only devices with the key
+  // can perform admin actions on a session.
+  function getAdminKey(sessionId) {
+    return localStorage.getItem(`speakerTimerKey_${sessionId}`) || '';
+  }
+
+  function isAdminOf(sessionId) {
+    return !!getAdminKey(sessionId);
+  }
+
+  // Wraps fetch for admin HTTP endpoints — automatically includes the control key.
+  async function adminFetch(sessionId, endpoint, body = {}) {
+    const key = getAdminKey(sessionId);
+    return fetch(`${HTTP_URL}/sessions/${sessionId}/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...body, key }),
+    });
+  }
+
   function genId() {
     return Math.random().toString(36).slice(2, 9);
   }
@@ -1552,13 +1574,7 @@
         btn.addEventListener('click', async () => {
           btn.textContent = '…';
           btn.disabled = true;
-          try {
-            await fetch(`${HTTP_URL}/sessions/${passSessionId}/assign-cohost`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ targetId: btn.dataset.target }),
-            });
-          } catch {}
+          try { await adminFetch(passSessionId, 'assign-cohost', { targetId: btn.dataset.target }); } catch {}
           passModal.classList.remove('visible');
           passSessionId = null;
         });
@@ -1576,12 +1592,18 @@
   const qrCodeWrap = document.getElementById('qrCodeWrap');
 
   function openQrModal(sessionId) {
-    const controlUrl = `${window.location.origin}/view/?session=${sessionId}`;
+    const key = getAdminKey(sessionId);
+    // Admins get a control QR (with key) so they can share with operators.
+    // Observers get a view-only QR.
+    const url = key
+      ? `${window.location.origin}/control/?session=${sessionId}&key=${key}`
+      : `${window.location.origin}/view/?session=${sessionId}`;
+    qrModal.querySelector('.qr-modal-eyebrow').textContent = key ? 'Scan to Control Timer' : 'Scan to View Timer';
     document.getElementById('qrModalSession').textContent = sessionId;
-    document.getElementById('qrModalUrl').textContent = controlUrl;
+    document.getElementById('qrModalUrl').textContent = url;
     qrCodeWrap.innerHTML = '';
     new QRCode(qrCodeWrap, {
-      text: controlUrl,
+      text: url,
       width: 182, height: 182,
       colorDark: '#000000', colorLight: '#ffffff',
       correctLevel: QRCode.CorrectLevel.M,
@@ -1757,7 +1779,7 @@
         <div class="card-progress-fill ${tc}" style="width:${offline ? '100' : pct}%"></div>
       </div>
       <div class="card-actions">
-        <a class="btn-timer-controls" href="/control/?session=${sessionId}"
+        <a class="btn-timer-controls" href="/control/?session=${sessionId}${getAdminKey(sessionId) ? '&key=' + getAdminKey(sessionId) : ''}"
            onclick="event.stopPropagation()">Timer Controls →</a>
       </div>
     `;
@@ -1779,6 +1801,13 @@
     const el = document.getElementById(`card-${sessionId}`);
     if (!el) return;
 
+    // Update href on the anchor element so it always includes the key if available
+    const adminKey = getAdminKey(sessionId);
+    const isAdmin  = !!adminKey;
+    if (el.tagName === 'A') {
+      el.href = `/control/?session=${sessionId}${adminKey ? '&key=' + adminKey : ''}`;
+    }
+
     const { state, status } = roomData[sessionId] || {};
     const { running, timeRemaining, totalTime, roomName, overtime, waitingList = [], runCount = 0, controllerConnected = false, coHost = false, coHostName = '', controllerName = '', pendingRequests = [] } = state || {};
     const offline = status === 'offline' || status === 'connecting';
@@ -1791,7 +1820,8 @@
     const waitingCount = waitingList?.length || 0;
     const metaParts = [];
     if (!offline && runCount > 0) metaParts.push(`Timer ${runCount + 1}`);
-    if (!offline && waitingCount > 0) metaParts.push(`<span class="waiting waiting-tap">${waitingCount} waiting &rarr;</span>`);
+    // Only admins see the waiting list badge and can manage it
+    if (isAdmin && !offline && waitingCount > 0) metaParts.push(`<span class="waiting waiting-tap">${waitingCount} waiting &rarr;</span>`);
 
     let pulseClass = '';
     if (!offline) {
@@ -1823,17 +1853,17 @@
       <div class="card-progress">
         <div class="card-progress-fill ${tc}" style="width:${offline ? '100' : pct}%"></div>
       </div>
-      ${!offline && controllerConnected && !coHost ? `
+      ${isAdmin && !offline && controllerConnected && !coHost ? `
       <div class="card-actions">
         <span class="controller-label">${controllerName ? escHtml(controllerName) + ' — active' : 'Controller active'}</span>
         <button class="btn-assign-operator" data-id="${sessionId}">Assign Op</button>
       </div>` : ''}
-      ${!offline && controllerConnected && coHost ? `
+      ${isAdmin && !offline && controllerConnected && coHost ? `
       <div class="card-actions">
         <span class="cohost-label">&#11041; Operator${coHostName ? ': ' + escHtml(coHostName) : ''}</span>
         <button class="btn-revoke-cohost" data-id="${sessionId}">Revoke</button>
       </div>` : ''}
-      ${!offline && pendingRequests.length > 0 ? `
+      ${isAdmin && !offline && pendingRequests.length > 0 ? `
       <div class="card-requests">
         ${pendingRequests.map(r => `
         <div class="req-item">
@@ -1846,6 +1876,12 @@
             <button class="btn-req-approve" data-req-id="${r.id}">Allow</button>
           </div>
         </div>`).join('')}
+      </div>` : ''}
+      ${!isAdmin && !offline ? `
+      <div class="card-actions">
+        <span class="controller-label" style="color:var(--muted);font-size:10px">View only</span>
+        <a class="btn-timer-controls" href="/control/?session=${sessionId}"
+           onclick="event.stopPropagation()" style="font-size:10px;padding:6px 0">Request Control &rarr;</a>
       </div>` : ''}
     `;
 
@@ -1874,12 +1910,7 @@
     if (makeCoHostBtn) {
       makeCoHostBtn.addEventListener('click', async (e) => {
         e.preventDefault(); e.stopPropagation();
-        try {
-          await fetch(`${HTTP_URL}/sessions/${sessionId}/assign-cohost`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({}),
-          });
-        } catch {}
+        try { await adminFetch(sessionId, 'assign-cohost'); } catch {}
       });
     }
 
@@ -1887,12 +1918,7 @@
     if (revokeCoHostBtn) {
       revokeCoHostBtn.addEventListener('click', async (e) => {
         e.preventDefault(); e.stopPropagation();
-        try {
-          await fetch(`${HTTP_URL}/sessions/${sessionId}/release`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: '{}',
-          });
-        } catch {}
+        try { await adminFetch(sessionId, 'release'); } catch {}
       });
     }
 
@@ -1900,38 +1926,21 @@
     if (assignOperatorBtn) {
       assignOperatorBtn.addEventListener('click', async (e) => {
         e.preventDefault(); e.stopPropagation();
-        try {
-          await fetch(`${HTTP_URL}/sessions/${sessionId}/assign-cohost`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({}),
-          });
-        } catch {}
+        try { await adminFetch(sessionId, 'assign-cohost'); } catch {}
       });
     }
 
     el.querySelectorAll('.btn-req-approve').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.preventDefault(); e.stopPropagation();
-        try {
-          await fetch(`${HTTP_URL}/sessions/${sessionId}/approve-request`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ targetId: btn.dataset.reqId }),
-          });
-        } catch {}
+        try { await adminFetch(sessionId, 'approve-request', { targetId: btn.dataset.reqId }); } catch {}
       });
     });
 
     el.querySelectorAll('.btn-req-deny').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.preventDefault(); e.stopPropagation();
-        try {
-          await fetch(`${HTTP_URL}/sessions/${sessionId}/deny-request`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ targetId: btn.dataset.reqId }),
-          });
-        } catch {}
+        try { await adminFetch(sessionId, 'deny-request', { targetId: btn.dataset.reqId }); } catch {}
       });
     });
   }
@@ -1959,7 +1968,10 @@
           const card = document.createElement(agendas[id] ? 'div' : 'a');
           card.id = `card-${id}`;
           card.dataset.id = id;
-          if (!agendas[id]) card.href = `/control/?session=${id}`;
+          if (!agendas[id]) {
+            const k = getAdminKey(id);
+            card.href = `/control/?session=${id}${k ? '&key=' + k : ''}`;
+          }
           list.appendChild(card);
           renderCard(id);
         }
@@ -2067,6 +2079,11 @@
               try {
                 const url = new URL(raw);
                 sessionId = (url.searchParams.get('session') || '').toUpperCase().trim();
+                // Save control key so this device has admin access for the scanned room
+                const scannedKey = (url.searchParams.get('key') || '').toUpperCase().trim();
+                if (sessionId && scannedKey) {
+                  localStorage.setItem(`speakerTimerKey_${sessionId}`, scannedKey);
+                }
               } catch {
                 if (/^[A-Z0-9]{4,10}$/i.test(raw.trim())) {
                   sessionId = raw.trim().toUpperCase();
