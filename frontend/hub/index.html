@@ -1557,7 +1557,9 @@
 
   function openAssignCohostModal(sessionId) {
     passSessionId = sessionId;
-    const waitingList = roomData[sessionId]?.state?.waitingList || [];
+    // Filter out background/system entries — only show real human waiters
+    const waitingList = (roomData[sessionId]?.state?.waitingList || [])
+      .filter(w => w.name !== 'Admin Hub' && w.name !== 'Presenter Display');
     const listEl = document.getElementById('passWaitingList');
 
     if (waitingList.length === 0) {
@@ -1694,11 +1696,95 @@
     } catch {
       entry.status = 'offline';
     }
+
+    // If admin, also hold a silent background control connection so the admin
+    // stays "in control" while browsing the hub (not just the control page).
+    connectAdminBg(sessionId);
+  }
+
+  // ── Background admin control WS ───────────────────────────────────────────────
+  // Maintains a silent role=control connection for admin rooms so the admin keeps
+  // control even while on the hub page.  Yields instantly to control/event pages.
+  function connectAdminBg(sessionId) {
+    const key = getAdminKey(sessionId);
+    if (!key) return; // not admin for this room
+
+    const entry = roomData[sessionId] || {};
+    // Already connected or connecting
+    const rs = entry.adminWs?.readyState;
+    if (rs === WebSocket.OPEN || rs === WebSocket.CONNECTING) return;
+
+    try {
+      const ws = new WebSocket(
+        `${SERVER_URL}?session=${sessionId}&role=control&key=${key}&background=true`
+      );
+      entry.adminWs         = ws;
+      entry.adminWaitingId  = null;
+      entry.adminHasControl = false;
+      roomData[sessionId]   = entry;
+
+      ws.onopen = () => {
+        // Send our name so it appears in the waiting list if we get queued
+        // (e.g. while waiting behind a control page connection)
+        if (entry.adminWaitingId) {
+          ws.send(JSON.stringify({
+            type: 'set_waiting_name', sessionId,
+            waitingId: entry.adminWaitingId, name: 'Admin Hub'
+          }));
+        }
+      };
+
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === 'control_granted') {
+            entry.adminHasControl = true;
+            entry.adminWaitingId  = null;
+          } else if (msg.type === 'control_denied') {
+            // Kicked to waiting (control/event page took over) — request control
+            // back so we're queued; server gives it to us automatically when
+            // the control/event page disconnects.
+            entry.adminHasControl = false;
+            entry.adminWaitingId  = msg.waitingId;
+            // Set our name in waiting list
+            ws.send(JSON.stringify({
+              type: 'set_waiting_name', sessionId,
+              waitingId: msg.waitingId, name: 'Admin Hub'
+            }));
+            // Request control — server will queue us silently behind the real admin
+            ws.send(JSON.stringify({
+              type: 'request_control', sessionId, waitingId: msg.waitingId
+            }));
+          } else if (msg.type === 'request_pending') {
+            // Queued behind the control/event page — that's expected, do nothing
+          } else if (msg.type === 'session_info') {
+            // Key confirmed — nothing extra needed for background WS
+          }
+        } catch {}
+      };
+
+      ws.onclose = () => {
+        entry.adminHasControl = false;
+        entry.adminWs         = null;
+        // Reconnect after a short delay
+        setTimeout(() => {
+          if (rooms.includes(sessionId) && getAdminKey(sessionId)) {
+            connectAdminBg(sessionId);
+          }
+        }, 3000);
+      };
+
+      ws.onerror = () => ws.close();
+
+    } catch {
+      // ignore — will retry on reconnect
+    }
   }
 
   function disconnectRoom(sessionId) {
     const entry = roomData[sessionId];
-    if (entry?.ws) { entry.ws.onclose = null; entry.ws.close(); }
+    if (entry?.ws)      { entry.ws.onclose      = null; entry.ws.close();      }
+    if (entry?.adminWs) { entry.adminWs.onclose  = null; entry.adminWs.close(); }
     delete roomData[sessionId];
   }
 
@@ -1817,7 +1903,9 @@
     const pillClass = offline ? 'offline' : running ? 'running' : 'paused';
     const pillLabel = offline ? (status === 'connecting' ? 'Connecting' : 'Offline') : running ? 'Running' : (overtime ? 'Overtime' : 'Paused');
 
-    const waitingCount = waitingList?.length || 0;
+    // Filter out background/system entries from the human waiting count
+    const humanWaiting = (waitingList || []).filter(p => p.name !== 'Admin Hub' && p.name !== 'Presenter Display');
+    const waitingCount = humanWaiting.length;
     const metaParts = [];
     if (!offline && runCount > 0) metaParts.push(`Timer ${runCount + 1}`);
     // Only admins see the waiting list badge and can manage it

@@ -1182,7 +1182,8 @@
     }
 
     // Waiting list — only visible to the admin (key-holder)
-    const wl = state.waitingList || [];
+    // Filter out the admin's own background hub connection (it's not a real person)
+    const wl = (state.waitingList || []).filter(p => p.name !== 'Admin Hub' && p.name !== 'Presenter Display');
     waitingSection.classList.toggle('visible', isAdmin && hasControl && !state.coHost && wl.length > 0);
     waitingListEl.innerHTML = wl.map(p => `
       <div class="waiting-item">
