@@ -989,20 +989,28 @@
     /* QR: fixed to bottom-left corner — compact */
     .qr-panel {
       position: fixed !important;
+      top: auto !important;
       bottom: 6px !important;
       left: 6px !important;
       transform: none !important;
       padding: 4px 4px 3px !important;
       border-radius: 6px !important;
       gap: 2px !important;
-      width: fit-content;
+      width: fit-content !important;
+      height: fit-content !important;
       z-index: 50;
     }
     .qr-frame {
       width: 38px !important; height: 38px !important;
       padding: 3px !important; border-radius: 4px !important;
+      overflow: hidden !important;
+      flex-shrink: 0 !important;
     }
-    .qr-frame canvas, .qr-frame img { width: 32px !important; height: 32px !important; }
+    .qr-frame canvas, .qr-frame img {
+      display: block !important;
+      width: 32px !important; height: 32px !important;
+      max-width: 32px !important; max-height: 32px !important;
+    }
     .qr-label   { display: none !important; }
     .session-id { font-size: 7px !important; margin-top: 0 !important; letter-spacing: 0.05em !important; }
 
