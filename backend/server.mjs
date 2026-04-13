@@ -615,7 +615,13 @@ wss.on('connection', (ws, req) => {
       const entry = session.waitingControllers.get(msg.waitingId);
       if (!entry || entry.ws !== ws) return;
       if (!session.controller) {
-        // No active controller — grant directly
+        // If a grace period is active the admin just revoked a co-host and is
+        // navigating back — hold control for them; don't auto-grant to anyone.
+        if (session.controlGraceTimer) {
+          sendMsg(ws, { type: 'request_pending' });
+          return;
+        }
+        // No active controller and no grace period — grant directly
         session.waitingControllers.delete(msg.waitingId);
         session.controller = ws;
         session.state.controllerConnected = true;
