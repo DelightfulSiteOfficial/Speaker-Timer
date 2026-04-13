@@ -981,21 +981,25 @@
       overflow: hidden;
     }
 
-    /* QR: fixed to bottom-left corner */
+    /* QR: fixed to bottom-left corner — compact */
     .qr-panel {
       position: fixed !important;
-      bottom: 10px !important;
-      left: 10px !important;
+      bottom: 6px !important;
+      left: 6px !important;
       transform: none !important;
-      padding: 5px 8px !important;
-      border-radius: 8px;
+      padding: 4px 4px 3px !important;
+      border-radius: 6px !important;
+      gap: 2px !important;
       width: fit-content;
       z-index: 50;
     }
-    .qr-frame { width: 52px !important; height: 52px !important; }
-    .qr-frame canvas, .qr-frame img { width: 52px !important; height: 52px !important; }
-    .qr-label   { font-size: 6px !important; }
-    .session-id { font-size: 8px !important; margin-top: 1px !important; }
+    .qr-frame {
+      width: 38px !important; height: 38px !important;
+      padding: 3px !important; border-radius: 4px !important;
+    }
+    .qr-frame canvas, .qr-frame img { width: 32px !important; height: 32px !important; }
+    .qr-label   { display: none !important; }
+    .session-id { font-size: 7px !important; margin-top: 0 !important; letter-spacing: 0.05em !important; }
 
     /* Timer: compact, centered in left col */
     .timer-block   { align-items: center !important; gap: 2px !important; flex-shrink: 0; }
