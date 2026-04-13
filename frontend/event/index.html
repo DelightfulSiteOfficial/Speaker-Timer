@@ -1302,6 +1302,8 @@
   }
 
   let controlKey = params.get('key') || getSavedKey(sessionId);
+  // isAdmin: true only if this browser holds the admin key for this session.
+  let isAdmin = !!controlKey;
 
   // ── localStorage session helpers ──────────────────────────────────────────
   const SESSION_STORE_KEY = 'speakerTimerSessions';
@@ -1774,18 +1776,21 @@
           lastServerRemaining = state.timeRemaining;
           renderTimer();
           // Show control request modal from state for requests not already handled via WS
-          const pending = state.pendingRequests || [];
-          if (pending.length > 0) {
-            const first = pending[0];
-            if (!pendingRequestId) {
-              pendingRequestId = first.id;
-              ctrlRequestName.textContent = first.fromName || 'Someone';
-              ctrlRequestModal.classList.add('visible');
+          // Only admins can approve/deny requests
+          if (isAdmin) {
+            const pending = state.pendingRequests || [];
+            if (pending.length > 0) {
+              const first = pending[0];
+              if (!pendingRequestId) {
+                pendingRequestId = first.id;
+                ctrlRequestName.textContent = first.fromName || 'Someone';
+                ctrlRequestModal.classList.add('visible');
+              }
+            } else if (pending.length === 0 && pendingRequestId) {
+              // Request was handled elsewhere — hide modal
+              ctrlRequestModal.classList.remove('visible');
+              pendingRequestId = null;
             }
-          } else if (pending.length === 0 && pendingRequestId) {
-            // Request was handled elsewhere — hide modal
-            ctrlRequestModal.classList.remove('visible');
-            pendingRequestId = null;
           }
         } else if (msg.type === 'control_granted') {
           hasControl = true;
@@ -1795,6 +1800,7 @@
         } else if (msg.type === 'control_denied') {
           hasControl = false;
         } else if (msg.type === 'control_request') {
+          if (!isAdmin) break;
           pendingRequestId = msg.requestId;
           ctrlRequestName.textContent = msg.fromName || 'Someone';
           ctrlRequestModal.classList.add('visible');
@@ -1805,6 +1811,7 @@
           }
         } else if (msg.type === 'session_info' && msg.controlKey) {
           controlKey = msg.controlKey;
+          isAdmin = true;
           saveKey(sessionId, controlKey);
           saveSession(sessionId, 'event', controlKey);
           const newUrl = new URL(window.location.href);
