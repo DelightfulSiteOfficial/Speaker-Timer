@@ -638,6 +638,28 @@
   .presenter-btn:hover  { opacity: 0.85; }
   .presenter-btn:active { transform: scale(0.96); }
 
+  .presenter-nudge-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+    margin-top: 4px;
+  }
+  .presenter-nudge-btn {
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .presenter-nudge-btn:active { transform: scale(0.95); background: var(--border); }
+  .presenter-nudge-btn.add { color: var(--accent); border-color: rgba(232,255,71,0.2); background: rgba(232,255,71,0.04); }
+  .presenter-nudge-btn.sub { color: var(--warn);   border-color: rgba(255,153,0,0.2);  background: rgba(255,153,0,0.04); }
+
   /* ── Hold-to-set duration overlay (main timer) ── */
   .timer-hold-overlay {
     position: fixed;
@@ -1015,6 +1037,12 @@
     <div class="presenter-actions">
       <button class="presenter-btn reset" id="presenterReset">Reset</button>
       <button class="presenter-btn start" id="presenterStart">Start</button>
+    </div>
+    <div class="presenter-nudge-row">
+      <button class="presenter-nudge-btn sub" data-nudge="-60">−1m</button>
+      <button class="presenter-nudge-btn sub" data-nudge="-30">−30s</button>
+      <button class="presenter-nudge-btn add" data-nudge="30">+30s</button>
+      <button class="presenter-nudge-btn add" data-nudge="60">+1m</button>
     </div>
   </div>
 </div>
@@ -1444,6 +1472,10 @@
     presenterSlider.style.opacity = disabled ? '0.35' : '';
     presenterStart.style.opacity  = disabled ? '0.35' : '';
     presenterReset.style.opacity  = disabled ? '0.35' : '';
+    document.querySelectorAll('.presenter-nudge-btn').forEach(btn => {
+      btn.disabled = disabled;
+      btn.style.opacity = disabled ? '0.35' : '';
+    });
 
     // Sync mobile footer
     const mDot    = document.getElementById('mobileCtrlDot');
@@ -1651,6 +1683,11 @@
 
   // Reset
   presenterReset.addEventListener('click', () => sendCtrl({ type: 'reset' }));
+
+  // Nudge buttons
+  document.querySelectorAll('.presenter-nudge-btn').forEach(btn =>
+    btn.addEventListener('click', () =>
+      sendCtrl({ type: 'nudge', delta: parseInt(btn.dataset.nudge) })));
 
   // Keep Start button label in sync with running state
   const _origRender = render;
