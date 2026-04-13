@@ -567,6 +567,35 @@
   }
   .btn-revoke-cohost:active { background: rgba(255,153,0,0.1); transform: scale(0.95); }
 
+  .controller-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .btn-assign-operator {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .btn-assign-operator:active { background: var(--border); color: var(--text); }
+
   .btn-make-cohost {
     width: 100%;
     background: none;
@@ -905,6 +934,66 @@
     transition: all 0.15s;
   }
   .btn-add-full:active { transform: scale(0.98); opacity: 0.85; }
+
+  /* ── QR scanner panel ── */
+  .scan-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-height: 220px;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .scan-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .scan-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .scan-finder {
+    width: 130px;
+    height: 130px;
+    border: 2px solid var(--accent);
+    border-radius: 10px;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.45);
+  }
+
+  .scan-message {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+    padding: 16px 8px;
+    line-height: 1.7;
+  }
+
+  .scan-message.found { color: var(--accent); }
+
+  .scan-unavailable {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    padding: 24px 8px;
+    line-height: 1.7;
+    letter-spacing: 0.08em;
+  }
 
   .sheet-error {
     font-family: 'DM Mono', monospace;
@@ -1299,6 +1388,7 @@
   <!-- tabs -->
   <div class="sheet-tabs">
     <button class="sheet-tab active" id="tabRoom">Room</button>
+    <button class="sheet-tab" id="tabScan">Scan</button>
     <button class="sheet-tab" id="tabAgenda">Agenda</button>
   </div>
 
@@ -1309,6 +1399,17 @@
       <button class="btn-add-confirm" id="addConfirmBtn">Add</button>
     </div>
     <div class="sheet-error" id="sheetError"></div>
+  </div>
+
+  <!-- Scan panel -->
+  <div class="sheet-panel" id="panelScan">
+    <div class="scan-container" id="scanContainer">
+      <video class="scan-video" id="scanVideo" autoplay muted playsinline></video>
+      <div class="scan-overlay">
+        <div class="scan-finder"></div>
+      </div>
+    </div>
+    <div class="scan-message" id="scanMessage">Aim at the QR code on the display screen</div>
   </div>
 
   <!-- Agenda panel -->
@@ -1679,7 +1780,7 @@
     if (!el) return;
 
     const { state, status } = roomData[sessionId] || {};
-    const { running, timeRemaining, totalTime, roomName, overtime, waitingList = [], runCount = 0, controllerConnected = false, coHost = false, coHostName = '', pendingRequests = [] } = state || {};
+    const { running, timeRemaining, totalTime, roomName, overtime, waitingList = [], runCount = 0, controllerConnected = false, coHost = false, coHostName = '', controllerName = '', pendingRequests = [] } = state || {};
     const offline = status === 'offline' || status === 'connecting';
     const tc = offline ? '' : timeClass(timeRemaining, overtime);
     const pct = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) * 100 : 100;
@@ -1722,9 +1823,14 @@
       <div class="card-progress">
         <div class="card-progress-fill ${tc}" style="width:${offline ? '100' : pct}%"></div>
       </div>
+      ${!offline && controllerConnected && !coHost ? `
+      <div class="card-actions">
+        <span class="controller-label">${controllerName ? escHtml(controllerName) + ' — active' : 'Controller active'}</span>
+        <button class="btn-assign-operator" data-id="${sessionId}">Assign Op</button>
+      </div>` : ''}
       ${!offline && controllerConnected && coHost ? `
       <div class="card-actions">
-        <span class="cohost-label">&#11041; Co-host${coHostName ? ': ' + escHtml(coHostName) : ''}</span>
+        <span class="cohost-label">&#11041; Operator${coHostName ? ': ' + escHtml(coHostName) : ''}</span>
         <button class="btn-revoke-cohost" data-id="${sessionId}">Revoke</button>
       </div>` : ''}
       ${!offline && pendingRequests.length > 0 ? `
@@ -1785,6 +1891,19 @@
           await fetch(`${HTTP_URL}/sessions/${sessionId}/release`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: '{}',
+          });
+        } catch {}
+      });
+    }
+
+    const assignOperatorBtn = el.querySelector('.btn-assign-operator');
+    if (assignOperatorBtn) {
+      assignOperatorBtn.addEventListener('click', async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        try {
+          await fetch(`${HTTP_URL}/sessions/${sessionId}/assign-cohost`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
           });
         } catch {}
       });
@@ -1905,25 +2024,112 @@
   // Tab switching
   const tabRoom    = document.getElementById('tabRoom');
   const tabAgenda  = document.getElementById('tabAgenda');
+  const tabScan    = document.getElementById('tabScan');
   const panelRoom  = document.getElementById('panelRoom');
   const panelAgenda = document.getElementById('panelAgenda');
+  const panelScan  = document.getElementById('panelScan');
 
   let activeTab = 'room';
 
+  // ── QR Scanner ────────────────────────────────────────────────────────────────
+  let scanStream = null;
+  let scanAnimFrame = null;
+
+  async function startQrScanner() {
+    const container = document.getElementById('scanContainer');
+    const video     = document.getElementById('scanVideo');
+    const msg       = document.getElementById('scanMessage');
+
+    stopQrScanner();
+    msg.className = 'scan-message';
+    msg.textContent = 'Aim at the QR code on the display screen';
+
+    if (!('BarcodeDetector' in window)) {
+      container.innerHTML = '<div class="scan-unavailable">QR scanning is not supported in this browser.<br><br>Use the Room tab and type the session ID shown on the display screen.</div>';
+      return;
+    }
+
+    try {
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      scanStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 640 } }
+      });
+      video.srcObject = scanStream;
+
+      const scan = async () => {
+        if (!scanStream) return;
+        try {
+          if (video.readyState >= 2) {
+            const codes = await detector.detect(video);
+            if (codes.length > 0) {
+              const raw = codes[0].rawValue;
+              let sessionId = '';
+              try {
+                const url = new URL(raw);
+                sessionId = (url.searchParams.get('session') || '').toUpperCase().trim();
+              } catch {
+                if (/^[A-Z0-9]{4,10}$/i.test(raw.trim())) {
+                  sessionId = raw.trim().toUpperCase();
+                }
+              }
+              if (sessionId && sessionId.length >= 4) {
+                stopQrScanner();
+                msg.textContent = `Room ${sessionId} — added!`;
+                msg.className = 'scan-message found';
+                addRoom(sessionId);
+                setTimeout(closeSheet, 900);
+                return;
+              }
+            }
+          }
+        } catch {}
+        scanAnimFrame = requestAnimationFrame(scan);
+      };
+      video.addEventListener('loadeddata', () => {
+        scanAnimFrame = requestAnimationFrame(scan);
+      }, { once: true });
+    } catch {
+      container.innerHTML = '<div class="scan-unavailable">Camera access was denied.<br><br>Please allow camera access or type the session ID manually.</div>';
+    }
+  }
+
+  function stopQrScanner() {
+    if (scanAnimFrame) { cancelAnimationFrame(scanAnimFrame); scanAnimFrame = null; }
+    if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  }
+
   tabRoom.addEventListener('click', () => {
     activeTab = 'room';
+    stopQrScanner();
     tabRoom.classList.add('active');
     tabAgenda.classList.remove('active');
+    tabScan.classList.remove('active');
     panelRoom.classList.add('active');
     panelAgenda.classList.remove('active');
+    panelScan.classList.remove('active');
+    setTimeout(() => sessionInput.focus(), 100);
+  });
+
+  tabScan.addEventListener('click', () => {
+    activeTab = 'scan';
+    tabScan.classList.add('active');
+    tabRoom.classList.remove('active');
+    tabAgenda.classList.remove('active');
+    panelScan.classList.add('active');
+    panelRoom.classList.remove('active');
+    panelAgenda.classList.remove('active');
+    startQrScanner();
   });
 
   tabAgenda.addEventListener('click', () => {
     activeTab = 'agenda';
+    stopQrScanner();
     tabAgenda.classList.add('active');
     tabRoom.classList.remove('active');
+    tabScan.classList.remove('active');
     panelAgenda.classList.add('active');
     panelRoom.classList.remove('active');
+    panelScan.classList.remove('active');
   });
 
   function openSheet() {
@@ -1937,6 +2143,7 @@
   }
 
   function closeSheet() {
+    stopQrScanner();
     sheet.classList.remove('visible');
     backdrop.classList.remove('visible');
     sessionInput.value = '';

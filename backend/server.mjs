@@ -38,6 +38,7 @@ function createSession(id) {
       runCount: 0,     // increments each time reset is called after a timer was started
       coHost: false,
       coHostName: '',
+      controllerName: '',
       presenterLocked: false,  // true = desktop presenter controls disabled
     },
     clients: new Set(),
@@ -110,6 +111,7 @@ function autoPromote(session, skipWid = null, humanOnly = false) {
   session.waitingControllers.delete(chosenWid);
   session.controller = chosenEntry.ws;
   session.state.controllerConnected = true;
+  session.state.controllerName = chosenEntry.name || '';
   syncWaitingList(session);
   sendMsg(chosenEntry.ws, { type: 'control_granted' });
   broadcast(session);
@@ -358,6 +360,7 @@ const server = createServer(async (req, res) => {
       session.coHostWs = null;
       session.state.coHost = false;
       session.state.coHostName = '';
+      session.state.controllerName = '';
       syncWaitingList(session);
       sendMsg(ws, { type: 'control_denied', waitingId: newWaitingId });
       broadcast(session);
@@ -419,6 +422,7 @@ const server = createServer(async (req, res) => {
     session.waitingControllers.delete(targetId);
     session.controller = target.ws;
     session.state.controllerConnected = true;
+    session.state.controllerName = target.name || '';
     syncWaitingList(session);
     sendMsg(target.ws, { type: 'control_granted' });
     broadcast(session);
@@ -468,7 +472,7 @@ const server = createServer(async (req, res) => {
       sendMsg(target.ws, { type: 'control_granted' });
       broadcast(session);
     } else {
-      // Mark current controller as co-host
+      // Mark current controller as co-host (designate as room operator from hub)
       if (!session.controller) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, error: 'No active controller' }));
@@ -476,7 +480,7 @@ const server = createServer(async (req, res) => {
       }
       session.coHostWs = session.controller;
       session.state.coHost = true;
-      session.state.coHostName = '';
+      session.state.coHostName = session.state.controllerName || '';
       broadcast(session);
     }
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -519,6 +523,7 @@ const server = createServer(async (req, res) => {
     session.waitingControllers.delete(targetId);
     session.controller = target.ws;
     session.state.controllerConnected = true;
+    session.state.controllerName = target.name || '';
     removePendingRequest(session, targetId);
     syncWaitingList(session);
     sendMsg(target.ws, { type: 'control_granted' });
@@ -849,6 +854,7 @@ wss.on('connection', (ws, req) => {
         session.waitingControllers.delete(msg.targetId);
         session.controller = target.ws;
         session.state.controllerConnected = true;
+        session.state.controllerName = target.name || '';
         removePendingRequest(session, msg.targetId);
         syncWaitingList(session);
         sendMsg(target.ws, { type: 'control_granted' });
@@ -911,6 +917,7 @@ wss.on('connection', (ws, req) => {
     if (session.controller === ws) {
       session.controller = null;
       session.state.controllerConnected = false;
+      session.state.controllerName = '';
       if (session.coHostWs === ws) {
         session.coHostWs = null;
         session.state.coHost = false;
