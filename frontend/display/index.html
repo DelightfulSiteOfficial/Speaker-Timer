@@ -891,7 +891,7 @@
   @media (max-width: 640px) {
     /* Body: column, centered, fixed height so nothing scrolls off */
     body {
-      padding: 0 0 96px; /* bottom pad = footer height */
+      padding: 0 0 148px; /* bottom pad = footer height (now includes nudge row) */
       justify-content: flex-start;
       align-items: center;
       overflow: hidden;
@@ -940,7 +940,7 @@
     .mobile-dial-wrap {
       display: flex;
       position: fixed;
-      bottom: calc(96px + 10px); /* 96px footer + 10px gap */
+      bottom: calc(96px + 46px + 10px); /* footer + nudge row height + gap */
       left: 50%;
       transform: translateX(-50%);
       margin-top: 0;
