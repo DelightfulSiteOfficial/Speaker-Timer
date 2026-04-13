@@ -1082,6 +1082,17 @@
     .mobile-nudge-row     { gap: 5px !important; }
     .mobile-nudge-btn     { height: 38px !important; font-size: 14px !important; }
   }
+
+  /* ── Tablet landscape overrides (641px+ width, landscape) ── */
+  @media (min-width: 641px) and (max-height: 1100px) and (orientation: landscape) {
+    .mobile-dial-wrap {
+      width: min(308px, 40vw) !important;
+      bottom: calc(144px + (100vh - 144px - min(308px, 40vw)) / 2 - 26px) !important;
+    }
+    .mobile-dial-val  { font-size: 70px !important; }
+    .mobile-dial-unit { font-size: 17px !important; }
+    .mobile-dial-hint { font-size: 13px !important; }
+  }
 </style>
 </head>
 <body>
