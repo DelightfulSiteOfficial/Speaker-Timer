@@ -398,6 +398,13 @@
     background: var(--accent);
     color: #000;
   }
+  .dial-mode-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, 10px);
+    z-index: 5;
+  }
 
   .dial-direct-input {
     position: absolute;
@@ -887,10 +894,6 @@
         <div class="dial-value" id="dialValue">10</div>
         <div class="dial-unit" id="dialUnit">min</div>
         <div class="dial-hint">tap to type</div>
-        <div class="dial-mode-toggle">
-          <button id="dialModeMin" class="active">min</button>
-          <button id="dialModeSec">sec</button>
-        </div>
       </div>
       <div class="dial-ring">
         <svg class="dial-svg" id="durationDial" viewBox="0 0 240 240">
@@ -899,6 +902,10 @@
           <path id="dialArc" fill="none" stroke="#e8ff47" stroke-width="10" stroke-linecap="round"/>
           <circle id="dialThumb" r="14" fill="#e8ff47"/>
         </svg>
+        <div class="dial-mode-toggle dial-mode-overlay">
+          <button id="dialModeMin" class="active">min</button>
+          <button id="dialModeSec">sec</button>
+        </div>
         <input class="dial-direct-input" id="dialDirectInput" type="number" min="1" max="120">
       </div>
     </div>
