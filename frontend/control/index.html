@@ -899,6 +899,82 @@
     background: var(--accent);
   }
 
+  /* ── Message section (extracted from control-panel) ── */
+  .message-section { display: none; flex-direction: column; gap: 8px; }
+  .message-section.visible { display: flex; }
+
+  /* ── Mobile landscape — two-column split view ── */
+  @media (orientation: landscape) and (max-height: 500px) {
+    body {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      grid-template-rows: auto 1fr auto !important;
+      height: 100dvh;
+      overflow: hidden !important;
+      gap: 0 !important;
+      padding: 6px 10px 6px 10px !important;
+      column-gap: 0 !important;
+    }
+
+    /* Left column */
+    .header        { grid-column: 1; grid-row: 1; padding-right: 10px; }
+    .timer-row     { grid-column: 1; grid-row: 2; align-self: center; padding-right: 10px; }
+    .message-section {
+      grid-column: 1; grid-row: 3;
+      display: flex !important;
+      flex-direction: column;
+      gap: 5px;
+      padding-right: 10px;
+      padding-bottom: 4px;
+    }
+    /* Hide message section on left if no control */
+    .message-section:not(.visible) { visibility: hidden; }
+
+    /* Right column */
+    .control-panel {
+      grid-column: 2; grid-row: 1 / 4;
+      display: flex !important;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+      border-left: 1px solid var(--border);
+      padding-left: 14px;
+      overflow-y: auto;
+    }
+
+    /* Lock screen spans full width */
+    .lock-screen      { grid-column: 1 / -1; grid-row: 2; }
+    .btn-take-control { grid-column: 1 / -1; grid-row: 3; }
+    .overtime-banner  { grid-column: 1 / -1; grid-row: 1; }
+
+    /* Timer sizing */
+    .time-big    { font-size: clamp(38px, 11vw, 64px) !important; }
+    .time-status { font-size: 10px !important; }
+
+    /* Dial sizing */
+    .dial-area   { width: 100%; }
+    .dial-ring   { width: min(46%, 140px) !important; }
+    .dial-value  { font-size: 34px !important; }
+    .dial-unit   { font-size: 11px !important; }
+    .dial-hint   { font-size: 9px !important; }
+    .dial-presets { gap: 4px !important; }
+    .dial-preset  { height: 26px !important; font-size: 10px !important; padding: 0 8px !important; }
+
+    /* Buttons */
+    .btn-main   { height: 40px !important; font-size: 20px !important; }
+    .nudge-btn  { height: 30px !important; font-size: 10px !important; }
+
+    /* Message input */
+    .section-label  { margin-bottom: 2px !important; }
+    .message-input  { padding: 6px 10px !important; font-size: 13px !important; }
+    .msg-btn-row    { gap: 5px !important; }
+    .btn-send-msg, .btn-clear-msg { padding: 5px 12px !important; font-size: 9px !important; }
+
+    /* Timer row: remove spacers so timer aligns left */
+    .timer-row-spacer, .timer-row-side { flex: 0 !important; }
+    .time-preview { margin: 0 !important; }
+  }
+
   /* ── Tablet landscape — compact layout to fit screen ── */
   @media (min-width: 768px) and (orientation: landscape) {
     body {
@@ -1015,23 +1091,23 @@
     <button class="nudge-btn add" data-nudge="60">+1m</button>
   </div>
 
-  <!-- Message flash -->
-  <div>
-    <div class="section-label">Message on display</div>
-    <input class="message-input" id="messageInput" type="text" placeholder="Flash a message to the presenter…" maxlength="200">
-    <div class="msg-btn-row">
-      <button class="btn-send-msg" id="sendMsgBtn">Send</button>
-      <button class="btn-clear-msg" id="clearMsgBtn">Clear</button>
-    </div>
-    <div class="msg-status" id="msgStatus">
-      <div class="msg-status-text" id="msgStatusText"></div>
-      <div class="msg-status-bar-track" id="msgBarTrack" style="display:none">
-        <div class="msg-status-bar-fill" id="msgBarFill"></div>
-      </div>
+
+</div>
+
+<!-- ── Message on display (sibling of control-panel so landscape grid can place it left) ── -->
+<div class="message-section" id="messageSection">
+  <div class="section-label">Message on display</div>
+  <input class="message-input" id="messageInput" type="text" placeholder="Flash a message to the presenter…" maxlength="200">
+  <div class="msg-btn-row">
+    <button class="btn-send-msg" id="sendMsgBtn">Send</button>
+    <button class="btn-clear-msg" id="clearMsgBtn">Clear</button>
+  </div>
+  <div class="msg-status" id="msgStatus">
+    <div class="msg-status-text" id="msgStatusText"></div>
+    <div class="msg-status-bar-track" id="msgBarTrack" style="display:none">
+      <div class="msg-status-bar-fill" id="msgBarFill"></div>
     </div>
   </div>
-
-
 </div>
 
 <!-- ── Waiting list bottom sheet ── -->
@@ -1150,6 +1226,7 @@
   const overtimeBanner   = document.getElementById('overtimeBanner');
   const sessionTag       = document.getElementById('sessionTag');
   const controlPanel     = document.getElementById('controlPanel');
+  const messageSection   = document.getElementById('messageSection');
   const lockScreen          = document.getElementById('lockScreen');
   const takeControlBtn      = document.getElementById('takeControlBtn');
   const waitingSection      = document.getElementById('waitingSection');
@@ -1284,6 +1361,7 @@
     overtimeBanner.className = 'overtime-banner' + (overtime && hasControl ? ' visible' : '');
 
     controlPanel.classList.toggle('visible', hasControl);
+    messageSection.classList.toggle('visible', hasControl);
     dialArea.classList.toggle('locked', running);
     lockScreen.classList.toggle('visible', !hasControl);
     takeControlBtn.classList.toggle('visible', !hasControl && controlAvailable);
