@@ -644,6 +644,36 @@
     letter-spacing: 0.08em;
     color: var(--muted);
     margin-top: 2px;
+    cursor: text;
+  }
+
+  .item-meta-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+  }
+  .item-meta-input {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--accent);
+    outline: none;
+    width: 32px;
+    text-align: center;
+    padding: 0;
+    -moz-appearance: textfield;
+  }
+  .item-meta-input::-webkit-outer-spin-button,
+  .item-meta-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .item-meta-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
   }
 
   .item-actions {
@@ -1763,6 +1793,11 @@
       nameEl.addEventListener('click', () => startRename(nameEl));
     });
 
+    // Wire up inline time edit on item meta
+    agendaList.querySelectorAll('.item-meta').forEach(metaEl => {
+      metaEl.addEventListener('click', () => startTimeEdit(metaEl));
+    });
+
     // Wire up drag handles
     agendaList.querySelectorAll('.agenda-item').forEach(el => initDragItem(el));
   }
@@ -1794,6 +1829,62 @@
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter')  { input.blur(); }
       if (e.key === 'Escape') { input.removeEventListener('blur', commit); renderAgenda(); }
+    });
+  }
+
+  function startTimeEdit(metaEl) {
+    const itemEl = metaEl.closest('.agenda-item');
+    const id     = itemEl.dataset.id;
+    const item   = agenda.find(i => i.id === id);
+    if (!item) return;
+
+    const curMins = Math.floor(item.duration / 60);
+    const curSecs = item.duration % 60;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'item-meta-edit';
+    wrap.innerHTML = `
+      <input class="item-meta-input" id="_editMin" type="number" min="0" max="120" value="${curMins}">
+      <span class="item-meta-label">min</span>
+      <input class="item-meta-input" id="_editSec" type="number" min="0" max="59" value="${curSecs}">
+      <span class="item-meta-label">sec</span>
+    `;
+    metaEl.replaceWith(wrap);
+
+    const minInput = wrap.querySelector('#_editMin');
+    const secInput = wrap.querySelector('#_editSec');
+    minInput.focus();
+    minInput.select();
+
+    let committed = false;
+    function commit() {
+      if (committed) return;
+      committed = true;
+      const mins = Math.max(0, Math.min(120, parseInt(minInput.value) || 0));
+      const secs = Math.max(0, Math.min(59,  parseInt(secInput.value) || 0));
+      const total = mins * 60 + secs;
+      if (total > 0 && total !== item.duration) {
+        item.duration = total;
+        broadcastAgenda();
+      }
+      renderAgenda();
+    }
+
+    function cancel() {
+      if (committed) return;
+      committed = true;
+      renderAgenda();
+    }
+
+    minInput.addEventListener('blur', () => setTimeout(commit, 120));
+    secInput.addEventListener('blur', () => setTimeout(commit, 120));
+
+    [minInput, secInput].forEach(inp => {
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter')  { commit(); }
+        if (e.key === 'Escape') { committed = true; cancel(); }
+        if (e.key === 'Tab' && inp === minInput) { e.preventDefault(); secInput.focus(); secInput.select(); }
+      });
     });
   }
 
