@@ -319,8 +319,6 @@
     .btn-start     { height: 42px; font-size: 22px; }
     .btn-secondary { height: 34px; font-size: 14px; }
 
-    /* QR lives inside timer-panel — always hide on ≤900px */
-    .qr-corner { display: none; }
 
     /* Agenda panel: fill remaining height */
     .agenda-panel {
@@ -415,7 +413,6 @@
       font-size: 18px;
       border-radius: 12px;
     }
-    .timer-panel .qr-corner { display: none !important; }
 
     /* ── Agenda tab ── */
     .agenda-panel { flex-direction: column; }
@@ -865,25 +862,6 @@
   }
   .overtime-badge.visible { display: block; }
 
-  /* QR corner */
-  .qr-corner {
-    position: absolute;
-    bottom: 14px;
-    right: 16px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
-  .qr-corner canvas, .qr-corner img { border-radius: 4px; }
-  .qr-corner-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 8px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--muted);
-    text-align: center;
-  }
 
 
   /* ── Control request modal ── */
@@ -1230,11 +1208,6 @@
       </div>
     </div>
 
-    <!-- QR for display page -->
-    <div class="qr-corner">
-      <div id="qrCode"></div>
-      <div class="qr-corner-label">Display screen</div>
-    </div>
   </div>
 
 </div>
@@ -1558,13 +1531,7 @@
     setTimeout(() => toast.classList.remove('visible'), ms);
   }
 
-  // ── QR code ───────────────────────────────────────────────────────────────
   const displayUrl = `${window.location.origin}/display/?session=${sessionId}`;
-  new QRCode(document.getElementById('qrCode'), {
-    text: displayUrl, width: 72, height: 72,
-    colorDark: '#f0ede8', colorLight: '#0a0a0a',
-    correctLevel: QRCode.CorrectLevel.M,
-  });
 
 
   // ── "..." overflow menu ───────────────────────────────────────────────────
