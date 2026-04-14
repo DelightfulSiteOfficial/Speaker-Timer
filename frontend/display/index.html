@@ -1430,10 +1430,9 @@
       mStart.textContent = running ? 'Pause' : 'Start';
       mStart.classList.toggle('pause', running);
     }
-    // Sync mobile dial (only when not actively dragging it)
-    if (!window._mDialDragging) {
-      const totalMins = Math.max(1, Math.round(state.totalTime / 60));
-      if (window._updateMDial) window._updateMDial(totalMins, false);
+    // Sync mobile dial (only when not dragging, and only update the active mode's component)
+    if (!window._mDialDragging && window._syncMDial) {
+      window._syncMDial(state.totalTime);
     }
 
     // Update control status (handles presenterLocked state)
@@ -2376,7 +2375,16 @@
       if (e.key === 'Escape') dialInput.style.display = 'none';
     });
 
-    // Expose updater for the render loop to call
+    // Expose sync function: only updates the minutes component from server state,
+    // never touches dialSecs so the sec slider stays put after user sets it.
+    window._syncMDial = function(totalSeconds) {
+      if (dialMode === 'min') {
+        // In min mode: update dial to show current total minutes
+        const mins = Math.max(1, Math.floor(totalSeconds / 60));
+        if (mins !== dialMins) updateDial(mins, false);
+      }
+      // In sec mode: do nothing — user is editing seconds, don't reset
+    };
     window._updateMDial = updateDial;
     updateDial(10, false);
   })();
