@@ -917,8 +917,8 @@
     }
 
     /* Left column */
-    .header        { grid-column: 1; grid-row: 1; padding-right: 10px; }
-    .timer-row     { grid-column: 1; grid-row: 2; align-self: center; padding-right: 10px; }
+    .header        { grid-column: 1; grid-row: 1; padding-right: 10px; z-index: 1; }
+    .timer-row     { grid-column: 1; grid-row: 1 / 4; align-self: center; justify-content: center; padding-right: 10px; z-index: 0; }
     .message-section {
       grid-column: 1; grid-row: 3;
       display: flex !important;
@@ -926,6 +926,7 @@
       gap: 5px;
       padding-right: 10px;
       padding-bottom: 4px;
+      z-index: 1;
     }
     /* Hide message section on left if no control */
     .message-section:not(.visible) { visibility: hidden; }
@@ -971,13 +972,26 @@
     .msg-btn-row    { gap: 5px !important; }
     .btn-send-msg, .btn-clear-msg { padding: 5px 12px !important; font-size: 9px !important; }
 
-    /* Timer row: push timer toward center/right of left column */
+    /* Timer row: center timer in left column */
     .timer-row-spacer, .timer-row-side { flex: 0 !important; }
     .time-preview { margin: 0 !important; }
-    .timer-row { justify-content: flex-end; padding-right: 16px !important; }
+
+    /* Hide 15m–45m presets in landscape — only keep 5, 10, 60, 90 */
+    .dial-preset[data-mins="15"],
+    .dial-preset[data-mins="20"],
+    .dial-preset[data-mins="30"],
+    .dial-preset[data-mins="45"] { display: none !important; }
 
     /* Waiting badge: align under "All Rooms" button */
     .waiting-badge { right: 18px !important; }
+  }
+
+  /* ── Mobile portrait — hide mid-range presets ── */
+  @media (max-width: 767px) and (orientation: portrait) {
+    .dial-preset[data-mins="15"],
+    .dial-preset[data-mins="20"],
+    .dial-preset[data-mins="30"],
+    .dial-preset[data-mins="45"] { display: none !important; }
   }
 
   /* ── Tablet landscape — compact layout to fit screen ── */
