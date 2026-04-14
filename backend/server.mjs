@@ -337,9 +337,9 @@ const server = createServer(async (req, res) => {
       return;
     }
     const secs = parseInt(seconds);
-    if (!secs || secs < 1 || secs > 18000) {
+    if (isNaN(secs) || secs < 0 || secs > 18000) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: false, error: 'seconds must be 1–18000' }));
+      res.end(JSON.stringify({ ok: false, error: 'seconds must be 0–18000' }));
       return;
     }
     const session = getSession(sessionId);
@@ -865,7 +865,7 @@ wss.on('connection', (ws, req) => {
 
       case 'set_duration': {
         const secs = parseInt(msg.seconds);
-        if (!secs || secs < 1 || secs > 18000) break; // 1s – 5hr
+        if (isNaN(secs) || secs < 0 || secs > 18000) break; // 0s – 5hr
         s.totalTime = secs;
         s.timeRemaining = secs;
         s.running = false;
