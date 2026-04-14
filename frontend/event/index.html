@@ -2255,8 +2255,10 @@
     pipHideControlsBtn.querySelector('.menu-item-icon').textContent = pipControlsHidden ? '⊞' : '⊟';
     pipHideControlsBtn.childNodes[2].textContent = pipControlsHidden ? ' Show PiP Controls' : ' Hide PiP Controls';
     if (pipWindow) {
-      const btnRow = pipWindow.document.getElementById('pbtnrow');
-      if (btnRow) btnRow.style.display = pipControlsHidden ? 'none' : '';
+      const btnRow  = pipWindow.document.getElementById('pbtnrow');
+      const progBar = pipWindow.document.getElementById('pprogressbar');
+      if (btnRow)  btnRow.style.display  = pipControlsHidden ? 'none' : '';
+      if (progBar) progBar.style.display = pipControlsHidden ? 'none' : '';
     }
     closeMenu();
   });
@@ -2384,7 +2386,7 @@
         <div class="pspeaker" id="ps"></div>
         <div id="ptimer">
           <div class="ptime" id="pt">--:--</div>
-          <div class="pbar"><div class="ppfill" id="pp" style="width:100%"></div></div>
+          <div class="pbar" id="pprogressbar"><div class="ppfill" id="pp" style="width:100%"></div></div>
           <div class="phi" id="phi">tap · start</div>
         </div>
         <div id="pinput">
@@ -2414,8 +2416,10 @@
 
       // Apply current hide state
       if (pipControlsHidden) {
-        const btnRow = pipWindow.document.getElementById('pbtnrow');
-        if (btnRow) btnRow.style.display = 'none';
+        const btnRow  = pipWindow.document.getElementById('pbtnrow');
+        const progBar = pipWindow.document.getElementById('pprogressbar');
+        if (btnRow)  btnRow.style.display  = 'none';
+        if (progBar) progBar.style.display = 'none';
       }
 
       // Hold-to-type
