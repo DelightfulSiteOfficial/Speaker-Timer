@@ -957,7 +957,7 @@
     .dial-value     { font-size: 34px !important; }
     .dial-unit      { font-size: 11px !important; }
     .dial-hint      { font-size: 9px !important; }
-    .dial-mode-btn  { width: 70px !important; height: 70px !important; font-size: 17px !important; transform: translate(-50%, -36px) !important; }
+    .dial-mode-btn  { width: 84px !important; height: 84px !important; font-size: 20px !important; transform: translate(-50%, -43px) !important; }
     .dial-presets { gap: 4px !important; }
     .dial-preset  { height: 26px !important; font-size: 10px !important; padding: 0 8px !important; }
 
@@ -971,9 +971,13 @@
     .msg-btn-row    { gap: 5px !important; }
     .btn-send-msg, .btn-clear-msg { padding: 5px 12px !important; font-size: 9px !important; }
 
-    /* Timer row: remove spacers so timer aligns left */
+    /* Timer row: push timer toward center/right of left column */
     .timer-row-spacer, .timer-row-side { flex: 0 !important; }
     .time-preview { margin: 0 !important; }
+    .timer-row { justify-content: flex-end; padding-right: 16px !important; }
+
+    /* Waiting badge: align under "All Rooms" button */
+    .waiting-badge { right: 18px !important; }
   }
 
   /* ── Tablet landscape — compact layout to fit screen ── */
