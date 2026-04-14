@@ -373,6 +373,32 @@
     opacity: 0.6;
   }
 
+  .dial-mode-toggle {
+    display: inline-flex;
+    margin-top: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+  .dial-mode-toggle button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    padding: 3px 7px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    letter-spacing: inherit;
+    text-transform: uppercase;
+  }
+  .dial-mode-toggle button.active {
+    background: var(--accent);
+    color: #000;
+  }
+
   .dial-direct-input {
     position: absolute;
     top: 50%; left: 50%;
@@ -859,8 +885,12 @@
     <div class="dial-wrapper">
       <div class="dial-center-overlay" id="dialCenterOverlay">
         <div class="dial-value" id="dialValue">10</div>
-        <div class="dial-unit">min</div>
+        <div class="dial-unit" id="dialUnit">min</div>
         <div class="dial-hint">tap to type</div>
+        <div class="dial-mode-toggle">
+          <button id="dialModeMin" class="active">min</button>
+          <button id="dialModeSec">sec</button>
+        </div>
       </div>
       <div class="dial-ring">
         <svg class="dial-svg" id="durationDial" viewBox="0 0 240 240">
