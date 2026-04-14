@@ -718,6 +718,22 @@
   }
   .btn-item-del:hover { border-color: var(--border); color: var(--danger); }
 
+  .btn-item-reset {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-item-reset:hover { color: var(--text); border-color: #444; }
+
   /* ── Add item form ── */
   .add-form {
     padding: 14px 20px;
@@ -1770,6 +1786,7 @@
           <div class="item-meta">${durLabel}</div>
         </div>
         <div class="item-actions">
+          ${item.status !== 'pending' ? `<button class="btn-item-reset" data-idx="${idx}" title="Reset to pending">↺ Reset</button>` : ''}
           <button class="btn-load ${item.status === 'active' ? 'loaded' : ''}"
                   data-idx="${idx}">
             ${item.status === 'active' ? 'Active' : 'Load'}
@@ -1786,6 +1803,9 @@
     });
     agendaList.querySelectorAll('.btn-item-del').forEach(btn => {
       btn.addEventListener('click', () => removeItem(parseInt(btn.dataset.idx)));
+    });
+    agendaList.querySelectorAll('.btn-item-reset').forEach(btn => {
+      btn.addEventListener('click', () => resetItem(parseInt(btn.dataset.idx)));
     });
 
     // Wire up inline rename on item name
@@ -2018,6 +2038,14 @@
     agenda.splice(idx, 1);
     renderAgenda();
     renderTimer();
+  }
+
+  function resetItem(idx) {
+    if (!agenda[idx]) return;
+    agenda[idx].status = 'pending';
+    renderAgenda();
+    renderTimer();
+    broadcastAgenda();
   }
 
   function loadItem(idx) {
