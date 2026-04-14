@@ -772,6 +772,32 @@
     margin-top: 4px;
     opacity: 0.5;
   }
+
+  .dial-mode-toggle {
+    display: inline-flex;
+    margin-top: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+  .dial-mode-toggle button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    padding: 3px 7px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    letter-spacing: inherit;
+    text-transform: uppercase;
+  }
+  .dial-mode-toggle button.active {
+    background: var(--accent);
+    color: #000;
+  }
   .mobile-dial-input {
     position: absolute;
     top: 50%; left: 50%;
@@ -1130,8 +1156,12 @@
   <div class="mobile-dial-wrap" id="mobileDial">
     <div class="mobile-dial-center" id="mobileDialCenter">
       <div class="mobile-dial-val" id="mobileDialVal">10</div>
-      <div class="mobile-dial-unit">min</div>
+      <div class="mobile-dial-unit" id="mobileDialUnit">min</div>
       <div class="mobile-dial-hint">drag to set</div>
+      <div class="dial-mode-toggle">
+        <button id="mDialModeMin" class="active">min</button>
+        <button id="mDialModeSec">sec</button>
+      </div>
     </div>
     <div class="mobile-dial-ring">
       <svg class="mobile-dial-svg" id="mobileDurationDial" viewBox="0 0 240 240">
