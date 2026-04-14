@@ -798,6 +798,13 @@
     background: var(--accent);
     color: #000;
   }
+  .dial-mode-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, 10px);
+    z-index: 5;
+  }
   .mobile-dial-input {
     position: absolute;
     top: 50%; left: 50%;
@@ -1158,10 +1165,6 @@
       <div class="mobile-dial-val" id="mobileDialVal">10</div>
       <div class="mobile-dial-unit" id="mobileDialUnit">min</div>
       <div class="mobile-dial-hint">drag to set</div>
-      <div class="dial-mode-toggle">
-        <button id="mDialModeMin" class="active">min</button>
-        <button id="mDialModeSec">sec</button>
-      </div>
     </div>
     <div class="mobile-dial-ring">
       <svg class="mobile-dial-svg" id="mobileDurationDial" viewBox="0 0 240 240">
@@ -1170,6 +1173,10 @@
         <path id="mobileDialArc" fill="none" stroke="#e8ff47" stroke-width="10" stroke-linecap="round"/>
         <circle id="mobileDialThumb" r="14" fill="#e8ff47"/>
       </svg>
+      <div class="dial-mode-toggle dial-mode-overlay">
+        <button id="mDialModeMin" class="active">min</button>
+        <button id="mDialModeSec">sec</button>
+      </div>
       <input class="mobile-dial-input" id="mobileDialInput" type="number" min="1" max="120">
     </div>
   </div>
