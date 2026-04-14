@@ -1306,7 +1306,7 @@
       dialValue.textContent  = dialSecs;
       dialUnitEl.textContent = 'sec';
     } else {
-      dialMins = Math.max(1, Math.min(120, Math.round(value)));
+      dialMins = Math.max(0, Math.min(120, Math.round(value)));
       const endAngle = (DIAL_START + (dialMins / 120) * DIAL_SWEEP) % 360;
       dialArcEl.setAttribute('d', dialDescribeArc(DIAL_START, endAngle, DIAL_R));
       const [tx, ty] = dialPolarToXY(endAngle, DIAL_R);
@@ -1591,7 +1591,7 @@
           state = { ...state, ...msg.payload };
 
           if (msg.payload.totalTime !== undefined && !dialDragging && dialMode === 'min') {
-            const mins = Math.max(1, Math.floor(state.totalTime / 60));
+            const mins = Math.max(0, Math.floor(state.totalTime / 60));
             if (mins !== dialMins) updateDial(mins, false);
           }
 

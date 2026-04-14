@@ -2285,7 +2285,7 @@
         dialValEl.textContent  = dialSecs;
         dialUnitEl.textContent = 'sec';
       } else {
-        dialMins = Math.max(1, Math.min(120, Math.round(value)));
+        dialMins = Math.max(0, Math.min(120, Math.round(value)));
         const endAngle = (DIAL_START + (dialMins / 120) * DIAL_SWEEP) % 360;
         dialArc.setAttribute('d', describeArc(DIAL_START, endAngle, DIAL_R));
         const [tx, ty] = polarToXY(endAngle, DIAL_R);
@@ -2384,7 +2384,7 @@
     window._syncMDial = function(totalSeconds) {
       if (dialMode === 'min') {
         // In min mode: update dial to show current total minutes
-        const mins = Math.max(1, Math.floor(totalSeconds / 60));
+        const mins = Math.max(0, Math.floor(totalSeconds / 60));
         if (mins !== dialMins) updateDial(mins, false);
       }
       // In sec mode: do nothing — user is editing seconds, don't reset
