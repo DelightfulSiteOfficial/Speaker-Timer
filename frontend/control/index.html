@@ -1299,8 +1299,9 @@
     if (dialMode === 'sec') {
       dialSecs = Math.max(0, Math.min(59, Math.round(value)));
       const endAngle = (DIAL_START + (dialSecs / 59) * DIAL_SWEEP) % 360;
-      dialArcEl.setAttribute('d', dialDescribeArc(DIAL_START, endAngle, DIAL_R));
-      const [tx, ty] = dialPolarToXY(endAngle, DIAL_R);
+      dialArcEl.setAttribute('d', dialSecs === 0 ? '' : dialDescribeArc(DIAL_START, endAngle, DIAL_R));
+      const [tx0, ty0] = dialPolarToXY(DIAL_START, DIAL_R);
+      const [tx, ty]   = dialSecs === 0 ? [tx0, ty0] : dialPolarToXY(endAngle, DIAL_R);
       dialThumb.setAttribute('cx', tx.toFixed(2));
       dialThumb.setAttribute('cy', ty.toFixed(2));
       dialValue.textContent  = dialSecs;
@@ -1308,8 +1309,9 @@
     } else {
       dialMins = Math.max(0, Math.min(120, Math.round(value)));
       const endAngle = (DIAL_START + (dialMins / 120) * DIAL_SWEEP) % 360;
-      dialArcEl.setAttribute('d', dialDescribeArc(DIAL_START, endAngle, DIAL_R));
-      const [tx, ty] = dialPolarToXY(endAngle, DIAL_R);
+      dialArcEl.setAttribute('d', dialMins === 0 ? '' : dialDescribeArc(DIAL_START, endAngle, DIAL_R));
+      const [tx0, ty0] = dialPolarToXY(DIAL_START, DIAL_R);
+      const [tx, ty]   = dialMins === 0 ? [tx0, ty0] : dialPolarToXY(endAngle, DIAL_R);
       dialThumb.setAttribute('cx', tx.toFixed(2));
       dialThumb.setAttribute('cy', ty.toFixed(2));
       dialValue.textContent  = dialMins;
