@@ -432,8 +432,9 @@
 
   /* ══════════════════════════════════════════
      PHONE LANDSCAPE — split view
+     (height ≤500px catches phones, not tablets)
   ══════════════════════════════════════════ */
-  @media (max-width: 640px) and (orientation: landscape) {
+  @media (orientation: landscape) and (max-height: 500px) {
     .mobile-tab-bar { display: none !important; }
 
     .main {
@@ -1453,7 +1454,7 @@
   let activeTab = 'timer';
 
   function isPhoneLandscape() {
-    return window.innerWidth <= 640 && window.matchMedia('(orientation: landscape)').matches;
+    return window.matchMedia('(orientation: landscape) and (max-height: 500px)').matches;
   }
 
   function switchTab(tab) {
