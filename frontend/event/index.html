@@ -542,7 +542,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 20px;
+    padding: 12px 20px 12px 10px;
     border-bottom: 1px solid var(--border);
     transition: background 0.15s;
     position: relative;
@@ -552,9 +552,33 @@
   .agenda-item.active {
     background: rgba(232,255,71,0.04);
     border-left: 2px solid var(--accent);
-    padding-left: 18px;
+    padding-left: 8px;
   }
   .agenda-item.done { opacity: 0.4; }
+  .agenda-item.drag-over-above { border-top: 2px solid var(--accent); }
+  .agenda-item.drag-over-below { border-bottom: 2px solid var(--accent); }
+  .agenda-item.dragging { opacity: 0.35; }
+
+  /* ── Drag handle ── */
+  .drag-handle {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 4px 4px;
+    cursor: grab;
+    flex-shrink: 0;
+    opacity: 0.25;
+    transition: opacity 0.15s;
+  }
+  .drag-handle:active { cursor: grabbing; }
+  .agenda-item:hover .drag-handle { opacity: 0.55; }
+  .drag-handle span {
+    display: block;
+    width: 14px;
+    height: 2px;
+    background: var(--muted);
+    border-radius: 1px;
+  }
 
   .item-status {
     width: 18px;
@@ -1692,6 +1716,9 @@
                      :                               `${durSecs} sec`;
 
       el.innerHTML = `
+        <div class="drag-handle" title="Drag to reorder">
+          <span></span><span></span><span></span>
+        </div>
         <div class="item-status ${item.status}">${statusIcon}</div>
         <div class="item-body">
           <div class="item-name">${escHtml(item.name)}</div>
@@ -1708,13 +1735,129 @@
       agendaList.appendChild(el);
     });
 
-    // Wire up Load buttons
+    // Wire up Load / Delete buttons
     agendaList.querySelectorAll('.btn-load').forEach(btn => {
       btn.addEventListener('click', () => loadItem(parseInt(btn.dataset.idx)));
     });
     agendaList.querySelectorAll('.btn-item-del').forEach(btn => {
       btn.addEventListener('click', () => removeItem(parseInt(btn.dataset.idx)));
     });
+
+    // Wire up drag handles
+    agendaList.querySelectorAll('.agenda-item').forEach(el => initDragItem(el));
+  }
+
+  // ── Drag-and-drop reorder ─────────────────────────────────────────────────
+  let dragSrcId = null;
+
+  function initDragItem(el) {
+    const handle = el.querySelector('.drag-handle');
+    if (!handle) return;
+
+    // ── Mouse / HTML5 drag ────────────────────────────────────────────────
+    el.setAttribute('draggable', 'false'); // handle-only drag
+    handle.addEventListener('mousedown', () => { el.setAttribute('draggable', 'true'); });
+    el.addEventListener('dragstart', e => {
+      dragSrcId = el.dataset.id;
+      el.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    el.addEventListener('dragend', () => {
+      el.setAttribute('draggable', 'false');
+      el.classList.remove('dragging');
+      clearDropIndicators();
+    });
+    el.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (el.dataset.id === dragSrcId) return;
+      const above = e.clientY < el.getBoundingClientRect().top + el.offsetHeight / 2;
+      clearDropIndicators();
+      el.classList.add(above ? 'drag-over-above' : 'drag-over-below');
+    });
+    el.addEventListener('dragleave', () => clearDropIndicators());
+    el.addEventListener('drop', e => {
+      e.preventDefault();
+      if (!dragSrcId || el.dataset.id === dragSrcId) return;
+      const above = e.clientY < el.getBoundingClientRect().top + el.offsetHeight / 2;
+      const fromIdx = agenda.findIndex(i => i.id === dragSrcId);
+      let   toIdx   = agenda.findIndex(i => i.id === el.dataset.id);
+      if (fromIdx === -1 || toIdx === -1) return;
+      const [moved] = agenda.splice(fromIdx, 1);
+      if (!above && toIdx >= fromIdx) toIdx++;
+      else if (above && toIdx < fromIdx) {}
+      else if (!above) toIdx++;
+      else toIdx = toIdx > fromIdx ? toIdx - 1 : toIdx;
+      // Simpler: recalc after splice
+      const fresh = agenda.findIndex(i => i.id === el.dataset.id);
+      const insertAt = above ? fresh : fresh + 1;
+      agenda.splice(insertAt, 0, moved);
+      clearDropIndicators();
+      renderAgenda();
+      broadcastAgenda();
+    });
+
+    // ── Touch drag ───────────────────────────────────────────────────────
+    let touchClone = null, touchScrollStart = null;
+    handle.addEventListener('touchstart', e => {
+      dragSrcId = el.dataset.id;
+      const touch = e.touches[0];
+      touchScrollStart = touch.clientY;
+      el.classList.add('dragging');
+      // Create visual clone
+      touchClone = el.cloneNode(true);
+      touchClone.style.cssText = `
+        position:fixed; pointer-events:none; z-index:9999; opacity:0.85;
+        width:${el.offsetWidth}px; left:${el.getBoundingClientRect().left}px;
+        top:${el.getBoundingClientRect().top}px; box-shadow:0 8px 24px rgba(0,0,0,0.6);
+        background:#1a1a1a; border-radius:8px;
+      `;
+      document.body.appendChild(touchClone);
+      e.preventDefault();
+    }, { passive: false });
+
+    handle.addEventListener('touchmove', e => {
+      if (!touchClone) return;
+      const touch = e.touches[0];
+      touchClone.style.top = `${touch.clientY - el.offsetHeight / 2}px`;
+      clearDropIndicators();
+      const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.agenda-item');
+      if (target && target.dataset.id !== dragSrcId) {
+        const above = touch.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2;
+        target.classList.add(above ? 'drag-over-above' : 'drag-over-below');
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    handle.addEventListener('touchend', e => {
+      if (touchClone) { touchClone.remove(); touchClone = null; }
+      el.classList.remove('dragging');
+      const touch = e.changedTouches[0];
+      const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.agenda-item');
+      clearDropIndicators();
+      if (target && target.dataset.id !== dragSrcId) {
+        const above = touch.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2;
+        const fromIdx = agenda.findIndex(i => i.id === dragSrcId);
+        const toIdx   = agenda.findIndex(i => i.id === target.dataset.id);
+        if (fromIdx !== -1 && toIdx !== -1) {
+          const [moved] = agenda.splice(fromIdx, 1);
+          const fresh = agenda.findIndex(i => i.id === target.dataset.id);
+          agenda.splice(above ? fresh : fresh + 1, 0, moved);
+          renderAgenda();
+          broadcastAgenda();
+        }
+      }
+      dragSrcId = null;
+    });
+  }
+
+  function clearDropIndicators() {
+    agendaList.querySelectorAll('.drag-over-above, .drag-over-below').forEach(el => {
+      el.classList.remove('drag-over-above', 'drag-over-below');
+    });
+  }
+
+  function broadcastAgenda() {
+    send({ type: 'sync_agenda', sessionId, agenda });
   }
 
   function escHtml(s) {
