@@ -2300,6 +2300,9 @@
       dialMode = mode;
       mDialBtn.textContent = mode;
       mDialBtn.classList.toggle('sec-mode', mode === 'sec');
+      const color = mode === 'sec' ? '#ff9900' : '#e8ff47';
+      dialArc.setAttribute('stroke', color);
+      dialThumb.setAttribute('fill', color);
       // Show current value for that component, don't send
       updateDial(mode === 'sec' ? dialSecs : dialMins, false);
     }

@@ -1325,6 +1325,9 @@
     dialMode = mode;
     dialModeBtn.textContent = mode;
     dialModeBtn.classList.toggle('sec-mode', mode === 'sec');
+    const color = mode === 'sec' ? '#ff9900' : '#e8ff47';
+    dialArcEl.setAttribute('stroke', color);
+    dialThumb.setAttribute('fill', color);
     updateDial(mode === 'sec' ? dialSecs : dialMins, false);
   }
 
