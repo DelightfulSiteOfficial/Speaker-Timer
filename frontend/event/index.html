@@ -2101,8 +2101,14 @@
   function addItem(name, durationSecs) {
     name = name.trim();
     if (!name || durationSecs < 1) return false;
+    const noActive = !agenda.some(i => i.status === 'active');
     agenda.push({ id: genItemId(), name, duration: durationSecs, status: 'pending' });
     renderAgenda();
+    // Auto-load the first item added when nothing is already active
+    if (noActive) {
+      const idx = agenda.findIndex(i => i.status === 'pending');
+      if (idx !== -1) loadItem(idx);
+    }
     return true;
   }
 
