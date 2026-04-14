@@ -1161,13 +1161,6 @@
         <button class="menu-item" id="shareBtn">
           <span class="menu-item-icon">⬡</span> Share Session
         </button>
-        <div class="menu-divider"></div>
-        <button class="menu-item" id="openDisplayBtn">
-          <span class="menu-item-icon">🖥</span> Open Display Screen
-        </button>
-        <button class="menu-item accent" id="copyLinkBtn">
-          <span class="menu-item-icon">⎘</span> Copy Display Link
-        </button>
       </div>
     </div>
   </div>
@@ -1569,15 +1562,6 @@
     correctLevel: QRCode.CorrectLevel.M,
   });
 
-  document.getElementById('openDisplayBtn').addEventListener('click', () => {
-    window.open(displayUrl, '_blank');
-    closeMenu();
-  });
-
-  document.getElementById('copyLinkBtn').addEventListener('click', () => {
-    navigator.clipboard.writeText(displayUrl).then(() => showToast('Display link copied ✓'));
-    closeMenu();
-  });
 
   // ── "..." overflow menu ───────────────────────────────────────────────────
   const moreBtn      = document.getElementById('moreBtn');
