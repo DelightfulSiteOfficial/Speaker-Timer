@@ -178,7 +178,7 @@
   }
 
   .qr-frame canvas,
-  .qr-frame img { border-radius: 3px; }
+  .qr-frame img { border-radius: 0; display: block; }
 
   .qr-label {
     font-family: 'DM Mono', monospace;
@@ -950,11 +950,7 @@
       margin-bottom: 10px;
       width: fit-content;
     }
-    .qr-frame { width: 80px !important; height: 80px !important; }
-    .qr-frame canvas, .qr-frame img {
-      width: 80px !important;
-      height: 80px !important;
-    }
+    .qr-frame { width: 80px !important; height: 80px !important; padding: 4px !important; }
     .qr-label  { font-size: 7px; }
     .session-id { font-size: 17px; margin-top: 4px; }
     .qr-ghost { display: none !important; }
@@ -988,8 +984,7 @@
     .time-display { font-size: clamp(267px, 37vw, 373px) !important; }
 
     /* QR: 1/3 larger than phone, position unchanged */
-    .qr-frame { width: 107px !important; height: 107px !important; }
-    .qr-frame canvas, .qr-frame img { width: 107px !important; height: 107px !important; }
+    .qr-frame { width: 107px !important; height: 107px !important; padding: 6px !important; }
     .session-id { font-size: 20px !important; margin-top: 5px !important; }
 
     /* Dial: ~2× phone size, positioned higher */
@@ -1059,15 +1054,9 @@
       z-index: 50;
     }
     .qr-frame {
-      width: 80px !important; height: 80px !important;
-      padding: 5px !important; border-radius: 6px !important;
-      overflow: hidden !important;
+      width: 72px !important; height: 72px !important;
+      padding: 4px !important; border-radius: 6px !important;
       flex-shrink: 0 !important;
-    }
-    .qr-frame canvas, .qr-frame img {
-      display: block !important;
-      width: 70px !important; height: 70px !important;
-      max-width: 70px !important; max-height: 70px !important;
     }
     .qr-label   { display: none !important; }
     .session-id { font-size: 14px !important; margin-top: 2px !important; letter-spacing: 0.05em !important; }
@@ -1128,11 +1117,7 @@
     .time-display { font-size: clamp(80px, 42vh, 310px) !important; }
 
     /* QR: 1/3 larger than base landscape size */
-    .qr-frame { width: 107px !important; height: 107px !important; }
-    .qr-frame canvas, .qr-frame img {
-      width: 93px !important; height: 93px !important;
-      max-width: 93px !important; max-height: 93px !important;
-    }
+    .qr-frame { width: 107px !important; height: 107px !important; padding: 6px !important; }
 
     .mobile-dial-wrap {
       width: min(600px, 37vw) !important;
@@ -1467,7 +1452,14 @@
     // Never embed the admin key in the QR — anyone scanning gets the
     // key-free URL so they join as a regular controller, not admin.
     const url = `${window.location.origin}/control/?session=${sessionId}`;
-    const size = window.innerWidth <= 640 ? 80 : 132;
+    // Pick canvas size to match the frame's inner area (frame size minus padding)
+    // so no CSS scaling is needed and the QR renders crisp.
+    const isLandscapePhone = window.matchMedia('(orientation:landscape) and (max-height:500px)').matches;
+    const isMobilePortrait = window.innerWidth <= 640 && !isLandscapePhone;
+    let size;
+    if (isLandscapePhone) size = 64;         // frame 72px - 4px padding each side
+    else if (isMobilePortrait) size = 72;    // frame 80px - 4px padding each side
+    else size = 148;                         // frame 148px default (desktop/tablet)
     const frame = document.getElementById('qrFrame');
     frame.innerHTML = '';
     new QRCode(frame, {
