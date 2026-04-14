@@ -431,6 +431,69 @@
   }
 
   /* ══════════════════════════════════════════
+     PHONE LANDSCAPE — split view
+  ══════════════════════════════════════════ */
+  @media (max-width: 640px) and (orientation: landscape) {
+    .mobile-tab-bar { display: none !important; }
+
+    .main {
+      position: static !important;
+      top: auto !important; left: auto !important;
+      right: auto !important; bottom: auto !important;
+      display: grid !important;
+      grid-template-columns: 1fr 200px !important;
+      flex: 1;
+      overflow: hidden !important;
+    }
+
+    .col-resize-handle { display: none !important; }
+
+    .timer-panel,
+    .agenda-panel {
+      position: static !important;
+      inset: auto !important;
+      overflow: hidden !important;
+    }
+
+    .timer-panel {
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 6px 12px !important;
+      gap: 0 !important;
+      border-bottom: none !important;
+      border-right: 1px solid var(--border) !important;
+      flex-wrap: nowrap !important;
+    }
+
+    .now-label   { display: none !important; }
+    .now-speaker { font-size: 11px !important; margin-bottom: 4px !important; width: auto !important; text-align: center !important; }
+    .time-display { font-size: clamp(48px, 16vh, 80px) !important; line-height: 1 !important; margin-bottom: 4px !important; }
+    .progress-bar { width: 100% !important; max-width: 260px !important; height: 3px !important; margin: 0 0 4px !important; order: 0 !important; }
+    .overtime-badge { order: 0 !important; margin-bottom: 4px !important; }
+
+    .controls { width: 100% !important; max-width: 260px !important; gap: 6px !important; margin-top: 6px !important; }
+    .btn-start     { height: 38px !important; font-size: 20px !important; border-radius: 10px !important; }
+    .btn-row       { gap: 6px !important; }
+    .btn-secondary { height: 30px !important; font-size: 13px !important; border-radius: 8px !important; }
+    .nudge-row     { gap: 4px !important; flex-wrap: wrap !important; }
+    .nudge-btn     { height: 26px !important; font-size: 11px !important; padding: 0 8px !important; }
+
+    .agenda-panel { flex-direction: column !important; }
+    .agenda-panel-header { padding: 8px 10px !important; }
+    .agenda-list  { flex: 1 !important; min-height: 0 !important; overflow-y: auto !important; }
+    .agenda-item  { padding: 8px 10px !important; }
+    .item-name    { font-size: 13px !important; }
+    .item-actions { opacity: 1 !important; }
+    .add-form     { padding: 6px 10px 8px !important; flex-shrink: 0 !important; }
+    .add-form-row { gap: 4px !important; flex-wrap: wrap !important; }
+    .add-name-input { font-size: 14px !important; }
+    .add-dur-input  { width: 50px !important; font-size: 16px !important; }
+
+    .toast { bottom: 16px !important; }
+  }
+
+  /* ══════════════════════════════════════════
      AGENDA PANEL (LEFT)
   ══════════════════════════════════════════ */
   .agenda-panel {
@@ -1389,21 +1452,29 @@
 
   let activeTab = 'timer';
 
+  function isPhoneLandscape() {
+    return window.innerWidth <= 640 && window.matchMedia('(orientation: landscape)').matches;
+  }
+
   function switchTab(tab) {
     activeTab = tab;
     tabTimerBtn.classList.toggle('active',  tab === 'timer');
     tabAgendaBtn.classList.toggle('active', tab === 'agenda');
 
-    if (window.innerWidth <= 640) {
-      // JS owns show/hide directly — inline styles beat any CSS rule
+    if (window.innerWidth <= 640 && !isPhoneLandscape()) {
+      // Portrait mobile: JS owns show/hide directly
       timerPanelEl.style.display  = tab === 'timer'  ? 'flex' : 'none';
       agendaPanelEl.style.display = tab === 'agenda' ? 'flex' : 'none';
     }
   }
 
   function initTabs() {
-    if (window.innerWidth <= 640) {
-      // Mobile: apply current tab state via inline styles
+    if (isPhoneLandscape()) {
+      // Landscape: clear inline styles so CSS grid split-view takes over
+      timerPanelEl.style.display  = '';
+      agendaPanelEl.style.display = '';
+    } else if (window.innerWidth <= 640) {
+      // Portrait mobile: apply current tab state via inline styles
       switchTab(activeTab);
     } else {
       // Desktop/tablet: clear inline styles and let CSS grid handle layout
