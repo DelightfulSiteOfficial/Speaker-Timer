@@ -1296,6 +1296,9 @@
         <button class="menu-item" id="pipBtn">
           <span class="menu-item-icon">⧉</span> Pop Out Timer
         </button>
+        <button class="menu-item" id="pipHideControlsBtn">
+          <span class="menu-item-icon">⊟</span> Hide PiP Controls
+        </button>
         <button class="menu-item" id="shareBtn">
           <span class="menu-item-icon">⬡</span> Share Session
         </button>
@@ -2242,8 +2245,21 @@
   }
 
   // ── Picture-in-Picture ────────────────────────────────────────────────────
-  const pipBtn = document.getElementById('pipBtn');
+  const pipBtn             = document.getElementById('pipBtn');
+  const pipHideControlsBtn = document.getElementById('pipHideControlsBtn');
   let pipWindow = null;
+  let pipControlsHidden = false;
+
+  pipHideControlsBtn.addEventListener('click', () => {
+    pipControlsHidden = !pipControlsHidden;
+    pipHideControlsBtn.querySelector('.menu-item-icon').textContent = pipControlsHidden ? '⊞' : '⊟';
+    pipHideControlsBtn.childNodes[2].textContent = pipControlsHidden ? ' Show PiP Controls' : ' Hide PiP Controls';
+    if (pipWindow) {
+      const btnRow = pipWindow.document.getElementById('pbtnrow');
+      if (btnRow) btnRow.style.display = pipControlsHidden ? 'none' : '';
+    }
+    closeMenu();
+  });
 
   function updatePiP() {
     if (!pipWindow) return;
@@ -2375,7 +2391,7 @@
           <input class="pmin" id="pmin" type="number" min="1" max="120" placeholder="—">
           <div class="pmin-hint">enter to set · esc to cancel</div>
         </div>
-        <div class="pbtnrow">
+        <div class="pbtnrow" id="pbtnrow">
           <button class="pctrl-btn next"  id="ppb">← Prev</button>
           <button class="pctrl-btn start" id="psb">Start</button>
           <button class="pctrl-btn next"  id="pnb">Next →</button>
@@ -2395,6 +2411,12 @@
       prb.addEventListener('click', () => send({ type: 'reset', sessionId }));
       pnb.addEventListener('click', () => loadNextItem());
       ppb.addEventListener('click', () => loadPrevItem());
+
+      // Apply current hide state
+      if (pipControlsHidden) {
+        const btnRow = pipWindow.document.getElementById('pbtnrow');
+        if (btnRow) btnRow.style.display = 'none';
+      }
 
       // Hold-to-type
       let pipHoldTimer = null;
