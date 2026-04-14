@@ -619,9 +619,24 @@
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.3;
+    cursor: text;
   }
   .agenda-item.active .item-name { color: var(--accent); }
   .agenda-item.done .item-name { text-decoration: line-through; }
+
+  .item-name-input {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--text);
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--accent);
+    outline: none;
+    width: 100%;
+    padding: 0;
+    line-height: 1.3;
+  }
 
   .item-meta {
     font-family: 'DM Mono', monospace;
@@ -1743,8 +1758,43 @@
       btn.addEventListener('click', () => removeItem(parseInt(btn.dataset.idx)));
     });
 
+    // Wire up inline rename on item name
+    agendaList.querySelectorAll('.item-name').forEach(nameEl => {
+      nameEl.addEventListener('click', () => startRename(nameEl));
+    });
+
     // Wire up drag handles
     agendaList.querySelectorAll('.agenda-item').forEach(el => initDragItem(el));
+  }
+
+  function startRename(nameEl) {
+    const itemEl = nameEl.closest('.agenda-item');
+    const id     = itemEl.dataset.id;
+    const item   = agenda.find(i => i.id === id);
+    if (!item) return;
+
+    const input = document.createElement('input');
+    input.className = 'item-name-input';
+    input.value = item.name;
+    input.maxLength = 60;
+    nameEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    function commit() {
+      const newName = input.value.trim();
+      if (newName && newName !== item.name) {
+        item.name = newName;
+        broadcastAgenda();
+      }
+      renderAgenda();
+    }
+
+    input.addEventListener('blur',    commit);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { input.blur(); }
+      if (e.key === 'Escape') { input.removeEventListener('blur', commit); renderAgenda(); }
+    });
   }
 
   // ── Drag-and-drop reorder ─────────────────────────────────────────────────
