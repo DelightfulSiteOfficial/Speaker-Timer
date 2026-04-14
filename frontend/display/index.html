@@ -2255,7 +2255,8 @@
     const dialInput  = document.getElementById('mobileDialInput');
     const dialWrap   = document.getElementById('mobileDial');
 
-    let dialMins    = 10;
+    let dialMins    = 10;  // integer minutes component
+    let dialSecs    = 0;   // integer seconds component (0–59)
     let dialMode    = 'min'; // 'min' or 'sec'
     let isDragging  = false;
     const mDialBtn  = document.getElementById('mDialModeBtn');
@@ -2274,26 +2275,34 @@
     }
 
     function updateDial(value, sendUpdate) {
-      const max = dialMode === 'sec' ? 3600 : 120;
-      value = Math.max(1, Math.min(max, Math.round(value)));
-      dialMins = dialMode === 'sec' ? value / 60 : value;
-      const endAngle = (DIAL_START + (value / max) * DIAL_SWEEP) % 360;
-      dialArc.setAttribute('d', describeArc(DIAL_START, endAngle, DIAL_R));
-      const [tx, ty] = polarToXY(endAngle, DIAL_R);
-      dialThumb.setAttribute('cx', tx.toFixed(2));
-      dialThumb.setAttribute('cy', ty.toFixed(2));
-      dialValEl.textContent = value;
-      dialUnitEl.textContent = dialMode === 'sec' ? 'sec' : 'min';
-      const seconds = dialMode === 'sec' ? value : value * 60;
-      if (sendUpdate) sendCtrl({ type: 'set_duration', seconds });
+      if (dialMode === 'sec') {
+        dialSecs = Math.max(0, Math.min(59, Math.round(value)));
+        const endAngle = (DIAL_START + (dialSecs / 59) * DIAL_SWEEP) % 360;
+        dialArc.setAttribute('d', describeArc(DIAL_START, endAngle, DIAL_R));
+        const [tx, ty] = polarToXY(endAngle, DIAL_R);
+        dialThumb.setAttribute('cx', tx.toFixed(2));
+        dialThumb.setAttribute('cy', ty.toFixed(2));
+        dialValEl.textContent  = dialSecs;
+        dialUnitEl.textContent = 'sec';
+      } else {
+        dialMins = Math.max(1, Math.min(120, Math.round(value)));
+        const endAngle = (DIAL_START + (dialMins / 120) * DIAL_SWEEP) % 360;
+        dialArc.setAttribute('d', describeArc(DIAL_START, endAngle, DIAL_R));
+        const [tx, ty] = polarToXY(endAngle, DIAL_R);
+        dialThumb.setAttribute('cx', tx.toFixed(2));
+        dialThumb.setAttribute('cy', ty.toFixed(2));
+        dialValEl.textContent  = dialMins;
+        dialUnitEl.textContent = 'min';
+      }
+      if (sendUpdate) sendCtrl({ type: 'set_duration', seconds: dialMins * 60 + dialSecs });
     }
 
     function setDialMode(mode) {
-      const oldSecs = Math.round(dialMins * 60);
       dialMode = mode;
       mDialBtn.textContent = mode;
       mDialBtn.classList.toggle('sec-mode', mode === 'sec');
-      updateDial(mode === 'sec' ? oldSecs : Math.max(1, Math.round(dialMins)), false);
+      // Show current value for that component, don't send
+      updateDial(mode === 'sec' ? dialSecs : dialMins, false);
     }
 
     mDialBtn.addEventListener('click', e => {
@@ -2316,8 +2325,8 @@
       if (offset > DIAL_SWEEP) {
         offset = offset < (DIAL_SWEEP + (360 - DIAL_SWEEP) / 2) ? DIAL_SWEEP : 0;
       }
-      const max = dialMode === 'sec' ? 3600 : DIAL_MAX;
-      return Math.max(1, (offset / DIAL_SWEEP) * max);
+      const max = dialMode === 'sec' ? 59 : DIAL_MAX;
+      return Math.max(0, (offset / DIAL_SWEEP) * max);
     }
 
     dialSvg.addEventListener('pointerdown', e => {
@@ -2339,8 +2348,7 @@
       isDragging = false;
       window._mDialDragging = false;
       dialSvg.releasePointerCapture(e.pointerId);
-      const val = parseInt(dialValEl.textContent);
-      sendCtrl({ type: 'set_duration', seconds: dialMode === 'sec' ? val : val * 60 });
+      sendCtrl({ type: 'set_duration', seconds: dialMins * 60 + dialSecs });
     });
     dialSvg.addEventListener('pointercancel', () => {
       isDragging = false;
