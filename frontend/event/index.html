@@ -626,7 +626,7 @@
   .add-name-input:focus { border-color: #333; }
 
   .add-dur-input {
-    width: 72px;
+    width: 58px;
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -1171,8 +1171,11 @@
         <input class="add-name-input" id="addNameInput" type="text"
                placeholder="Speaker or session name…" maxlength="60" autocomplete="off">
         <input class="add-dur-input" id="addDurInput" type="number"
-               min="1" max="120" placeholder="min">
+               min="0" max="120" placeholder="0">
         <span class="add-dur-label">min</span>
+        <input class="add-dur-input" id="addSecInput" type="number"
+               min="0" max="59" placeholder="0">
+        <span class="add-dur-label">sec</span>
         <button class="btn-add" id="addItemBtn">Add</button>
       </div>
     </div>
@@ -1610,13 +1613,17 @@
       el.dataset.id = item.id;
 
       const statusIcon = item.status === 'active' ? '▶' : item.status === 'done' ? '✓' : '';
-      const mins = Math.round(item.duration / 60);
+      const durMins = Math.floor(item.duration / 60);
+      const durSecs = item.duration % 60;
+      const durLabel = durMins > 0 && durSecs > 0 ? `${durMins} min ${durSecs} sec`
+                     : durMins > 0                 ? `${durMins} min`
+                     :                               `${durSecs} sec`;
 
       el.innerHTML = `
         <div class="item-status ${item.status}">${statusIcon}</div>
         <div class="item-body">
           <div class="item-name">${escHtml(item.name)}</div>
-          <div class="item-meta">${mins} min</div>
+          <div class="item-meta">${durLabel}</div>
         </div>
         <div class="item-actions">
           <button class="btn-load ${item.status === 'active' ? 'loaded' : ''}"
@@ -1643,10 +1650,10 @@
   }
 
   // ── Agenda actions ────────────────────────────────────────────────────────
-  function addItem(name, durationMins) {
+  function addItem(name, durationSecs) {
     name = name.trim();
-    if (!name || !durationMins) return false;
-    agenda.push({ id: genItemId(), name, duration: durationMins * 60, status: 'pending' });
+    if (!name || durationSecs < 1) return false;
+    agenda.push({ id: genItemId(), name, duration: durationSecs, status: 'pending' });
     renderAgenda();
     return true;
   }
@@ -1687,26 +1694,34 @@
   }
 
   // ── Add form ──────────────────────────────────────────────────────────────
+  const addSecInput = document.getElementById('addSecInput');
+
   addItemBtn.addEventListener('click', () => {
     const name = addNameInput.value.trim();
-    const dur  = parseInt(addDurInput.value);
-    if (!name || !dur || dur < 1) {
+    const mins = Math.max(0, parseInt(addDurInput.value) || 0);
+    const secs = Math.max(0, Math.min(59, parseInt(addSecInput.value) || 0));
+    const totalSecs = mins * 60 + secs;
+    if (!name || totalSecs < 1) {
       addNameInput.focus();
       return;
     }
-    addItem(name, dur);
+    addItem(name, totalSecs);
     addNameInput.value = '';
     addDurInput.value  = '';
+    addSecInput.value  = '';
     addNameInput.focus();
   });
 
   addNameInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
-      if (!addDurInput.value) { addDurInput.focus(); return; }
+      if (!addDurInput.value && !addSecInput.value) { addDurInput.focus(); return; }
       addItemBtn.click();
     }
   });
   addDurInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') addItemBtn.click();
+  });
+  addSecInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') addItemBtn.click();
   });
 
