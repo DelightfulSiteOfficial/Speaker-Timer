@@ -1876,8 +1876,8 @@
       renderAgenda();
     }
 
-    minInput.addEventListener('blur', () => setTimeout(commit, 120));
-    secInput.addEventListener('blur', () => setTimeout(commit, 120));
+    minInput.addEventListener('blur', () => setTimeout(() => { if (!wrap.contains(document.activeElement)) commit(); }, 80));
+    secInput.addEventListener('blur', () => setTimeout(() => { if (!wrap.contains(document.activeElement)) commit(); }, 80));
 
     [minInput, secInput].forEach(inp => {
       inp.addEventListener('keydown', e => {
