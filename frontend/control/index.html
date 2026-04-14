@@ -1364,14 +1364,14 @@
     dialDragging = true;
     durationDial.setPointerCapture(e.pointerId);
     const [cx, cy] = clientToDialCoords(e);
-    updateDial(Math.round(coordsToValue(cx, cy)) || 1, false);
+    updateDial(Math.round(coordsToValue(cx, cy)), false);
     e.preventDefault();
   });
 
   durationDial.addEventListener('pointermove', e => {
     if (!dialDragging) return;
     const [cx, cy] = clientToDialCoords(e);
-    updateDial(Math.round(coordsToValue(cx, cy)) || 1, false);
+    updateDial(Math.round(coordsToValue(cx, cy)), false);
     e.preventDefault();
   });
 
@@ -1397,7 +1397,7 @@
   dialDirectInput.addEventListener('blur', () => {
     const val = parseInt(dialDirectInput.value);
     dialDirectInput.style.display = 'none';
-    if (!state.running && val >= 1 && val <= 300) updateDial(val, true);
+    if (!state.running && val >= 0 && val <= 300) updateDial(val, true);
   });
 
   dialDirectInput.addEventListener('keydown', e => {

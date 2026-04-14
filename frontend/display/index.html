@@ -2338,13 +2338,13 @@
       window._mDialDragging = true;
       dialSvg.setPointerCapture(e.pointerId);
       const [cx, cy] = clientToSVG(e);
-      updateDial(Math.round(coordsToValue(cx, cy)) || 1, false);
+      updateDial(Math.round(coordsToValue(cx, cy)), false);
       e.preventDefault();
     });
     dialSvg.addEventListener('pointermove', e => {
       if (!isDragging) return;
       const [cx, cy] = clientToSVG(e);
-      updateDial(Math.round(coordsToValue(cx, cy)) || 1, false);
+      updateDial(Math.round(coordsToValue(cx, cy)), false);
     });
     dialSvg.addEventListener('pointerup', e => {
       if (!isDragging) return;
@@ -2368,12 +2368,12 @@
     dialInput.addEventListener('blur', () => {
       const v = parseInt(dialInput.value);
       dialInput.style.display = 'none';
-      if (!state.running && v >= 1 && v <= 300) updateDial(v, true);
+      if (!state.running && v >= 0 && v <= 300) updateDial(v, true);
     });
     dialInput.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         const v = parseInt(dialInput.value);
-        if (v >= 1 && v <= 300) updateDial(v, true);
+        if (v >= 0 && v <= 300) updateDial(v, true);
         dialInput.style.display = 'none';
       }
       if (e.key === 'Escape') dialInput.style.display = 'none';
