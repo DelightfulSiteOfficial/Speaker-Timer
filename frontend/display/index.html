@@ -1118,18 +1118,17 @@
     .timer-block  { margin-top: -60px !important; }
     .time-display { font-size: clamp(80px, 42vh, 310px) !important; }
 
-    /* QR: positioned directly above the dial controls */
+    /* QR: 1/3 larger than base landscape size — restate position for tablet */
     .qr-panel {
-      bottom: calc(144px + (100vh - 144px - min(600px, 37vw)) / 2 - 140px + min(600px, 37vw) + 16px) !important;
-      left: 78vw !important;
-      transform: translateX(-50%) !important;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+      left: calc(env(safe-area-inset-left, 0px) + 24px) !important;
     }
     .qr-frame { width: 107px !important; height: 107px !important; padding: 6px !important; }
     .session-id { font-size: 16px !important; margin-top: 28px !important; letter-spacing: 0.05em !important; }
 
     .mobile-dial-wrap {
       width: min(600px, 37vw) !important;
-      bottom: calc(144px + (100vh - 144px - min(600px, 37vw)) / 2 - 140px) !important;
+      bottom: calc(144px + (100vh - 144px - min(600px, 37vw)) / 2 - 26px) !important;
       left: 78vw !important;
     }
     .mobile-dial-ring { width: min(273px, 32vw) !important; }
