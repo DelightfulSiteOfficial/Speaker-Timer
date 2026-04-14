@@ -1018,7 +1018,33 @@
   }
   .overtime-badge.visible { display: block; }
 
-
+  /* Schedule offset indicator */
+  .schedule-offset {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 100px;
+    margin-bottom: 6px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .schedule-offset.behind {
+    color: var(--warn);
+    background: rgba(255,153,0,0.08);
+    border: 1px solid rgba(255,153,0,0.3);
+  }
+  .schedule-offset.ahead {
+    color: var(--green);
+    background: rgba(34,197,94,0.08);
+    border: 1px solid rgba(34,197,94,0.3);
+  }
+  .schedule-offset.on-time {
+    color: var(--muted);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border2);
+  }
 
   /* ── Control request modal ── */
   .ctrl-request-modal {
@@ -1347,6 +1373,8 @@
   <div class="timer-panel">
     <div class="now-label">Now Presenting</div>
     <div class="now-speaker" id="nowSpeaker">—</div>
+
+    <div class="schedule-offset" id="scheduleOffsetDisplay" style="display:none"></div>
 
     <div class="time-display" id="timeDisplay">--:--</div>
 
@@ -1685,6 +1713,34 @@
   const overlayTitle  = document.getElementById('overlayTitle');
   const overlaySub    = document.getElementById('overlaySub');
   let pipPrompted     = false;
+
+  // ── Schedule offset tracker ───────────────────────────────────────────────
+  const scheduleOffsetEl = document.getElementById('scheduleOffsetDisplay');
+  let scheduleOffsetSecs = 0;   // running total: positive = ahead, negative = behind
+  let scheduleHistory    = [];  // stack of per-item deviations for undo on Prev
+
+  function formatScheduleTime(secs) {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return m > 0 ? `${m}:${String(s).padStart(2, '0')}` : `0:${String(s).padStart(2, '0')}`;
+  }
+
+  function updateScheduleDisplay() {
+    if (scheduleHistory.length === 0 || scheduleOffsetSecs === 0) {
+      scheduleOffsetEl.style.display = 'none';
+      return;
+    }
+    scheduleOffsetEl.style.display = '';
+    const abs = Math.abs(Math.round(scheduleOffsetSecs));
+    const timeStr = formatScheduleTime(abs);
+    if (scheduleOffsetSecs < 0) {
+      scheduleOffsetEl.textContent = `${timeStr} behind schedule`;
+      scheduleOffsetEl.className = 'schedule-offset behind';
+    } else {
+      scheduleOffsetEl.textContent = `${timeStr} ahead of schedule`;
+      scheduleOffsetEl.className = 'schedule-offset ahead';
+    }
+  }
 
   sessionPill.textContent = `Session ${sessionId}`;
 
@@ -2086,6 +2142,11 @@
   function loadNextItem() {
     const nextIdx = agenda.findIndex(i => i.status === 'pending');
     if (nextIdx === -1) return;
+    // Capture deviation before reset fires
+    const deviation = liveTimeRemaining(); // positive = early, negative = overtime
+    scheduleHistory.push(deviation);
+    scheduleOffsetSecs += deviation;
+    updateScheduleDisplay();
     loadItem(nextIdx);
     setTimeout(() => send({ type: 'start', sessionId }), 100);
   }
@@ -2097,6 +2158,11 @@
       if (agenda[i].status === 'done') { prevIdx = i; break; }
     }
     if (prevIdx === -1) return;
+    // Undo last schedule deviation
+    if (scheduleHistory.length > 0) {
+      scheduleOffsetSecs -= scheduleHistory.pop();
+      updateScheduleDisplay();
+    }
     // Mark currently active item back to pending
     agenda.forEach(item => { if (item.status === 'active') item.status = 'pending'; });
     loadItem(prevIdx);
