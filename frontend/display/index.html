@@ -1368,6 +1368,32 @@
   <div class="overlay-sub" id="overlaySub">Reaching server</div>
 </div>
 
+<!-- Share Session modal -->
+<div class="share-modal-backdrop" id="shareModalBackdrop">
+  <div class="share-modal">
+    <div class="share-modal-header">
+      <div class="share-modal-title">Share Session</div>
+      <button class="share-modal-close" id="shareModalClose">Close</button>
+    </div>
+    <div class="share-session-id" id="shareSessionIdEl"></div>
+    <div class="share-qr" id="shareQrEl"></div>
+    <div class="share-url-row">
+      <div class="share-url-label">Control (phone / operator)</div>
+      <div class="share-url-line">
+        <div class="share-url-text" id="shareControlUrlEl"></div>
+        <button class="share-url-btn" id="shareCopyControlBtn">Copy</button>
+      </div>
+    </div>
+    <div class="share-url-row">
+      <div class="share-url-label">Display (big screen)</div>
+      <div class="share-url-line">
+        <div class="share-url-text" id="shareDisplayUrlEl"></div>
+        <button class="share-url-btn" id="shareCopyDisplayBtn">Copy</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
 
@@ -2523,30 +2549,5 @@
   })();
 </script>
 
-<!-- Share Session modal -->
-<div class="share-modal-backdrop" id="shareModalBackdrop">
-  <div class="share-modal">
-    <div class="share-modal-header">
-      <div class="share-modal-title">Share Session</div>
-      <button class="share-modal-close" id="shareModalClose">Close</button>
-    </div>
-    <div class="share-session-id" id="shareSessionIdEl"></div>
-    <div class="share-qr" id="shareQrEl"></div>
-    <div class="share-url-row">
-      <div class="share-url-label">Control (phone / operator)</div>
-      <div class="share-url-line">
-        <div class="share-url-text" id="shareControlUrlEl"></div>
-        <button class="share-url-btn" id="shareCopyControlBtn">Copy</button>
-      </div>
-    </div>
-    <div class="share-url-row">
-      <div class="share-url-label">Display (big screen)</div>
-      <div class="share-url-line">
-        <div class="share-url-text" id="shareDisplayUrlEl"></div>
-        <button class="share-url-btn" id="shareCopyDisplayBtn">Copy</button>
-      </div>
-    </div>
-  </div>
-</div>
 </body>
 </html>
