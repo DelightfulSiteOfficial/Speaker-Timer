@@ -2336,7 +2336,8 @@
         .pbar{width:100%;height:2px;background:#1e1e1e;border-radius:1px;overflow:hidden}
         .ppfill{height:100%;background:#e8ff47;border-radius:1px;transition:width 0.9s linear}
         .ppfill.warn{background:#ff9900}.ppfill.danger{background:#ff4444}
-        .pbtnrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;margin-top:2px}
+        .pbtnrow{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto;gap:6px;width:100%;margin-top:2px}
+        .pbtnrow .preset-btn{grid-column:1/-1}
         .pctrl-btn{
           height:36px;border-radius:8px;border:none;cursor:pointer;
           font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.05em;
@@ -2375,10 +2376,10 @@
           <div class="pmin-hint">enter to set · esc to cancel</div>
         </div>
         <div class="pbtnrow">
-          <button class="pctrl-btn reset" id="prb">Reset</button>
-          <button class="pctrl-btn start" id="psb">Start</button>
           <button class="pctrl-btn next"  id="ppb">← Prev</button>
+          <button class="pctrl-btn start" id="psb">Start</button>
           <button class="pctrl-btn next"  id="pnb">Next →</button>
+          <button class="pctrl-btn reset" id="prb" style="grid-column:1/-1">Reset</button>
         </div>
       `;
 
