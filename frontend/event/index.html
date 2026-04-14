@@ -994,6 +994,13 @@
   .btn-secondary.next-btn:hover { background: rgba(232,255,71,0.1); }
   .btn-secondary.next-btn:disabled { opacity: 0.25; cursor: not-allowed; transform: none; }
 
+  .btn-secondary.prev-btn {
+    border-color: rgba(255,255,255,0.1);
+    color: var(--muted);
+  }
+  .btn-secondary.prev-btn:hover { color: var(--text); border-color: #444; }
+  .btn-secondary.prev-btn:disabled { opacity: 0.25; cursor: not-allowed; transform: none; }
+
 
   /* Overtime */
   .overtime-badge {
@@ -1350,6 +1357,7 @@
       <button class="btn-start" id="startBtn">Start</button>
       <div class="btn-row">
         <button class="btn-secondary" id="resetBtn">Reset</button>
+        <button class="btn-secondary prev-btn" id="prevBtn">← Prev</button>
         <button class="btn-secondary next-btn" id="nextBtn">Next →</button>
       </div>
       <div class="nudge-row">
@@ -1668,6 +1676,7 @@
     }
   });
   const nextBtn       = document.getElementById('nextBtn');
+  const prevBtn       = document.getElementById('prevBtn');
   const toast         = document.getElementById('toast');
   const overlay       = document.getElementById('overlay');
   const overlayTitle  = document.getElementById('overlayTitle');
@@ -1741,9 +1750,11 @@
     nowSpeaker.textContent = roomName || '—';
     nowSpeaker.classList.toggle('has-name', !!roomName);
 
-    // Next button: disabled when no pending items
+    // Next/Prev buttons: disabled when no items available
     const hasNext = agenda.some(i => i.status === 'pending');
     nextBtn.disabled = !hasNext;
+    const hasPrev = agenda.some(i => i.status === 'done');
+    prevBtn.disabled = !hasPrev;
 
     // Background pulses
     const isWarn5  = timeRemaining <= 300 && timeRemaining > 60  && !overtime;
@@ -2073,8 +2084,19 @@
     const nextIdx = agenda.findIndex(i => i.status === 'pending');
     if (nextIdx === -1) return;
     loadItem(nextIdx);
-    // Small delay so reset + set_duration are processed before start
     setTimeout(() => send({ type: 'start', sessionId }), 100);
+  }
+
+  function loadPrevItem() {
+    // Find the last done item and reload it
+    let prevIdx = -1;
+    for (let i = agenda.length - 1; i >= 0; i--) {
+      if (agenda[i].status === 'done') { prevIdx = i; break; }
+    }
+    if (prevIdx === -1) return;
+    // Mark currently active item back to pending
+    agenda.forEach(item => { if (item.status === 'active') item.status = 'pending'; });
+    loadItem(prevIdx);
   }
 
   // ── Add form ──────────────────────────────────────────────────────────────
@@ -2121,6 +2143,7 @@
       send({ type: 'nudge', sessionId, delta: parseInt(btn.dataset.nudge) })));
 
   nextBtn.addEventListener('click', () => loadNextItem());
+  prevBtn.addEventListener('click', () => loadPrevItem());
 
 
   // ── WebSocket ─────────────────────────────────────────────────────────────
@@ -2231,12 +2254,14 @@
     const tc = overtime ? 'overtime' : isDanger ? 'danger' : isWarning ? 'warning' : '';
     const pct = totalTime > 0 ? Math.max(0, timeRemaining / totalTime) : 1;
     const hasNext = agenda.some(i => i.status === 'pending');
+    const hasPrev = agenda.some(i => i.status === 'done');
 
     const t  = pipWindow.document.getElementById('pt');
     const sp = pipWindow.document.getElementById('ps');
     const pb = pipWindow.document.getElementById('pp');
     const sb = pipWindow.document.getElementById('psb');
     const nb = pipWindow.document.getElementById('pnb');
+    const prevb = pipWindow.document.getElementById('ppb');
     const ht = pipWindow.document.getElementById('phi');
 
     if (t)  { t.textContent = formatTime(timeRemaining); t.className = 'ptime ' + tc; }
@@ -2244,6 +2269,7 @@
     if (pb) { pb.style.width = (pct * 100) + '%'; pb.className = 'ppfill' + (overtime || isDanger ? ' danger' : isWarning ? ' warn' : ''); }
     if (sb) { sb.textContent = running ? 'Pause' : 'Start'; sb.className = 'pctrl-btn ' + (running ? 'pause' : 'start'); }
     if (nb) { nb.disabled = !hasNext; nb.style.opacity = hasNext ? '1' : '0.3'; }
+    if (prevb) { prevb.disabled = !hasPrev; prevb.style.opacity = hasPrev ? '1' : '0.3'; }
     if (ht) { ht.textContent = running ? 'tap · pause' : 'tap · start'; }
   }
 
@@ -2351,6 +2377,7 @@
         <div class="pbtnrow">
           <button class="pctrl-btn reset" id="prb">Reset</button>
           <button class="pctrl-btn start" id="psb">Start</button>
+          <button class="pctrl-btn next"  id="ppb">← Prev</button>
           <button class="pctrl-btn next"  id="pnb">Next →</button>
         </div>
       `;
@@ -2360,11 +2387,13 @@
       const psb     = pipWindow.document.getElementById('psb');
       const prb     = pipWindow.document.getElementById('prb');
       const pnb     = pipWindow.document.getElementById('pnb');
+      const ppb     = pipWindow.document.getElementById('ppb');
 
       // Buttons
       psb.addEventListener('click', () => send({ type: state.running ? 'pause' : 'start', sessionId }));
       prb.addEventListener('click', () => send({ type: 'reset', sessionId }));
       pnb.addEventListener('click', () => loadNextItem());
+      ppb.addEventListener('click', () => loadPrevItem());
 
       // Hold-to-type
       let pipHoldTimer = null;
