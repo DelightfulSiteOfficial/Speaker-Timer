@@ -1150,6 +1150,62 @@
       font-size: 42px !important;
     }
   }
+
+  /* ── Share Session modal ── */
+  .share-modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(10,10,10,0.88);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .share-modal-backdrop.visible { opacity: 1; pointer-events: auto; }
+  .share-modal {
+    background: #141414; border: 1px solid #262626; border-radius: 20px;
+    padding: 28px 28px 24px; width: min(380px, calc(100vw - 32px));
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .share-modal-header { display: flex; align-items: center; justify-content: space-between; }
+  .share-modal-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 28px;
+    letter-spacing: 0.05em; color: var(--text);
+  }
+  .share-modal-close {
+    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--muted); background: none;
+    border: 1px solid #1e1e1e; border-radius: 6px; padding: 4px 10px;
+    cursor: pointer; transition: color 0.15s, border-color 0.15s;
+  }
+  .share-modal-close:hover { color: var(--text); border-color: #333; }
+  .share-session-id {
+    font-family: 'DM Mono', monospace; font-size: 22px; letter-spacing: 0.15em;
+    color: var(--accent); text-align: center;
+    background: rgba(232,255,71,0.05); border: 1px solid rgba(232,255,71,0.15);
+    border-radius: 10px; padding: 10px 0;
+  }
+  .share-qr { display: flex; justify-content: center; padding: 4px 0; }
+  .share-qr canvas, .share-qr img { border-radius: 6px; }
+  .share-url-row { display: flex; flex-direction: column; gap: 6px; }
+  .share-url-label {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted);
+  }
+  .share-url-line {
+    display: flex; align-items: center; gap: 8px;
+    background: #0a0a0a; border: 1px solid #1e1e1e;
+    border-radius: 8px; padding: 8px 12px;
+  }
+  .share-url-text {
+    flex: 1; font-family: 'DM Mono', monospace; font-size: 11px;
+    color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .share-url-btn {
+    flex-shrink: 0; font-family: 'DM Mono', monospace; font-size: 9px;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    background: none; border: 1px solid #262626; border-radius: 6px;
+    color: var(--muted); padding: 4px 10px; cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .share-url-btn:hover { color: var(--text); border-color: #444; }
 </style>
 </head>
 <body>
@@ -1216,6 +1272,7 @@
     <button class="overflow-btn" id="overflowBtn">···</button>
     <div class="overflow-menu" id="overflowMenu">
       <button class="overflow-item" id="mainMenuBtn">Main Menu</button>
+      <button class="overflow-item" id="shareSessionBtn">Share Session</button>
       <button class="overflow-item" id="fullscreenToggle">Fullscreen</button>
       <button class="overflow-item" id="pipBtn">Pop Out</button>
       <button class="overflow-item" id="qrToggle">Hide QR</button>
@@ -1545,6 +1602,63 @@
   // ── Main Menu ──────────────────────────────────────────────────────────────
   document.getElementById('mainMenuBtn').addEventListener('click', () => {
     window.location.href = 'https://www.speakertimerapp.com';
+  });
+
+  // ── Share Session modal ────────────────────────────────────────────────────
+  const shareModalBackdrop  = document.getElementById('shareModalBackdrop');
+  const shareModalClose     = document.getElementById('shareModalClose');
+  const shareSessionIdEl    = document.getElementById('shareSessionIdEl');
+  const shareQrEl           = document.getElementById('shareQrEl');
+  const shareControlUrlEl   = document.getElementById('shareControlUrlEl');
+  const shareDisplayUrlEl   = document.getElementById('shareDisplayUrlEl');
+  const shareCopyControlBtn = document.getElementById('shareCopyControlBtn');
+  const shareCopyDisplayBtn = document.getElementById('shareCopyDisplayBtn');
+  let shareQrBuilt = false;
+
+  function openShareModal() {
+    const origin     = window.location.origin;
+    const controlUrl = `${origin}/control/?session=${sessionId}`;
+    const dispUrl    = `${origin}/display/?session=${sessionId}`;
+    shareSessionIdEl.textContent  = sessionId;
+    shareControlUrlEl.textContent = controlUrl;
+    shareDisplayUrlEl.textContent = dispUrl;
+    if (!shareQrBuilt) {
+      new QRCode(shareQrEl, {
+        text: controlUrl, width: 128, height: 128,
+        colorDark: '#f0ede8', colorLight: '#111111',
+      });
+      shareQrBuilt = true;
+    }
+    shareModalBackdrop.classList.add('visible');
+  }
+
+  function closeShareModal() {
+    shareModalBackdrop.classList.remove('visible');
+  }
+
+  document.getElementById('shareSessionBtn').addEventListener('click', () => {
+    overflowMenu.classList.remove('open');
+    openShareModal();
+  });
+  shareModalClose.addEventListener('click', closeShareModal);
+  shareModalBackdrop.addEventListener('click', e => {
+    if (e.target === shareModalBackdrop) closeShareModal();
+  });
+
+  shareCopyControlBtn.addEventListener('click', () => {
+    const url = `${window.location.origin}/control/?session=${sessionId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      shareCopyControlBtn.textContent = 'Copied!';
+      setTimeout(() => { shareCopyControlBtn.textContent = 'Copy'; }, 2000);
+    });
+  });
+
+  shareCopyDisplayBtn.addEventListener('click', () => {
+    const url = `${window.location.origin}/display/?session=${sessionId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      shareCopyDisplayBtn.textContent = 'Copied!';
+      setTimeout(() => { shareCopyDisplayBtn.textContent = 'Copy'; }, 2000);
+    });
   });
 
   // ── QR toggle ──────────────────────────────────────────────────────────────
@@ -2408,5 +2522,31 @@
     updateDial(10, false);
   })();
 </script>
+
+<!-- Share Session modal -->
+<div class="share-modal-backdrop" id="shareModalBackdrop">
+  <div class="share-modal">
+    <div class="share-modal-header">
+      <div class="share-modal-title">Share Session</div>
+      <button class="share-modal-close" id="shareModalClose">Close</button>
+    </div>
+    <div class="share-session-id" id="shareSessionIdEl"></div>
+    <div class="share-qr" id="shareQrEl"></div>
+    <div class="share-url-row">
+      <div class="share-url-label">Control (phone / operator)</div>
+      <div class="share-url-line">
+        <div class="share-url-text" id="shareControlUrlEl"></div>
+        <button class="share-url-btn" id="shareCopyControlBtn">Copy</button>
+      </div>
+    </div>
+    <div class="share-url-row">
+      <div class="share-url-label">Display (big screen)</div>
+      <div class="share-url-line">
+        <div class="share-url-text" id="shareDisplayUrlEl"></div>
+        <button class="share-url-btn" id="shareCopyDisplayBtn">Copy</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
