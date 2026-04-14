@@ -309,10 +309,17 @@
 
   /* ── Duration dial ── */
   .dial-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 6px;
+  }
+  .dial-ring {
     position: relative;
     width: min(68%, 240px);
     aspect-ratio: 1;
-    margin: 0 0 6px;
+    flex-shrink: 0;
   }
 
   .dial-svg {
@@ -331,13 +338,11 @@
   }
 
   .dial-center-overlay {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
+    text-align: right;
     cursor: pointer;
     -webkit-user-select: none;
     user-select: none;
+    flex-shrink: 0;
   }
 
   .dial-value {
@@ -852,18 +857,20 @@
   <!-- Dial -->
   <div class="dial-area">
     <div class="dial-wrapper">
-      <svg class="dial-svg" id="durationDial" viewBox="0 0 240 240">
-        <path id="dialBgArc" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round"
-              d="M 72.00 203.08 A 96 96 0 1 1 168.00 203.08"/>
-        <path id="dialArc" fill="none" stroke="#e8ff47" stroke-width="10" stroke-linecap="round"/>
-        <circle id="dialThumb" r="14" fill="#e8ff47"/>
-      </svg>
       <div class="dial-center-overlay" id="dialCenterOverlay">
         <div class="dial-value" id="dialValue">10</div>
         <div class="dial-unit">min</div>
         <div class="dial-hint">tap to type</div>
       </div>
-      <input class="dial-direct-input" id="dialDirectInput" type="number" min="1" max="120">
+      <div class="dial-ring">
+        <svg class="dial-svg" id="durationDial" viewBox="0 0 240 240">
+          <path id="dialBgArc" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round"
+                d="M 72.00 203.08 A 96 96 0 1 1 168.00 203.08"/>
+          <path id="dialArc" fill="none" stroke="#e8ff47" stroke-width="10" stroke-linecap="round"/>
+          <circle id="dialThumb" r="14" fill="#e8ff47"/>
+        </svg>
+        <input class="dial-direct-input" id="dialDirectInput" type="number" min="1" max="120">
+      </div>
     </div>
     <div class="dial-presets">
       <button class="dial-preset" data-mins="15">15m</button>

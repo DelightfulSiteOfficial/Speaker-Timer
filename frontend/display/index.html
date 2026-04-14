@@ -722,12 +722,17 @@
 
   /* ── Mobile circular dial ── */
   .mobile-dial-wrap {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .mobile-dial-ring {
     position: relative;
     width: min(190px, 58vw);
     aspect-ratio: 1;
-    margin-top: 6px;
-    flex-direction: column;
-    align-items: center;
+    flex-shrink: 0;
   }
   .mobile-dial-svg {
     width: 100%; height: 100%;
@@ -737,13 +742,11 @@
     overflow: visible;
   }
   .mobile-dial-center {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
+    text-align: right;
     user-select: none;
     pointer-events: auto;
     cursor: pointer;
+    flex-shrink: 0;
   }
   .mobile-dial-val {
     font-family: 'Bebas Neue', sans-serif;
@@ -1125,18 +1128,20 @@
 
   <!-- Mobile circular dial (portrait phones, hidden on desktop) -->
   <div class="mobile-dial-wrap" id="mobileDial">
-    <svg class="mobile-dial-svg" id="mobileDurationDial" viewBox="0 0 240 240">
-      <path fill="none" stroke="#1e1e1e" stroke-width="10" stroke-linecap="round"
-            d="M 72.00 203.08 A 96 96 0 1 1 168.00 203.08"/>
-      <path id="mobileDialArc" fill="none" stroke="#e8ff47" stroke-width="10" stroke-linecap="round"/>
-      <circle id="mobileDialThumb" r="14" fill="#e8ff47"/>
-    </svg>
     <div class="mobile-dial-center" id="mobileDialCenter">
       <div class="mobile-dial-val" id="mobileDialVal">10</div>
       <div class="mobile-dial-unit">min</div>
       <div class="mobile-dial-hint">drag to set</div>
     </div>
-    <input class="mobile-dial-input" id="mobileDialInput" type="number" min="1" max="120">
+    <div class="mobile-dial-ring">
+      <svg class="mobile-dial-svg" id="mobileDurationDial" viewBox="0 0 240 240">
+        <path fill="none" stroke="#1e1e1e" stroke-width="10" stroke-linecap="round"
+              d="M 72.00 203.08 A 96 96 0 1 1 168.00 203.08"/>
+        <path id="mobileDialArc" fill="none" stroke="#e8ff47" stroke-width="10" stroke-linecap="round"/>
+        <circle id="mobileDialThumb" r="14" fill="#e8ff47"/>
+      </svg>
+      <input class="mobile-dial-input" id="mobileDialInput" type="number" min="1" max="120">
+    </div>
   </div>
 
   <!-- Ghost hit area for restoring hidden QR via double-click -->
