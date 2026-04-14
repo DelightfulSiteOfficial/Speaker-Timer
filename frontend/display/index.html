@@ -773,37 +773,31 @@
     opacity: 0.5;
   }
 
-  .dial-mode-toggle {
-    display: inline-flex;
-    margin-top: 8px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-  }
-  .dial-mode-toggle button {
-    background: none;
-    border: none;
-    color: var(--muted);
-    padding: 3px 7px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: inherit;
-    letter-spacing: inherit;
-    text-transform: uppercase;
-  }
-  .dial-mode-toggle button.active {
-    background: var(--accent);
-    color: #000;
-  }
-  .dial-mode-overlay {
+  .dial-mode-btn {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, 10px);
+    transform: translate(-50%, 18px);
     z-index: 5;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    background: rgba(10,10,10,0.85);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+  }
+  .dial-mode-btn.sec-mode {
+    color: var(--warn);
   }
   .mobile-dial-input {
     position: absolute;
@@ -1173,10 +1167,7 @@
         <path id="mobileDialArc" fill="none" stroke="#e8ff47" stroke-width="10" stroke-linecap="round"/>
         <circle id="mobileDialThumb" r="14" fill="#e8ff47"/>
       </svg>
-      <div class="dial-mode-toggle dial-mode-overlay">
-        <button id="mDialModeMin" class="active">min</button>
-        <button id="mDialModeSec">sec</button>
-      </div>
+      <button class="dial-mode-btn" id="mDialModeBtn">min</button>
       <input class="mobile-dial-input" id="mobileDialInput" type="number" min="1" max="120">
     </div>
   </div>
@@ -2259,12 +2250,15 @@
     const dialArc    = document.getElementById('mobileDialArc');
     const dialThumb  = document.getElementById('mobileDialThumb');
     const dialValEl  = document.getElementById('mobileDialVal');
+    const dialUnitEl = document.getElementById('mobileDialUnit');
     const dialCenter = document.getElementById('mobileDialCenter');
     const dialInput  = document.getElementById('mobileDialInput');
     const dialWrap   = document.getElementById('mobileDial');
 
     let dialMins    = 10;
+    let dialMode    = 'min'; // 'min' or 'sec'
     let isDragging  = false;
+    const mDialBtn  = document.getElementById('mDialModeBtn');
 
     function polarToXY(deg, r) {
       const rad = deg * Math.PI / 180;
@@ -2279,18 +2273,34 @@
       return `M ${sx.toFixed(2)} ${sy.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
     }
 
-    function updateDial(mins, sendUpdate) {
-      mins = Math.max(1, Math.min(120, Math.round(mins)));
-      dialMins = mins;
-      const display  = Math.min(mins, DIAL_MAX);
-      const endAngle = (DIAL_START + (display / DIAL_MAX) * DIAL_SWEEP) % 360;
+    function updateDial(value, sendUpdate) {
+      const max = dialMode === 'sec' ? 3600 : 120;
+      value = Math.max(1, Math.min(max, Math.round(value)));
+      dialMins = dialMode === 'sec' ? value / 60 : value;
+      const endAngle = (DIAL_START + (value / max) * DIAL_SWEEP) % 360;
       dialArc.setAttribute('d', describeArc(DIAL_START, endAngle, DIAL_R));
       const [tx, ty] = polarToXY(endAngle, DIAL_R);
       dialThumb.setAttribute('cx', tx.toFixed(2));
       dialThumb.setAttribute('cy', ty.toFixed(2));
-      dialValEl.textContent = mins;
-      if (sendUpdate) sendCtrl({ type: 'set_duration', seconds: mins * 60 });
+      dialValEl.textContent = value;
+      dialUnitEl.textContent = dialMode === 'sec' ? 'sec' : 'min';
+      const seconds = dialMode === 'sec' ? value : value * 60;
+      if (sendUpdate) sendCtrl({ type: 'set_duration', seconds });
     }
+
+    function setDialMode(mode) {
+      const oldSecs = Math.round(dialMins * 60);
+      dialMode = mode;
+      mDialBtn.textContent = mode;
+      mDialBtn.classList.toggle('sec-mode', mode === 'sec');
+      updateDial(mode === 'sec' ? oldSecs : Math.max(1, Math.round(dialMins)), false);
+    }
+
+    mDialBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (!desktopHasControl || state.running) return;
+      setDialMode(dialMode === 'min' ? 'sec' : 'min');
+    });
 
     function clientToSVG(e) {
       const r = dialSvg.getBoundingClientRect();
@@ -2298,7 +2308,7 @@
               (e.clientY - r.top)  * (240 / r.height)];
     }
 
-    function coordsToMins(cx, cy) {
+    function coordsToValue(cx, cy) {
       const dx = cx - 120, dy = cy - 120;
       let angle = Math.atan2(dx, -dy) * 180 / Math.PI;
       angle = ((angle % 360) + 360) % 360;
@@ -2306,7 +2316,8 @@
       if (offset > DIAL_SWEEP) {
         offset = offset < (DIAL_SWEEP + (360 - DIAL_SWEEP) / 2) ? DIAL_SWEEP : 0;
       }
-      return Math.max(1, (offset / DIAL_SWEEP) * DIAL_MAX);
+      const max = dialMode === 'sec' ? 3600 : DIAL_MAX;
+      return Math.max(1, (offset / DIAL_SWEEP) * max);
     }
 
     dialSvg.addEventListener('pointerdown', e => {
@@ -2315,20 +2326,21 @@
       window._mDialDragging = true;
       dialSvg.setPointerCapture(e.pointerId);
       const [cx, cy] = clientToSVG(e);
-      updateDial(Math.round(coordsToMins(cx, cy)) || 1, false);
+      updateDial(Math.round(coordsToValue(cx, cy)) || 1, false);
       e.preventDefault();
     });
     dialSvg.addEventListener('pointermove', e => {
       if (!isDragging) return;
       const [cx, cy] = clientToSVG(e);
-      updateDial(Math.round(coordsToMins(cx, cy)) || 1, false);
+      updateDial(Math.round(coordsToValue(cx, cy)) || 1, false);
     });
     dialSvg.addEventListener('pointerup', e => {
       if (!isDragging) return;
       isDragging = false;
       window._mDialDragging = false;
       dialSvg.releasePointerCapture(e.pointerId);
-      sendCtrl({ type: 'set_duration', seconds: dialMins * 60 });
+      const val = parseInt(dialValEl.textContent);
+      sendCtrl({ type: 'set_duration', seconds: dialMode === 'sec' ? val : val * 60 });
     });
     dialSvg.addEventListener('pointercancel', () => {
       isDragging = false;
