@@ -898,6 +898,30 @@
     transform: translateX(14px);
     background: var(--accent);
   }
+
+  /* ── Tablet landscape — compact layout to fit screen ── */
+  @media (min-width: 768px) and (orientation: landscape) {
+    body {
+      overflow-y: auto;
+      gap: 3px !important;
+      padding-top: 4px !important;
+      padding-bottom: 4px !important;
+    }
+    .header { padding: 2px 0 !important; }
+    .timer-row { padding: 0 !important; }
+    .time-big { font-size: clamp(48px, 8vh, 72px) !important; }
+    .control-panel { gap: 4px !important; }
+    .dial-ring { width: min(48%, 160px) !important; }
+    .dial-value { font-size: 38px !important; }
+    .dial-presets { gap: 5px !important; }
+    .dial-preset { height: 30px !important; font-size: 11px !important; padding: 0 10px !important; }
+    .btn-main { height: 44px !important; font-size: 22px !important; }
+    .nudge-btn { height: 34px !important; font-size: 11px !important; }
+    .section-label { margin-bottom: 3px !important; }
+    .message-input { padding: 7px 12px !important; }
+    .msg-btn-row { gap: 6px !important; }
+    .btn-send-msg, .btn-clear-msg { padding: 6px 14px !important; font-size: 10px !important; }
+  }
 </style>
 </head>
 <body>
