@@ -859,8 +859,8 @@
     <div class="dial-wrapper">
       <div class="dial-center-overlay" id="dialCenterOverlay">
         <div class="dial-value" id="dialValue">10</div>
-        <div class="dial-unit" id="dialUnit">min</div>
-        <div class="dial-hint" id="dialHint">tap to toggle</div>
+        <div class="dial-unit">min</div>
+        <div class="dial-hint">tap to type</div>
       </div>
       <div class="dial-ring">
         <svg class="dial-svg" id="durationDial" viewBox="0 0 240 240">
@@ -1247,11 +1247,8 @@
   const dialCenterOverlay = document.getElementById('dialCenterOverlay');
   const dialDirectInput   = document.getElementById('dialDirectInput');
 
-  let dialMins     = 10;
-  let dialMode     = 'min'; // 'min' or 'sec'
+  let dialMins    = 10;
   let dialDragging = false;
-  const dialUnit   = document.getElementById('dialUnit');
-  const dialHint   = document.getElementById('dialHint');
 
   function dialPolarToXY(angleDeg, r) {
     const rad = angleDeg * Math.PI / 180;
@@ -1266,38 +1263,20 @@
     return `M ${sx.toFixed(2)} ${sy.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
   }
 
-  function updateDial(value, sendUpdate) {
-    const max = dialMode === 'sec' ? 3600 : 120;
-    value = Math.max(1, Math.min(max, Math.round(value)));
-    dialMins = dialMode === 'sec' ? value / 60 : value;
-    const display  = Math.min(value, max);
-    const endAngle = (DIAL_START + (display / max) * DIAL_SWEEP) % 360;
+  function updateDial(mins, sendUpdate) {
+    mins = Math.max(1, Math.min(120, Math.round(mins)));
+    dialMins = mins;
+    const displayMins = Math.min(mins, DIAL_MAX);
+    const endAngle = (DIAL_START + (displayMins / DIAL_MAX) * DIAL_SWEEP) % 360;
     dialArcEl.setAttribute('d', dialDescribeArc(DIAL_START, endAngle, DIAL_R));
     const [tx, ty] = dialPolarToXY(endAngle, DIAL_R);
     dialThumb.setAttribute('cx', tx.toFixed(2));
     dialThumb.setAttribute('cy', ty.toFixed(2));
-    dialValue.textContent = value;
-    dialUnit.textContent  = dialMode === 'sec' ? 'sec' : 'min';
+    dialValue.textContent = mins;
     document.querySelectorAll('.dial-preset').forEach(btn => {
-      btn.classList.toggle('active', parseInt(btn.dataset.mins) === Math.round(dialMins));
+      btn.classList.toggle('active', parseInt(btn.dataset.mins) === mins);
     });
-    const seconds = dialMode === 'sec' ? value : value * 60;
-    if (sendUpdate) send({ type: 'set_duration', sessionId, seconds });
-  }
-
-  function toggleDialMode() {
-    if (!hasControl || state.running) return;
-    if (dialMode === 'min') {
-      dialMode = 'sec';
-      const secs = Math.round(dialMins * 60);
-      dialHint.textContent = 'tap to toggle';
-      updateDial(secs, false);
-    } else {
-      dialMode = 'min';
-      const mins = Math.max(1, Math.round(dialMins));
-      dialHint.textContent = 'tap to toggle';
-      updateDial(mins, false);
-    }
+    if (sendUpdate) send({ type: 'set_duration', sessionId, seconds: mins * 60 });
   }
 
   function clientToDialCoords(e) {
@@ -1308,7 +1287,7 @@
     ];
   }
 
-  function coordsToValue(cx, cy) {
+  function coordsToMins(cx, cy) {
     const dx = cx - 120, dy = cy - 120;
     let angle = Math.atan2(dx, -dy) * 180 / Math.PI;
     angle = ((angle % 360) + 360) % 360;
@@ -1316,8 +1295,7 @@
     if (offset > DIAL_SWEEP) {
       offset = offset < (DIAL_SWEEP + (360 - DIAL_SWEEP) / 2) ? DIAL_SWEEP : 0;
     }
-    const max = dialMode === 'sec' ? 3600 : DIAL_MAX;
-    return Math.max(1, (offset / DIAL_SWEEP) * max);
+    return Math.max(1, (offset / DIAL_SWEEP) * DIAL_MAX);
   }
 
   durationDial.addEventListener('pointerdown', e => {
@@ -1325,14 +1303,14 @@
     dialDragging = true;
     durationDial.setPointerCapture(e.pointerId);
     const [cx, cy] = clientToDialCoords(e);
-    updateDial(Math.round(coordsToValue(cx, cy)) || 1, false);
+    updateDial(Math.round(coordsToMins(cx, cy)) || 1, false);
     e.preventDefault();
   });
 
   durationDial.addEventListener('pointermove', e => {
     if (!dialDragging) return;
     const [cx, cy] = clientToDialCoords(e);
-    updateDial(Math.round(coordsToValue(cx, cy)) || 1, false);
+    updateDial(Math.round(coordsToMins(cx, cy)) || 1, false);
     e.preventDefault();
   });
 
@@ -1340,9 +1318,7 @@
     if (!dialDragging) return;
     dialDragging = false;
     durationDial.releasePointerCapture(e.pointerId);
-    const val = parseInt(dialValue.textContent);
-    const seconds = dialMode === 'sec' ? val : val * 60;
-    send({ type: 'set_duration', sessionId, seconds });
+    send({ type: 'set_duration', sessionId, seconds: dialMins * 60 });
   });
 
   durationDial.addEventListener('pointercancel', e => {
@@ -1350,7 +1326,11 @@
   });
 
   dialCenterOverlay.addEventListener('click', () => {
-    toggleDialMode();
+    if (!hasControl || state.running) return;
+    dialDirectInput.value = dialMins;
+    dialDirectInput.style.display = 'block';
+    dialDirectInput.focus();
+    dialDirectInput.select();
   });
 
   dialDirectInput.addEventListener('blur', () => {
