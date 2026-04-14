@@ -127,10 +127,10 @@
   .overtime-badge.visible { display: block; }
 
 
-  /* ── QR panel — floats to the right, out of flow so timer stays centred ── */
+  /* ── QR panel — fixed to viewport so overflow:hidden on timer-area never clips it ── */
   .qr-panel {
-    position: absolute;
-    right: 0;
+    position: fixed;
+    right: 20px;
     top: 50%;
     transform: translateY(-50%);
     background: var(--surface);
@@ -143,6 +143,7 @@
     gap: 10px;
     transition: opacity 0.35s, visibility 0.35s;
     flex-shrink: 0;
+    z-index: 10;
   }
 
   .qr-panel.hidden {
@@ -1043,8 +1044,8 @@
     .qr-panel {
       position: fixed !important;
       top: auto !important;
-      bottom: 26px !important;
-      left: 14px !important;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 32px) !important;
+      left: calc(env(safe-area-inset-left, 0px) + 20px) !important;
       transform: none !important;
       padding: 4px 4px 3px !important;
       border-radius: 6px !important;
@@ -1116,7 +1117,11 @@
     .timer-block  { margin-top: -60px !important; }
     .time-display { font-size: clamp(80px, 42vh, 310px) !important; }
 
-    /* QR: 1/3 larger than base landscape size */
+    /* QR: 1/3 larger than base landscape size — restate position for tablet */
+    .qr-panel {
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 36px) !important;
+      left: calc(env(safe-area-inset-left, 0px) + 24px) !important;
+    }
     .qr-frame { width: 107px !important; height: 107px !important; padding: 6px !important; }
 
     .mobile-dial-wrap {
@@ -1232,15 +1237,15 @@
   <!-- Ghost hit area for restoring hidden QR via double-click -->
   <div class="qr-ghost" id="qrGhost"></div>
 
-  <!-- QR panel — vertically centered to the right of timer (repositioned to top on mobile) -->
-  <div class="qr-panel" id="qrPanel">
-    <div class="qr-frame" id="qrFrame">
-      <div style="width:132px;height:132px;background:#eee;border-radius:3px;"></div>
-    </div>
-    <div class="qr-label">Scan to control</div>
-    <div class="session-id" id="sessionIdDisplay">—</div>
-  </div>
+</div>
 
+<!-- QR panel — outside timer-area so overflow:hidden never clips it -->
+<div class="qr-panel" id="qrPanel">
+  <div class="qr-frame" id="qrFrame">
+    <div style="width:132px;height:132px;background:#eee;border-radius:3px;"></div>
+  </div>
+  <div class="qr-label">Scan to control</div>
+  <div class="session-id" id="sessionIdDisplay">—</div>
 </div>
 
 <!-- Hold-to-set duration overlay -->
