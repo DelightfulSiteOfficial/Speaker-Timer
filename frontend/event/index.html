@@ -1262,7 +1262,7 @@
       <div class="share-url-label">Display (big screen)</div>
       <div class="share-url-line">
         <div class="share-url-text" id="shareDisplayUrl"></div>
-        <button class="share-url-btn accent-btn" id="openDisplayShareBtn">Open</button>
+        <button class="share-url-btn" id="copyDisplayBtn">Copy</button>
       </div>
     </div>
   </div>
@@ -2093,7 +2093,7 @@
   const shareControlUrlEl  = document.getElementById('shareControlUrl');
   const shareDisplayUrlEl  = document.getElementById('shareDisplayUrl');
   const copyControlBtn     = document.getElementById('copyControlBtn');
-  const openDisplayShareBtn = document.getElementById('openDisplayShareBtn');
+  const copyDisplayBtn     = document.getElementById('copyDisplayBtn');
   const shareBtnEl         = document.getElementById('shareBtn');
 
   let shareQrKey = null; // tracks which key the QR was built for
@@ -2113,7 +2113,6 @@
       });
       shareQrKey = controlKey;
     }
-    openDisplayShareBtn.onclick = () => window.open(dispUrl, '_blank');
     shareModalBackdrop.classList.add('visible');
   }
 
@@ -2134,6 +2133,16 @@
       setTimeout(() => { copyControlBtn.textContent = 'Copy'; }, 2000);
     }).catch(() => {
       copyControlBtn.textContent = 'Copy';
+    });
+  });
+
+  copyDisplayBtn.addEventListener('click', () => {
+    const url = `${window.location.origin}/display/?session=${sessionId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      copyDisplayBtn.textContent = 'Copied!';
+      setTimeout(() => { copyDisplayBtn.textContent = 'Copy'; }, 2000);
+    }).catch(() => {
+      copyDisplayBtn.textContent = 'Copy';
     });
   });
 
