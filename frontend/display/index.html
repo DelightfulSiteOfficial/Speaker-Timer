@@ -1165,6 +1165,7 @@
   <div class="toolbar">
     <button class="overflow-btn" id="overflowBtn">···</button>
     <div class="overflow-menu" id="overflowMenu">
+      <button class="overflow-item" id="mainMenuBtn">Main Menu</button>
       <button class="overflow-item" id="fullscreenToggle">Fullscreen</button>
       <button class="overflow-item" id="pipBtn">Pop Out</button>
       <button class="overflow-item" id="qrToggle">Hide QR</button>
@@ -1491,6 +1492,11 @@
     overflowMenu.classList.toggle('open');
   });
   document.addEventListener('click', () => overflowMenu.classList.remove('open'));
+
+  // ── Main Menu ──────────────────────────────────────────────────────────────
+  document.getElementById('mainMenuBtn').addEventListener('click', () => {
+    window.location.href = 'https://www.speakertimerapp.com';
+  });
 
   // ── QR toggle ──────────────────────────────────────────────────────────────
   const qrPanel  = document.getElementById('qrPanel');
