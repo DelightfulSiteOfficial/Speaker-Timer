@@ -1466,7 +1466,7 @@
 </div>
 
 <script>
-  const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production.up.railway.app';
+  const SERVER_URL = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production-4ec9.up.railway.app';
   const HTTP_URL   = SERVER_URL.replace(/^wss?:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
   const params     = new URLSearchParams(window.location.search);
   const sessionId  = (params.get('session') || '').toUpperCase().trim()
