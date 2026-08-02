@@ -1300,6 +1300,7 @@
   }
   .share-url-btn.accent-btn:hover { background: rgba(232,255,71,0.06); }
 </style>
+<script src="/config.js"></script>
 </head>
 <body>
 
@@ -1529,8 +1530,12 @@
   const AGENDA_KEY = 'speakerTimerAgendas';
 
   function loadAgenda() {
-    try { return (JSON.parse(localStorage.getItem(AGENDA_KEY)) || {})[sessionId] || []; }
-    catch { return []; }
+    // Array.isArray guards against legacy hub-shaped blobs ({title, items})
+    // written to this key before the hub moved to speakerTimerHubAgendas.
+    try {
+      const stored = (JSON.parse(localStorage.getItem(AGENDA_KEY)) || {})[sessionId];
+      return Array.isArray(stored) ? stored : [];
+    } catch { return []; }
   }
   function saveAgenda() {
     try {
@@ -1538,6 +1543,9 @@
       all[sessionId] = agenda;
       localStorage.setItem(AGENDA_KEY, JSON.stringify(all));
     } catch {}
+    // Every persist also syncs to the server (no-op if unchanged or offline),
+    // so all mutation paths broadcast without needing explicit calls.
+    broadcastAgenda();
   }
   function genItemId() { return Math.random().toString(36).slice(2, 9); }
 
@@ -2089,8 +2097,39 @@
     });
   }
 
+  // lastSyncedAgendaJson is the copy the server is known to hold (last sent or
+  // last received). Skipping identical sends prevents echo loops
+  // (server broadcast → adopt → save → re-broadcast) and duplicate sends.
+  let lastSyncedAgendaJson = null;
+  let agendaSeeded = false;
+
   function broadcastAgenda() {
-    send({ type: 'sync_agenda', sessionId, agenda });
+    const json = JSON.stringify(agenda);
+    if (json === lastSyncedAgendaJson) return;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'sync_agenda', sessionId, agenda }));
+      lastSyncedAgendaJson = json;   // only mark synced when actually sent
+    }
+  }
+
+  // Called from the state handler on every server broadcast that carries an
+  // agenda. First message after (re)connect decides seeding direction: an empty
+  // server + local items means the server (re)started, so push local up rather
+  // than adopting the empty list and wiping this device.
+  function receiveServerAgenda(serverAgenda) {
+    if (!Array.isArray(serverAgenda)) return;
+    const serverJson = JSON.stringify(serverAgenda);
+    const firstSinceConnect = !agendaSeeded;
+    agendaSeeded = true;
+    if (firstSinceConnect && serverAgenda.length === 0) {
+      if (agenda.length > 0) broadcastAgenda();
+      return;
+    }
+    lastSyncedAgendaJson = serverJson;
+    if (serverJson === JSON.stringify(agenda)) return;
+    agenda = serverAgenda.map(i => ({ ...i }));
+    renderAgenda();   // renderAgenda persists via saveAgenda; echo guard stops re-send
+    renderTimer();
   }
 
   function escHtml(s) {
@@ -2243,6 +2282,7 @@
 
     ws.onopen = () => {
       connDot.classList.add('live');
+      agendaSeeded = false;   // next state message decides seed vs adopt
       if (!pipPrompted && window.documentPictureInPicture && !pipWindow) {
         pipPrompted = true;
         overlayTitle.textContent = 'Welcome to Speaker Timer';
@@ -2261,6 +2301,7 @@
           lastServerAt = Date.now();
           lastServerRemaining = state.timeRemaining;
           renderTimer();
+          receiveServerAgenda(msg.payload.agenda);
           // Show control request modal from state for requests not already handled via WS
           // Only admins can approve/deny requests
           if (isAdmin) {

@@ -85,6 +85,7 @@ speaker-timer/
 │
 └── frontend/                  ← zero build tooling; edit HTML directly
     ├── netlify.toml           ← redirects only (no publish key)
+    ├── config.js              ← THE place to change the backend URL
     ├── index.html             ← landing
     ├── display/index.html
     ├── control/index.html
@@ -125,6 +126,7 @@ This is the exact object sent to every client as `{ type: 'state', payload: … 
   runCount: 0,              // increments on reset, if the timer had been started
   controllerName: '',
   presenterLocked: false,   // true = desktop presenter controls disabled
+  agenda: [],               // [{ id, name, duration, status }] — see Agenda sync
 }
 ```
 
@@ -178,6 +180,13 @@ Controller **and** (`isAdmin` or `isPresenter`) only:
 { type: 'deny_request',       targetId }
 { type: 'pass_control_to',    targetId }
 { type: 'set_presenter_lock', locked }
+```
+
+`isAdmin` or `isPresenter`, **whether or not they hold control** (an event console
+must sync agenda edits while an operator's phone runs the timer):
+
+```js
+{ type: 'sync_agenda', agenda }   // full replace; see Agenda sync below
 ```
 
 ### Server → client
@@ -236,6 +245,29 @@ cancels the pending timer.
 
 **Timing constants:** tick 1000 ms · heartbeat ping 25 s (dead sockets terminated ~35 s) ·
 auto-stop at −1800 s overtime · session cleanup 10 min after the last client leaves.
+
+### Agenda sync
+
+The server relays agendas between hub and event pages (added 2026-07-27). Canonical item
+shape is the event page's:
+
+```js
+{ id, name, duration, status }   // duration in SECONDS; status pending|active|done
+```
+
+- `sync_agenda` is a **full replace**, sanitized server-side (max 50 items, name ≤ 80,
+  duration 0–18000, status whitelisted) and stored in `state.agenda`, so it reaches every
+  client inside the normal `state` broadcast. Last write wins; no merging.
+- Only `isAdmin` / `isPresenter` sockets may send it — QR-scan controllers cannot.
+- **Seeding rule (both pages):** the first `state` after (re)connect decides direction.
+  Server empty + local non-empty → push local up (covers server restarts). Otherwise the
+  server copy wins. After that, an empty server agenda is a deliberate clear and IS adopted.
+- **Echo guard (both pages):** a `lastSynced…Json` snapshot of the server's copy; sends
+  are skipped when local equals it. The event page broadcasts from `saveAgenda()` (which
+  `renderAgenda()` calls), so every mutation path syncs without explicit calls.
+- **Hub items carry both `minutes` (display) and `duration` (truth).** The hub translates
+  at its boundary; `minutes` is a rounded view of `duration` for synced items.
+- Deleting an agenda in the hub is local-only (stop tracking ≠ erase for everyone).
 
 ---
 
@@ -322,7 +354,8 @@ waiting list; can force-release or pass control. Derives its HTTP base from `SER
 |---|---|---|
 | `speakerTimerSessions` | index, display, control, event | recent sessions, capped at 10 |
 | `speakerTimerRooms` | hub | saved room list |
-| `speakerTimerAgendas` | hub, event | `{ sessionId: [items] }` — **local only, never synced** |
+| `speakerTimerAgendas` | event | `{ sessionId: [items] }` — cache; server-synced via `sync_agenda` |
+| `speakerTimerHubAgendas` | hub | `{ sessionId: {title, items} }` — hub's own shape; one-time migration salvages hub-shaped entries from `speakerTimerAgendas` |
 | `speakerTimerKeys` | event | `{ sessionId: controlKey }` |
 | `speakerTimerKey_${id}` | control | that session's control key |
 | `speakerTimerMyName` | control | the user's display name |
@@ -340,8 +373,14 @@ npm run dev:frontend    # :8080, npx serve
 ```
 
 `.claude/launch.json` defines the same two servers for the preview tooling.
-Set `SERVER_URL` to `ws://localhost:3000` in whichever pages you're testing — remember it is
-hardcoded in **six** separate files.
+Point the frontend at your local server by editing **one line** in `frontend/config.js`:
+
+```js
+window.SPEAKER_TIMER_SERVER = 'ws://localhost:3000';
+```
+
+(Revert before committing. The six pages still carry hardcoded `wss://` fallbacks for
+contexts where config.js isn't served, but config.js wins whenever it loads.)
 
 Open `http://localhost:8080/display/?session=TEST` (and `/control/`, `/view/`, …).
 
@@ -351,21 +390,16 @@ Open `http://localhost:8080/display/?session=TEST` (and `/control/`, `/view/`, �
 
 Verified present as of 2026-07-27:
 
-1. **`sync_agenda` goes nowhere.** `event/index.html:2093` sends it; `server.mjs` has no handler.
-   Agendas live in `localStorage` under `speakerTimerAgendas`, so hub and event never share them
-   across devices. This is the largest real feature gap.
-2. **Dead listener** — `control/index.html:1859` handles `waiting_list`, a message the server
+1. **Dead listener** — `control/index.html` handles `waiting_list`, a message the server
    never sends (the queue arrives inside the `state` payload).
-3. **`join` is a no-op** — display and view both send it; role comes from the query string.
-4. **`SERVER_URL` is hardcoded in six files.** A backend move means six edits, which is exactly
-   what caused the July 2026 outage. A single `frontend/config.js` would fix this permanently —
-   it remains the highest-value cleanup.
-5. **Two `netlify.toml` files** — the root one sets `publish = "frontend"`; `frontend/netlify.toml`
+2. **`join` is a no-op** — display and view both send it; role comes from the query string.
+3. **Two `netlify.toml` files** — the root one sets `publish = "frontend"`; `frontend/netlify.toml`
    holds redirects only. Both are needed as-is; don't merge them without care. A drag-and-drop
    deploy must use the `frontend/` one, since the root's `publish` key breaks a dropped folder.
-6. **Empty directory literally named `{frontend,backend}`** — a shell brace-expansion accident,
-   safe to delete.
-7. **`STATS_KEY` has a literal default** in `server.mjs:6`.
+4. **`STATS_KEY` has a literal default** in `server.mjs:6`.
+
+Resolved 2026-07-27: `sync_agenda` is now handled server-side (see Agenda sync); the backend
+URL is centralized in `frontend/config.js`; the stray `{frontend,backend}` directory is gone.
 
 ### Wishlist (not started)
 
@@ -396,8 +430,11 @@ separate control and view QR codes on the display · light / high-contrast theme
 - Use `WebSocket.OPEN` for readyState checks, never the literal `1`.
 - Session IDs are always `.toUpperCase().trim()`.
 - New message types must be added to the `switch` in `server.mjs` **and** documented above.
-- Adding a page means copying the `:root` block and adding redirects to **both** `netlify.toml`
-  files plus `frontend/_redirects` if you regenerate a drop bundle.
+- Adding a page means copying the `:root` block, including
+  `<script src="/config.js"></script>` before `</head>`, and adding redirects to **both**
+  `netlify.toml` files plus `frontend/_redirects` if you regenerate a drop bundle.
+- The backend URL lives in `frontend/config.js`. The per-page `wss://` fallbacks exist only
+  for partial deploys — keep them in sync when the backend moves, but config.js is the truth.
 - The mobile/tablet landscape media queries on control and display are hand-tuned against real
   devices over many commits. Don't refactor them casually.
 - After any push that must reach production, **verify the live site actually serves it** —

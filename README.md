@@ -75,19 +75,14 @@ deploy appearing at all. This repo needs a paid plan, or a public repo.
 
 ### Pointing the frontend at the backend
 
-`SERVER_URL` is currently hardcoded in **six** files:
+The backend address lives in **one file** — `frontend/config.js`:
 
-```
-frontend/display/index.html      frontend/hub/index.html
-frontend/control/index.html      frontend/event/index.html
-frontend/view/index.html         frontend/admin/index.html
+```js
+window.SPEAKER_TIMER_SERVER = 'wss://your-backend.up.railway.app';
 ```
 
-If the backend URL changes, update all six:
-
-```bash
-grep -rl 'OLD-HOSTNAME' frontend/ | xargs sed -i '' 's|OLD-HOSTNAME|NEW-HOSTNAME|g'
-```
+Every page loads it and falls back to a hardcoded URL only if it's missing. When the
+backend moves, edit that one line (and ideally the per-page fallbacks, at your leisure).
 
 Then verify the deploy actually landed — don't assume it did:
 
@@ -103,8 +98,8 @@ npm run dev:backend     # WebSocket server on :3000
 npm run dev:frontend    # static files on :8080
 ```
 
-Set `SERVER_URL` to `ws://localhost:3000` in the pages you're testing, then open
-`http://localhost:8080/display/?session=TEST`.
+Point `frontend/config.js` at `ws://localhost:3000` (one line — revert before
+committing), then open `http://localhost:8080/display/?session=TEST`.
 
 Backend health check:
 
