@@ -1178,6 +1178,7 @@
   .custom-min-input::placeholder { color: var(--muted); }
 
 </style>
+<script src="/config.js"></script>
 </head>
 <body>
 
@@ -1314,7 +1315,13 @@
   const SERVER_URL  = window.SPEAKER_TIMER_SERVER || 'wss://speaker-timer-production-4ec9.up.railway.app';
   const HTTP_URL    = SERVER_URL.replace(/^wss?:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
   const STORAGE_KEY  = 'speakerTimerRooms';
-  const AGENDAS_KEY  = 'speakerTimerAgendas';
+  // Hub agendas live under their own key. The old shared key
+  // ('speakerTimerAgendas') is also written by the event page with an
+  // incompatible shape (a bare item array vs the hub's {title, items}), so
+  // same-device hub+event use used to clobber each other. Server-side
+  // sync_agenda now keeps the two in sync instead.
+  const AGENDAS_KEY  = 'speakerTimerHubAgendas';
+  const LEGACY_AGENDAS_KEY = 'speakerTimerAgendas';
 
   function escHtml(s) {
     return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1348,7 +1355,19 @@
 
   // ── Agendas (localStorage) ───────────────────────────────────────────────────
   function loadAgendas() {
-    try { return JSON.parse(localStorage.getItem(AGENDAS_KEY)) || {}; } catch { return {}; }
+    try {
+      const own = JSON.parse(localStorage.getItem(AGENDAS_KEY));
+      if (own) return own;
+      // One-time migration: salvage hub-shaped entries ({title, items}) from
+      // the legacy shared key; skip event-shaped bare arrays.
+      const legacy = JSON.parse(localStorage.getItem(LEGACY_AGENDAS_KEY)) || {};
+      const migrated = {};
+      for (const [sid, val] of Object.entries(legacy)) {
+        if (val && !Array.isArray(val) && Array.isArray(val.items)) migrated[sid] = val;
+      }
+      localStorage.setItem(AGENDAS_KEY, JSON.stringify(migrated));
+      return migrated;
+    } catch { return {}; }
   }
   function saveAgendas(ag) {
     localStorage.setItem(AGENDAS_KEY, JSON.stringify(ag));
@@ -1373,8 +1392,74 @@
   }
 
   function removeAgenda(sessionId) {
+    // Local-only: removing an agenda here means "stop tracking it in this hub",
+    // not "erase it for every device" — so no syncAgendaUp.
     delete agendas[sessionId];
     saveAgendas(agendas);
+  }
+
+  // ── Agenda sync (server-relayed) ─────────────────────────────────────────────
+  // The server's canonical item shape is the event page's:
+  //   { id, name, duration (seconds), status }
+  // Hub items keep `minutes` for display but treat `duration` as the truth.
+
+  function canonicalAgenda(sessionId) {
+    return (agendas[sessionId]?.items || []).map(it => ({
+      id:       it.id,
+      name:     it.name,
+      duration: it.duration ?? (it.minutes * 60),
+      status:   it.status || 'pending',
+    }));
+  }
+
+  // Push local agenda to the server via the room's background admin socket.
+  // Guarded per-room against echo loops; no-op for rooms added without a key
+  // (no admin socket → read-only sync).
+  function syncAgendaUp(sessionId) {
+    const entry = roomData[sessionId];
+    if (!entry?.adminWs || entry.adminWs.readyState !== WebSocket.OPEN) return;
+    const agenda = canonicalAgenda(sessionId);
+    const json = JSON.stringify(agenda);
+    if (json === entry.lastSyncedAgendaJson) return;
+    entry.adminWs.send(JSON.stringify({ type: 'sync_agenda', sessionId, agenda }));
+    entry.lastSyncedAgendaJson = json;
+  }
+
+  // Called on every state broadcast that carries an agenda. First message after
+  // (re)connect decides seeding: empty server + local items → push up (server
+  // restarted) instead of adopting the empty list and wiping this device.
+  function receiveServerAgenda(sessionId, serverAgenda) {
+    if (!Array.isArray(serverAgenda)) return;
+    const entry = roomData[sessionId];
+    if (!entry) return;
+    const serverJson = JSON.stringify(serverAgenda);
+    const firstSinceConnect = !entry.agendaSeeded;
+    entry.agendaSeeded = true;
+    if (firstSinceConnect && serverAgenda.length === 0) {
+      if ((agendas[sessionId]?.items || []).length > 0) syncAgendaUp(sessionId);
+      return;
+    }
+    entry.lastSyncedAgendaJson = serverJson;
+    if (serverJson === JSON.stringify(canonicalAgenda(sessionId))) return;
+    // Adopt: translate to hub shape. Auto-create the agenda entry so agendas
+    // built on the event page appear in the hub without manual setup.
+    if (!agendas[sessionId] && serverAgenda.length === 0) return;
+    if (!agendas[sessionId] || !Array.isArray(agendas[sessionId].items)) {
+      agendas[sessionId] = { title: agendas[sessionId]?.title || sessionId, items: [] };
+    }
+    agendas[sessionId].items = serverAgenda.map(it => ({
+      id:       it.id,
+      name:     it.name,
+      minutes:  Math.max(1, Math.round(it.duration / 60)),
+      duration: it.duration,
+      status:   it.status,
+    }));
+    saveAgendas(agendas);
+    renderCard(sessionId);
+    if (agendaViewSessionId === sessionId) {
+      renderAgendaItems(sessionId);
+      renderAgendaStatusBar(sessionId);
+    }
   }
 
   // ── QR modal ─────────────────────────────────────────────────────────────────
@@ -1455,6 +1540,7 @@
 
       ws.onopen = () => {
         entry.status = 'live';
+        entry.agendaSeeded = false;   // next state message decides seed vs adopt
         renderCard(sessionId);
         if (agendaViewSessionId === sessionId) renderAgendaStatusBar(sessionId);
       };
@@ -1466,6 +1552,7 @@
             entry.state = { ...entry.state, ...msg.payload };
             renderCard(sessionId);
             if (agendaViewSessionId === sessionId) renderAgendaStatusBar(sessionId);
+            receiveServerAgenda(sessionId, msg.payload.agenda);
           }
         } catch {}
       };
@@ -2120,6 +2207,7 @@
       card.querySelector('.btn-item-delete').addEventListener('click', () => {
         agenda.items.splice(idx, 1);
         saveAgendas(agendas);
+        syncAgendaUp(sessionId);
         renderAgendaItems(sessionId);
         renderCard(sessionId);
       });
@@ -2138,7 +2226,7 @@
       await fetch(`${HTTP_URL}/sessions/${sessionId}/load`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: item.name, seconds: item.minutes * 60 }),
+        body: JSON.stringify({ name: item.name, seconds: item.duration ?? (item.minutes * 60) }),
       });
     } catch {}
 
@@ -2150,6 +2238,7 @@
     });
 
     saveAgendas(agendas);
+    syncAgendaUp(sessionId);
     renderAgendaItems(sessionId);
     renderCard(sessionId);
   }
@@ -2206,8 +2295,9 @@
     const agenda = agendas[agendaViewSessionId];
     if (!agenda) return;
 
-    agenda.items.push({ id: genId(), name, minutes, status: 'pending' });
+    agenda.items.push({ id: genId(), name, minutes, duration: minutes * 60, status: 'pending' });
     saveAgendas(agendas);
+    syncAgendaUp(agendaViewSessionId);
     renderAgendaItems(agendaViewSessionId);
     renderCard(agendaViewSessionId);
     closeItemSheet();

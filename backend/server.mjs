@@ -38,6 +38,7 @@ function createSession(id) {
       runCount: 0,     // increments each time reset is called after a timer was started
       controllerName: '',
       presenterLocked: false,  // true = desktop presenter controls disabled
+      agenda: [],      // [{ id, name, duration, status }] — synced via sync_agenda
     },
     clients: new Set(),
     tickInterval: null,
@@ -62,6 +63,20 @@ function syncWaitingList(session) {
 
 function removePendingRequest(session, waitingId) {
   session.state.pendingRequests = session.state.pendingRequests.filter(r => r.id !== waitingId);
+}
+
+// Validate and clamp a sync_agenda payload. Canonical item shape is the event
+// page's: { id, name, duration (seconds), status }. Returns null if the payload
+// isn't an array at all.
+const AGENDA_STATUSES = ['pending', 'active', 'done'];
+function sanitizeAgenda(raw) {
+  if (!Array.isArray(raw)) return null;
+  return raw.slice(0, 50).map(it => ({
+    id:       String(it?.id ?? '').slice(0, 16),
+    name:     String(it?.name ?? '').slice(0, 80),
+    duration: Math.min(18000, Math.max(0, parseInt(it?.duration) || 0)),
+    status:   AGENDA_STATUSES.includes(it?.status) ? it.status : 'pending',
+  }));
 }
 
 // Returns true if the provided key grants admin access to this session.
@@ -819,6 +834,19 @@ wss.on('connection', (ws, req) => {
         syncWaitingList(session);
         broadcast(session);
       }
+      return;
+    }
+
+    // Agenda sync — admin (event/hub) and presenter connections only, whether or
+    // not they currently hold the timer. Deliberately NOT gated on being the
+    // controller: an event console must sync agenda edits while an operator's
+    // phone is running the timer. Plain QR-scan controllers are excluded.
+    if (msg.type === 'sync_agenda') {
+      if (!ws.isAdmin && !ws.isPresenter) return;
+      const agenda = sanitizeAgenda(msg.agenda);
+      if (!agenda) return;
+      session.state.agenda = agenda;
+      broadcast(session);
       return;
     }
 
